@@ -1,0 +1,70 @@
+\documentclass[11pt]{article}
+\usepackage{arxiv}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{pxfonts}
+\usepackage{mathtools}
+\usepackage{tocloft}
+\usepackage{todonotes}%loads xcolor with []
+\usepackage{extarrows}
+%\usepackage{pxfonts}
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+\usepackage{wrapfig}
+\usepackage{caption}
+
+
+\usepackage{hyperref}
+\usepackage{subcaption}
+
+% Definitions of handy macros can go here
+\newcommand{\toodoo}[1]{{\tt\color{red} #1}}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[]
+\newtheorem{example}[definition]{Example}
+\newtheorem{remark}[definition]{Remark}
+\newtheorem{setting}[definition]{Setting}
+\newtheorem{assumption}[definition]{Assumption}
+\newtheorem{hypothesis}[definition]{Hypothesis}
+\theoremstyle{plain}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{lemma}[definition]{Lemma}
+
+\renewcommand{\labelenumi}{\textup{(\textit{\roman{enumi}})}}
+\setlength\cftparskip{0pt}
+\setlength\cftbeforesecskip{2pt}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\bm}[1]{\boldsymbol{#1}}
+\newcommand{\Rn}{\R^n} 
+\newcommand{\dx}{\mathrm{d}x}
+\newcommand{\rami}[1]{\textcolor{blue}{#1}}
+
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\title{Kfac PINNs }
+\date{November 2022}
+
+\author{Felix Dangel, Johannes M\"uller \& Marius Zeinhofer}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    Kfac for PINNs. 
+\end{abstract}
+\section{Introduction}
+PINNs are difficult to optimize.
+
+
+
+\bibliography{references}
+\bibliographystyle{apalike}
+\end{document}
