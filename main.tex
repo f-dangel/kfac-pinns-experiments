@@ -6,6 +6,7 @@
 \usepackage{pxfonts}
 \usepackage{mathtools}
 \usepackage{tocloft}
+\usepackage{dsfont}
 \usepackage{todonotes}%loads xcolor with []
 \usepackage{extarrows}
 %\usepackage{pxfonts}
@@ -63,6 +64,120 @@
 \section{Introduction}
 PINNs are difficult to optimize.
 
+\section{The Gramian/Fischer for the PINN Formulation of the Poisson Equation}
+$\bullet$ I think most of the complexity can already be understood just from this example. I illustrate, using the Poisson equation how to write the Gramian/Fisher as the product of a Jacobian and its transpose, see equation \eqref{eq:Jacobian_Fischer}. Is this what you were after Felix? I think it differs from the standard setting in the sense that suddenly the Laplacian shows up. It can also be used to derive a matrix-free version of the energy natural gradient descent, like done in Hessian free optimization.
+$\bullet$ We consider the Poisson equation
+\begin{align*}
+    -\Delta u & = f \quad \text{in }\Omega \\
+     u & = g \quad \text{on }\partial\Omega
+\end{align*}
+where $f\in L^2(\Omega)$ and $g\in H^{3/2}(\partial\Omega)$ are some given rhs and boundary values.
+
+$\bullet$ The function space energy is given by
+\[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f) \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds. \]
+
+$\bullet$ The PINN loss, with discretized integrals, is
+\begin{align*}
+    L(\theta) 
+    &=
+    \frac{1}{2N_\Omega} L_\Omega(\theta) + \frac{1}{2N_{\partial\Omega}}L_{\partial\Omega}(\theta)
+    \\
+    &=
+    \frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\theta(x_i) + f(x_i))^2 + \frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\theta(x^b_i) - g(x^b_i))^2
+\end{align*}
+where we denote by $(x_i)$, $i=1,\dots,N_\Omega$ the points in the interior of $\Omega$ and by $(x^b_i)$, $i=1,\dots,N_{\partial\Omega}$ the points on the boundary. We need quite a lot of these points in practice, it can be in the thousands. And we need them in one batch, too.
+
+$\bullet$ The energy natural gradient is for this example to use the Fischer/Gramian of the form
+\begin{equation*}
+    F(\theta) = F_\Omega(\theta) + F_{\partial\Omega}(\theta)
+\end{equation*}
+where
+\begin{equation}
+    F_\Omega(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_\Omega} \partial_{\theta_i} \Delta u_\theta(x_k) \partial_{\theta_j} \Delta u_\theta(x_k) 
+    %= \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
+\end{equation}
+%where $f_\theta = \Delta u_\theta$. 
+and 
+\begin{equation}
+    F_{\partial\Omega}(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_{\partial\Omega}} \partial_{\theta_i} \Delta u_\theta(x_k^b) \partial_{\theta_j} \Delta u_\theta (x_k^b). 
+    %= \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
+\end{equation}
+In more compact form and written as Jacobian products, this can be expressed as 
+\begin{equation}\label{eq:Jacobian_Fischer}
+    F_\Omega(\theta) = Dr_\Omega(\theta)^T \cdot Dr_\Omega(\theta) 
+    \quad \text{and} \quad
+    F_{\partial\Omega}(\theta) = Dr_{\partial\Omega}(\theta)^T \cdot Dr_{\partial\Omega}(\theta).
+\end{equation}
+Here, $Dr_\Omega(\theta)$ and $Dr_{\partial\Omega}(\theta)$  denote the \emph{Jacobians} of the maps
+\begin{equation*}
+    r_{\Omega}: \Theta \to \mathbb{R}^{N_\Omega}, \quad r_{\Omega}(\theta) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u_\theta(x_1), \dots, \Delta u_\theta(x_{N_{\Omega}}))
+\end{equation*}
+and 
+\begin{equation*}
+    r_{\partial\Omega}: \Theta \to \mathbb{R}^{N_\partial\Omega}, \quad r_{\partial\Omega}(\theta) = \frac{1}{\sqrt{N_{\partial\Omega}}}(u_\theta(x^b_1), \dots, u_\theta(x^b_{N_{\partial\Omega}}))
+\end{equation*}
+
+
+
+\section{K-FAC for a shallow network}
+
+Consider a shallow network
+\[ u_\theta(x) = W_2\sigma(W_1 x), \]
+where $x\in\mathbb R^d$, $W_1\in\mathbb R^{m\times d}, W_2\in\mathbb R^{1\times m}$. 
+
+\paragraph{Task: }
+Understand the structure, in particular the computational graph of $f_\theta = \Delta u_\theta$. 
+
+\paragraph{One dimensional case: }
+Assume first that $d=1$. 
+Then
+\[ D_x u_\theta(x) = W_2 \operatorname{diag}(\sigma'(W_1 x)) W_1 \]
+and 
+\[ D^2_x u_\theta(x) = W_2%(W_1^\top\otimes W_2)
+\operatorname{diag}(\operatorname{diag}(\sigma''(W_1 x)) W_1)W_1. % = W_2 \operatorname{diag}\sigma''(W_1 x) W_1^2 = W_2\odot W_1^2 \sigma''(W_1x), 
+\]
+In another form
+\[D^2 u_\theta(x) = W_2 \operatorname{diag}(\operatorname{diag}\sigma''(W_1 x) W_1) W_1 = W_2 \operatorname{diag}\sigma''(W_1 x) W_1^2 = W_2\odot W_1^2 \sigma''(W_1x), 
+\]
+where $(W_2\odot W_1^2)_k = (W_2)_k \cdot (W_1)_k^2$. 
+%where $(W_2\odot W_1^2)_k = (W_2)_k \cdot (W_1)_k^2$.
+%The Laplacian is then given as 
+%\[ f_\theta(x) = \Delta u_\theta(x) = \operatorname{tr}(D_x^2u_\theta(x)) =\operatorname{tr}(W_2 \operatorname{diag}(\operatorname{diag}(\sigma''(W_1 x)) W_1) W_1).  \]
+%Differentiation with respect to $W_2$ yields
+%\[ \frac{\partial f_\theta(x)}{\partial W_2} = \frac{\partial \Delta u_\theta(x)}{ \partial W_2} =  \]
+
+One can also rewrite the diagonalization operator via a Hadamard product as $\operatorname{diag}(x) = (x\mathds{1}^\top)\odot I$, where $\mathds{1}$ denotes the all one vector, $I$ the identity and $\odot$ the Hadamard (i.e., entrywise) product of two matrices. Not sure whether this helps though...
+
+%\paragraph{One dimensional case: }
+
+
+
+
+
+\section{Generalization to other PDEs}
+Essential to the formula above is that the discrete bilinear form (not explicitly stated above) can be written in the way
+\begin{equation}\label{eq:gramian_asssumption}
+    a^h(u,v) 
+    =
+    \langle T(u), T(v) \rangle_{\mathbb R^N}.
+\end{equation}
+This implies 
+\begin{equation*}
+    F(\theta) = D(T\circ P)^T \cdot D(T \circ P).
+\end{equation*}
+If you compute the entries of $F$ this yields
+\begin{equation*}
+    F(\theta)_{ij} = \langle T(\partial_{\theta_i}u_\theta), T(\partial_{\theta_j}u_\theta) \rangle_{\mathbb R^N}.
+\end{equation*}
+In the case of the Laplacian this $G$ will be one of the summands, so for example $F_\Omega$. The map $T$ needs to be linear and is a combination of PDE operators and point evaluation, in the case of the Laplacian
+\begin{equation*}
+    T:C^2(\Omega) \to \mathbb R^{N_\Omega}, \quad T(u) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u(x_1), \dots, \Delta u(x_{N_{\Omega}})).
+\end{equation*}
+The map $P$ is the parametrization, i.e., $\theta\mapsto u_\theta$.
+I think the form \eqref{eq:gramian_asssumption} is true for all of the PDEs we have in mind...but Johannes should double check that.
+
+\section{Some Math Stuff}
+%\begin{lemma}
 
 
 \bibliography{references}
