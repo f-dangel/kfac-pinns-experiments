@@ -1,0 +1,14 @@
+**.synctex(busy)
+**/.pdf-view-restore
+**.aux
+**.ptc
+**.bbl
+**.blg
+**.log
+**.out
+**.synctex.gz
+**/auto
+**.fdb_latexmk
+**.fls
+**.DS_Store
+main.pdf
