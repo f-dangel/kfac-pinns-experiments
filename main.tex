@@ -48,6 +48,7 @@
 \newcommand{\norm}[1]{\left\lVert#1\right\rVert}
 
 \input{preamble/goodfellow.tex} % follow DL notation from the Goodfellow book
+\input{preamble/custom.tex}
 
 \title{Kfac PINNs }
 \date{November 2022}
@@ -177,10 +178,14 @@ The map $T$ needs to be linear and is a combination of PDE operators and point e
 The map $P$ is the parametrization, i.e., $\theta\mapsto u_\theta$.
 I think the form \eqref{eq:gramian_asssumption} is true for all of the PDEs we have in mind...but Johannes should double check that.
 
-\section{Some Math Stuff}
-% \begin{lemma}
-
+\section{Laplacian of a Feed-forward Neural Network}
+\input{sections/laplacian_feedforward_nn.tex}
 
 \bibliography{references}
 \bibliographystyle{apalike}
 \end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
