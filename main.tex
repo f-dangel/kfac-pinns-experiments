@@ -11,6 +11,7 @@
 \usepackage{extarrows}
 \usepackage{titlesec}
 \usepackage{enumitem}
+\usepackage{comment}
 
 \usepackage{wrapfig}
 \usepackage{caption}
@@ -125,6 +126,60 @@ and
 \end{equation*}
 
 \section{K-FAC for a shallow network}
+\begin{comment}
+    For the one-dimensional shallow case we have
+\[ u_\theta(x) = \sum_{i=1}^m a_i\sigma(b_i x + c_i) + d. \]
+Then 
+\[ u_\theta'(x) = \sum_{i=1}^m a_ib_i\sigma'(b_i x + c_i) \]
+and 
+\[ u_\theta''(x) = \sum_{i=1}^m a_ib_i^2\sigma''(b_i x + c_i). \]
+The parameter derivative of the Laplacian (i.e., second-order derivative)
+\begin{align*}
+     \partial_{a_i}u_\theta''(x) & = b_i^2\sigma''(b_i x + c_i) \\
+     \partial_{b_i}u_\theta''(x) & = 2a_ib_i\sigma''(b_i x + c_i) + a_i b_i^2x\sigma^{(3)}(b_i x + c_i) \\
+     \partial_{c_i}u_\theta''(x) & = a_i b_i^2\sigma^{(3)}(b_i x + c_i) \\
+     \partial_{d}u_\theta''(x) & = 0.
+\end{align*}
+The parameter derivative of the Laplacian (i.e., second-order derivative)
+\begin{align*}
+     \partial_{a_i}u_\theta''(x) & = b_i^2\sigma''(b_i x + c_i) \\
+     \partial_{b_i}u_\theta''(x) & = 2a_ib_i\sigma''(b_i x + c_i) + a_i b_i^2x\sigma^{(3)}(b_i x + c_i) \\
+     \partial_{c_i}u_\theta''(x) & = a_i b_i^2\sigma^{(3)}(b_i x + c_i) \\
+     \partial_{d}u_\theta''(x) & = 0.
+\end{align*}
+\end{comment}
+
+First, we do the Hessian calculation as explicitly as possible. For this, we consider the easy case of a shallow network with one-dimensional output
+\[ u_\theta(x) = \sum_{i=1}^m a_i\sigma(b_i^\top x + c_i) + d. \]
+Then 
+\[ \nabla_x u_\theta(x) = \sum_{i=1}^m a_ib_i\sigma'(b_i x + c_i) \]
+or 
+\[ \partial_{x_j} u_\theta(x) = \sum_{i=1}^m a_i(b_i)_j\sigma'(b_i x + c_i). \]
+Consequently, we compute 
+\[ \partial_{x_k}\partial_{x_j} u_\theta(x) = \sum_{i=1}^m a_i(b_i)_j(b_i)_k\sigma'(b_i x + c_i) \]
+which yields the Hessian
+\[ \nabla^2_x u_\theta(x) = \sum_{i=1}^m a_i\sigma''(b_i x + c_i) \cdot b_ib_i^\top = \sum_{i=1}^m a_i\sigma''(b_i x + c_i) \cdot  b_i\otimes b_i \]
+and the Laplacian is given by 
+\[ \Delta_x u_\theta(x) = \sum_{i=1}^m a_i\sigma''(b_i x + c_i) \operatorname{tr}(b_ib_i^\top) = \sum_{i=1}^m a_i\sigma''(b_i x + c_i)  \operatorname{tr}(b_i\otimes b_i). \]
+The parameter derivatives of the Hessian are given 
+\begin{align*}
+     \partial_{a_i}\nabla_x^2 u_\theta(x) & = \sigma''(b_i x + c_i) b_ib_i^\top \\
+     \nabla_{b_i}\nabla_x^2 u_\theta(x) & = a_i\sigma''(b_i x + c_i) (b_i\otimes I+I\otimes b_i) + a_i \sigma^{(3)}(b_i x + c_i) \cdot  (I\otimes x^\top)(b_i\otimes b_i) \quad ?? \\
+     %+ a_i x\sigma^{(3)}(b_i x + c_i) \cdot b_ib_i^\top \\
+     \partial_{c_i}\nabla_x^2 u_\theta(x) & = a_i b_i^2\sigma^{(3)}(b_i x + c_i) \\
+     \partial_{d}\nabla_x^2 u_\theta(x) & = 0.
+\end{align*}
+The parameter derivatives of the Laplacian are given 
+\begin{align*}
+     \partial_{a_i}\Delta_x u_\theta(x) & = \sigma''(b_i x + c_i) \operatorname{tr}(b_ib_i^\top) \\
+     \nabla_{b_i}\Delta_x u_\theta(x) & = 2a_i\sigma''(b_i x + c_i) + a_i \sigma^{(3)}(b_i x + c_i) \operatorname{tr}(b_ib_i^\top) \cdot x \\
+     \partial_{c_i}\Delta_x u_\theta(x) & = a_i \sigma^{(3)}(b_i x + c_i)\operatorname{tr}(b_ib_i^\top) \\
+     \partial_{d}\Delta_x u_\theta(x) & = 0.
+\end{align*}
+
+
+\paragraph{Writing as linear algebra}
+
 Consider a shallow network
 \[ u_\theta(x) = W_2\sigma(W_1 x), \]
 where $x\in\mathbb R^d$, $W_1\in\mathbb R^{m\times d}, W_2\in\mathbb R^{1\times m}$.
@@ -152,6 +207,8 @@ where $(W_2\odot W_1^2)_k = (W_2)_k \cdot (W_1)_k^2$.
 
 One can also rewrite the diagonalization operator via a Hadamard product as $\operatorname{diag}(x) = (x\mathds{1}^\top)\odot I$, where $\mathds{1}$ denotes the all one vector, $I$ the identity and $\odot$ the Hadamard (i.e., entrywise) product of two matrices.
 Not sure whether this helps though...
+
+\paragraph{Multi-dimensional case}
 
 % \paragraph{One dimensional case: }
 

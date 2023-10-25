@@ -27,12 +27,19 @@ a single layer's weight $\mW$, i.e.\,$\nicefrac{\partial \Delta u_{\vtheta}}{\pa
 where $\vz^{(0)} := \vx$, $\vz^{(L)} := \vu$, and $\vtheta = ({\vtheta^{(1)}}^{\top}, \dots, {\vtheta^{(L)}}^{\top})^{\top}$ is the concatenation of parameters over layers.
 A parameter might be empty, e.g.\,if the layer is an activation layer.
 
+
+
 \subsection{Derivatives}
 
 \paragraph{Flattening} Above, we assumed all quantities ($\vz^{(i)}, \vtheta^{(i)}$) to be vectors.
 In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
 Our index convention to vectorize will be first-varies-fastest, which means column-stacking for a matrix (row index varies first, column index varies second).
 We denote the flattening operation by $\flatten(\cdot)$.
+Very useful is the so called \emph{vec-trick} stating that 
+\begin{equation}\label{eq:vecTrick}
+    \flatten(AXB) = (B^\top\otimes A)\flatten{X}
+\end{equation}
+for matrices $A, X, B$. In particular, this shows that $B^\top\otimes A$ is the  matrix representing the linear mapping $X\mapsto AXB$ and hence $J_X(AXB) = B^\top\otimes A$. 
 
 \paragraph{Jacobian \& Hessian} The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
 Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
@@ -304,6 +311,20 @@ terms of \Cref{eq:fisher}.
 \end{subequations}
 \toodoo{F.D.\,derived the Jacobians from \Cref{eq:fisher-jacobians} by hand.
   Might be worth to double-check for correctness.}
+
+JM double checked and got the following:
+Using the vec-trick~\eqref{eq:vecTrick} we obtain 
+\[  \jac_{\mW}(\mW \vx) = \vx^\top\otimes \mI \]
+and 
+\[ \jac_\mW(\flatten(\mW^\top \vx)) = \jac_\mW(\flatten(\vx^\top\mW)^\top)) = \jac_\mW(K\flatten(\vx^\top\mW))) = K\jac_\mW(\flatten(\vx^\top\mW))) = K (\mI\otimes \vx^\top),  \]
+where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A) = \flatten(A^\top)$. 
+%I think this does not agree with $\mI\otimes \vx^\top$ as 
+%Note that we need the commutation matrix
+%\[ (\mI\otimes \vx) \]
+By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW)\mX$ and hence 
+\[ \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes (\mW^{\top}\mX) + K (\mI \otimes (\mW^{\top}\mX^{\top})). \]
+\toodoo{Long story short, up to the commutation matrix I obtained the same :)}
+
 The Jacobians from \Cref{eq:fisher-jacobians} allow to express the Fisher in
 terms of Kronecker-structured expressions consisting of 16 terms in total.
 
