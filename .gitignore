@@ -12,3 +12,7 @@
 **.fls
 **.DS_Store
 main.pdf
+**__pycache__
+*.egg-info
+.eggs
+/.coverage

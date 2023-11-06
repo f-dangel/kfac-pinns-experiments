@@ -1,0 +1,9 @@
+name: kfac_pinns_exp
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.9.16
+  - pip=23.1.2
+  - pip:
+    - -e ."[lint,test]"
