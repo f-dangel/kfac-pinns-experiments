@@ -329,9 +329,14 @@ where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A)
 %I think this does not agree with $\mI\otimes \vx^\top$ as 
 %Note that we need the commutation matrix
 %\[ (\mI\otimes \vx) \]
-By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW)\mX$ and hence 
+Note that 
+\[ (W+A)^\top X (W+A) - W^\top X W = W^\top X A + A^\top X W + O(\lVert A \rVert^2) \]
+and hence 
+\[ \jac_W(W^\top X W)A = . \]
+By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW^\top)\flatten(\mX)$ and hence 
 \[ \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes (\mW^{\top}\mX) + K (\mI \otimes (\mW^{\top}\mX^{\top})). \]
-\toodoo{Long story short, up to the commutation matrix I obtained the same :)}
+\toodoo{Ok, I thought this made sense, but now it confuses me...}
+
 
 The Jacobians from \Cref{eq:fisher-jacobians} allow to express the Fisher in
 terms of Kronecker-structured expressions consisting of 16 terms in total.
@@ -359,10 +364,12 @@ Overall, with~\eqref{eq:spatialDerivatives} this yields
 
 
 \paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
-In order to evaluate the Fisher we also need to compute the terms $\grad{\textcolor{blue}{\bullet}}\Delta u$. 
+In order to evaluate the Fisher we also need to compute the terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ for all children, more specifically $\grad{\vz^{(i)}}\Delta u$, $\grad{\grad{\vz^{(i-1)}}u}\Delta u$ and $\grad{\gradsquared{\vz^{(i-1)}}u}\Delta u$.
+\toodoo{DO we need to understand how we compute this? We can definitely do this via backprop, but then additional terms would appear I guess}
+
 
 \paragraph{Zeroth order diagonal term}
-Note that one of the nine terms is the term from the original KFAC paper, namely
+Note that one of the nine terms is the term similar to the original KFAC paper, namely
 when $\textcolor{blue}{\bullet} = \textcolor{red}{\bullet} = \vz^{(i)}$
 (remember that $\jac_{\mW^{(i)}} \vz^{(i)} = \vz^{(i-1)} \otimes \mI$):
 \begin{align}\label{eq:original-kfac}
@@ -398,7 +405,8 @@ when $\textcolor{blue}{\bullet} = \textcolor{red}{\bullet} = \vz^{(i)}$
     &\coloneqq \mA_{\text{KFAC}}^{(i)} \otimes \mB_{\text{KFAC}}^{(i)}\,.
   \end{split}
 \end{align}
-\toodoo{I think the subscript should be $\nabla_{\vz^{(i)}} \Delta u$ instead of $\nabla_{\vz^{(i-1)}} \Delta u$ or am I missing something?}
+\toodoo{I think the subscript should be $\nabla_{\vz^{(i)}} \Delta u$ instead of $\nabla_{\vz^{(i-1)}} \Delta u$ or am I missing something? }
+Note however, that in comparison to traditional KFAC, there are Laplacian terms. 
 \Cref{eq:original-kfac} illustrates that the Kronecker structure emerges from
 the Jacobians. So we need to investigate these objects closer for the remaining
 terms of \Cref{eq:fisher}.
