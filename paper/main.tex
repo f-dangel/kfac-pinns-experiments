@@ -100,14 +100,14 @@ $\bullet$ The energy natural gradient is for this example to use the Fischer/Gra
   F(\theta) = F_\Omega(\theta) + F_{\partial\Omega}(\theta)
 \end{equation*}
 where
-\begin{equation}
+\begin{equation}\label{eq:FisherInterior}
   F_\Omega(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_\Omega} \partial_{\theta_i} \Delta u_\theta(x_k) \partial_{\theta_j} \Delta u_\theta(x_k)
   % = \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
 \end{equation}
 % where $f_\theta = \Delta u_\theta$.
 and
 \begin{equation}
-  F_{\partial\Omega}(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_{\partial\Omega}} \partial_{\theta_i} \Delta u_\theta(x_k^b) \partial_{\theta_j} \Delta u_\theta (x_k^b).
+  F_{\partial\Omega}(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_{\partial\Omega}} \partial_{\theta_i} u_\theta(x_k^b) \partial_{\theta_j} u_\theta (x_k^b).
   % = \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
 \end{equation}
 In more compact form and written as Jacobian products, this can be expressed as
@@ -125,7 +125,34 @@ and
   r_{\partial\Omega}: \Theta \to \mathbb{R}^{N_\partial\Omega}, \quad r_{\partial\Omega}(\theta) = \frac{1}{\sqrt{N_{\partial\Omega}}}(u_\theta(x^b_1), \dots, u_\theta(x^b_{N_{\partial\Omega}}))
 \end{equation*}
 
-\section{K-FAC for a shallow network}
+
+\section{Generalization to other PDEs}
+Essential to the formula above is that the discrete bilinear form (not explicitly stated above) can be written in the way
+\begin{equation}\label{eq:gramian_asssumption}
+  a^h(u,v)
+  =
+  \langle T(u), T(v) \rangle_{\mathbb R^N}.
+\end{equation}
+This implies
+\begin{equation*}
+  F(\theta) = D(T\circ P)^T \cdot D(T \circ P).
+\end{equation*}
+If you compute the entries of $F$ this yields
+\begin{equation*}
+  F(\theta)_{ij} = \langle T(\partial_{\theta_i}u_\theta), T(\partial_{\theta_j}u_\theta) \rangle_{\mathbb R^N}.
+\end{equation*}
+In the case of the Laplacian this $G$ will be one of the summands, so for example $F_\Omega$.
+The map $T$ needs to be linear and is a combination of PDE operators and point evaluation, in the case of the Laplacian
+\begin{equation*}
+  T:C^2(\Omega) \to \mathbb R^{N_\Omega}, \quad T(u) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u(x_1), \dots, \Delta u(x_{N_{\Omega}})).
+\end{equation*}
+The map $P$ is the parametrization, i.e., $\theta\mapsto u_\theta$.
+I think the form \eqref{eq:gramian_asssumption} is true for all of the PDEs we have in mind...but Johannes should double check that.
+
+\section{Laplacian of a Feed-forward Neural Network}
+\input{sections/laplacian_feedforward_nn.tex}
+
+\subsection{Explicit computations for a shallow network}
 \begin{comment}
     For the one-dimensional shallow case we have
 \[ u_\theta(x) = \sum_{i=1}^m a_i\sigma(b_i x + c_i) + d. \]
@@ -212,31 +239,6 @@ Not sure whether this helps though...
 
 % \paragraph{One dimensional case: }
 
-\section{Generalization to other PDEs}
-Essential to the formula above is that the discrete bilinear form (not explicitly stated above) can be written in the way
-\begin{equation}\label{eq:gramian_asssumption}
-  a^h(u,v)
-  =
-  \langle T(u), T(v) \rangle_{\mathbb R^N}.
-\end{equation}
-This implies
-\begin{equation*}
-  F(\theta) = D(T\circ P)^T \cdot D(T \circ P).
-\end{equation*}
-If you compute the entries of $F$ this yields
-\begin{equation*}
-  F(\theta)_{ij} = \langle T(\partial_{\theta_i}u_\theta), T(\partial_{\theta_j}u_\theta) \rangle_{\mathbb R^N}.
-\end{equation*}
-In the case of the Laplacian this $G$ will be one of the summands, so for example $F_\Omega$.
-The map $T$ needs to be linear and is a combination of PDE operators and point evaluation, in the case of the Laplacian
-\begin{equation*}
-  T:C^2(\Omega) \to \mathbb R^{N_\Omega}, \quad T(u) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u(x_1), \dots, \Delta u(x_{N_{\Omega}})).
-\end{equation*}
-The map $P$ is the parametrization, i.e., $\theta\mapsto u_\theta$.
-I think the form \eqref{eq:gramian_asssumption} is true for all of the PDEs we have in mind...but Johannes should double check that.
-
-\section{Laplacian of a Feed-forward Neural Network}
-\input{sections/laplacian_feedforward_nn.tex}
 
 \bibliography{references}
 \bibliographystyle{apalike}
