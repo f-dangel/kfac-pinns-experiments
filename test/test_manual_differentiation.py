@@ -7,11 +7,17 @@ from torch import Tensor, allclose, manual_seed, rand, rand_like
 from torch.autograd import grad
 from torch.nn import Linear, Module, Sequential, Sigmoid
 
-from kfac_pinns_exp.manual_differentiation import manual_backward, manual_forward
+from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
+from kfac_pinns_exp.manual_differentiation import (
+    manual_backward,
+    manual_forward,
+    manual_hessian_backward,
+)
 
 CASES = [
     {
-        "layers_fn": lambda: [Linear(10, 5), Sigmoid(), Linear(5, 3)],
+        # NOTE The last layer should produce a single number
+        "layers_fn": lambda: [Linear(10, 5), Sigmoid(), Linear(5, 1)],
         "input_fn": lambda: rand(4, 10),
         "seed": 0,
         "id": "linear-sigmoid-linear",
@@ -71,6 +77,27 @@ def test_manual_backward(case: Dict):
     true_grad_X = grad(true_outputs, X, grad_outputs=grad_outputs)[0]
 
     activations = manual_forward(layers, X)
-    gradients = manual_backward(layers, activations, grad_output=grad_outputs)
+    gradients = manual_backward(layers, activations, grad_outputs=grad_outputs)
     assert len(gradients) == len(layers) + 1
     assert allclose(gradients[0], true_grad_X)
+
+
+@mark.parametrize("case", CASES, ids=CASE_IDS)
+def test_manual_hessian_backward(case: Dict):
+    """Test manual execution of a Hessian backward pass.
+
+    Only checks for same Hessians w.r.t. the first input. Does not check the
+    intermediate Hessians.
+
+    Args:
+        case: A dictionary describing a test case.
+    """
+    layers, X = set_up(case)
+
+    true_hess_X = autograd_input_hessian(Sequential(*layers), X)
+
+    activations = manual_forward(layers, X)
+    gradients = manual_backward(layers, activations)
+    hessians = manual_hessian_backward(layers, activations, gradients)
+
+    assert allclose(true_hess_X, hessians[0])
