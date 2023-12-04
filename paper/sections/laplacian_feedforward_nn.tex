@@ -7,7 +7,7 @@ The Laplacian follows by taking the trace of the latter.
 Finally, we express the Laplacians gradient w.r.t.
 a single layer's weight $\mW$, i.e.\,$\nicefrac{\partial \Delta u_{\vtheta}}{\partial \mW}$, in terms of $\mW$'s children in the compute graph.
 
-%\subsection{Feed-forward Neural Networks}
+% \subsection{Feed-forward Neural Networks}
 \paragraph{Layer notation} Consider a sequential neural network $u_{\vtheta}$ with depth $L$ that consists of layers $f^{(i)}_{\vtheta^{(i)}}$ with trainable parameters $\vtheta^{(i)} \in \sR^{d^{(i)}}, i=1,\dots, L,$ that transform an input $\vx \in \sR^M$ into a prediction $u_{\vtheta}(\vx)\in \sR^C$ via intermediate representations $\vz^{(i)} \in \sR^{h^{(i)}}, i= 0, \dots, L$,
 \begin{align}
   \begin{split}
@@ -29,17 +29,17 @@ A parameter might be empty, e.g.\,if the layer is an activation layer.
 
 
 
-%\subsection{Derivatives}
+% \subsection{Derivatives}
 
 \paragraph{Flattening} Above, we assumed all quantities ($\vz^{(i)}, \vtheta^{(i)}$) to be vectors.
 In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
 Our index convention to vectorize will be first-varies-fastest, which means column-stacking for a matrix (row index varies first, column index varies second).
 We denote the flattening operation by $\flatten(\cdot)$.
-Very useful is the so called \emph{vec-trick} stating that 
+Very useful is the so called \emph{vec-trick} stating that
 \begin{equation}\label{eq:vecTrick}
-    \flatten(AXB) = (B^\top\otimes A)\flatten{X}
+  \flatten(AXB) = (B^\top\otimes A)\flatten{X}
 \end{equation}
-for matrices $A, X, B$. In particular, this shows that $B^\top\otimes A$ is the  matrix representing the linear mapping $X\mapsto AXB$ and hence $J_X(AXB) = B^\top\otimes A$. 
+for matrices $A, X, B$. In particular, this shows that $B^\top\otimes A$ is the  matrix representing the linear mapping $X\mapsto AXB$ and hence $J_X(AXB) = B^\top\otimes A$.
 
 \paragraph{Jacobian \& Hessian} The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
 Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
@@ -74,13 +74,13 @@ u = 1$, then backpropagate the error via VJPs,
 for $i = L, \dots, 1$, and initialization $\grad{\vz^{(L)}}u = \grad{u}u = 1$ of the recursion.
 This yields the gradients of $u$ w.r.t.\,all intermediate representations and parameters.
 
-\paragraph{Hessian backpropagation} 
+\paragraph{Hessian backpropagation}
 Recall the Hessian chain rule
 \begin{equation*}
-    %D^2(f\circ g)(x) = D^2f(g(x))(\nabla g(x), \nabla g(x)) + 
-    \nabla^2 (f\circ g) = (J g)^\top\cdot \nabla^2 f(g) \cdot Jg + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k,
+  % D^2(f\circ g)(x) = D^2f(g(x))(\nabla g(x), \nabla g(x)) +
+  \nabla^2 (f\circ g) = (J g)^\top\cdot \nabla^2 f(g) \cdot Jg + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k,
 \end{equation*}
-where $g_i$ dentotes the individual components of $g$, see~\cite{skorski2019chain}. 
+where $g_i$ dentotes the individual components of $g$, see~\cite{skorski2019chain}.
 The recursion for computing Hessians of $u$
 w.r.t.\,intermediate representations and parameters starts by initializing the
 recursion with $\gradsquared{\vz^{(L)}}u = \gradsquared{u} u = 0$, then
@@ -136,7 +136,7 @@ intermediate gradients and Hessians for computing $\gradsquared{\vx}u_{\vtheta}$
 \item $\gradsquared{\vz^{(i-1)}}u$ depends on $\gradsquared{\vz^{(i)}}u$ and $\grad{\vz^{(i)}} u$ due to the recursion in \Cref{eq:hessian-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ and Hessian $\gradsquared{\vz^{(i-1)}}[\vz^{(i)}]_k$ in the Hessian backpropagation \Cref{eq:gradient-backpropagation}.
 \end{itemize}
 
-%\subsection{Laplacian}
+% \subsection{Laplacian}
 
 The Laplacian $\Delta u_{\vtheta}$ follows by taking the trace of
 $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
@@ -148,32 +148,32 @@ $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
 \end{figure}
 
 \paragraph{Hessian backpropagation through nonlinear layers}
-We mostly consider nonlinear layers without trainable parameters and consist of a componentwise nonlinearity $z\mapsto \sigma(z)$ for some $\sigma\colon\mathbb R\to\mathbb R$ and we assume $\sigma$ to be twice continuously differentiable (I guess one ask for weaker things). 
-The Jacobian of such a nonlinear layer is given by 
+We mostly consider nonlinear layers without trainable parameters and consist of a componentwise nonlinearity $z\mapsto \sigma(z)$ for some $\sigma\colon\mathbb R\to\mathbb R$ and we assume $\sigma$ to be twice continuously differentiable (I guess one ask for weaker things).
+The Jacobian of such a nonlinear layer is given by
 \begin{equation}
-    \jac_{\vz^{(i-1)}}\vz^{(i)} = \operatorname{diag}(\sigma'(\vz^{(i-1)}))
+  \jac_{\vz^{(i-1)}}\vz^{(i)} = \operatorname{diag}(\sigma'(\vz^{(i-1)}))
 \end{equation}
 and the %Hessian acts as
-%\begin{equation*}
-%    (\nabla^2_{\vz^{(i-1)}\vz^{(i)})(u,v) = u\odot v\odot \sigma''(z). %u^\top \operatorname{diag}(\sigma''(\vz_{i-1}))v = (v\top)
-%\end{equation*}
+% \begin{equation*}
+%   (\nabla^2_{\vz^{(i-1)}\vz^{(i)})(u,v) = u\odot v\odot \sigma''(z). %u^\top \operatorname{diag}(\sigma''(\vz_{i-1}))v = (v\top)
+% \end{equation*}
 Hessian terms are given by
 \begin{equation}
-    \nabla^2_{\vz^{(i-1)}}[\vz^{(i)}]_k = \sigma''(\vz^{(i-1)}_k) e_k  e_k^\top.
+  \nabla^2_{\vz^{(i-1)}}[\vz^{(i)}]_k = \sigma''(\vz^{(i-1)}_k) e_k  e_k^\top.
 \end{equation}
 \toodoo{Someone should definitely double check}
 With these two identities we can backpropogate the input Hessian through the non-trainable nonlinear layers and obtain
 \begin{equation}
-    \gradsquared{\vz^{(i-1)}}u
-    =
-      \left( \operatorname{diag}(\sigma'(\vz^{(i-1)})) \right)^{\top}
-      \gradsquared{\vz^{(i)}}u
-      \left( \operatorname{diag}(\sigma'(\vz^{(i-1)})) \right)
-      +
-      \sum_{k=1}^{h^{(i)}}
-      \operatorname{diag}(\sigma''(\vz^{(i-1)_k})
-      e_k e_k^\top
-      [\grad{\vz^{(i)}} u]_k\,,
+  \gradsquared{\vz^{(i-1)}}u
+  =
+  \left( \operatorname{diag}(\sigma'(\vz^{(i-1)})) \right)^{\top}
+  \gradsquared{\vz^{(i)}}u
+  \left( \operatorname{diag}(\sigma'(\vz^{(i-1)})) \right)
+  +
+  \sum_{k=1}^{h^{(i)}}
+  \operatorname{diag}(\sigma''(\vz^{(i-1)_k})
+  e_k e_k^\top
+  [\grad{\vz^{(i)}} u]_k\,,
 \end{equation}
 
 \paragraph{Hessian backpropagation through a linear layer} To de-clutter the dependency graph of \Cref{fig:hbp-dependencies}, we will now consider the dependency of $\Delta u_{\vtheta}$ w.r.t.\,the weight of a single layer.
@@ -209,9 +209,9 @@ Laplacian, highlighting its three direct children,
   \end{split}
 \end{align}
 
-\subsection{Computing the parameter derivative of the input Laplacian} 
-Recall, that the entries of the Fisher are composed from parameter derivatives of the input Laplacian, see~\eqref{eq:FisherInterior}. 
-Here, we only consider architectures where only the linear layers possess trainable parameters and therefore we compute the parameter $\partial_{\theta} \Delta u_\theta$ of the input Laplacian. 
+\subsection{Computing the parameter derivative of the input Laplacian}
+Recall, that the entries of the Fisher are composed from parameter derivatives of the input Laplacian, see~\eqref{eq:FisherInterior}.
+Here, we only consider architectures where only the linear layers possess trainable parameters and therefore we compute the parameter $\partial_{\theta} \Delta u_\theta$ of the input Laplacian.
 
 We have now identified the direct children of $\mW^{(i)}$ in the Laplacian's compute graph.
 This allows us to write down its derivative $\grad{\mW^{(i)}} \Delta u$, which---by the chain rule---is simply the accumulated backpropagated error from the direct children:
@@ -243,8 +243,8 @@ This allows us to write down its derivative $\grad{\mW^{(i)}} \Delta u$, which--
   \end{split}
 \end{align}
 
-%\paragraph{The Fisher} 
-With the Laplacian's gradient \Cref{eq:laplacian-gradient}, we can write down the Fisher block (up to summation over the data) for $\mW^{(i)}$ as 
+% \paragraph{The Fisher}
+With the Laplacian's gradient \Cref{eq:laplacian-gradient}, we can write down the Fisher block (up to summation over the data) for $\mW^{(i)}$ as
 \begin{align}\label{eq:fisher}
   \begin{split}
     \mF^{(i)}
@@ -296,13 +296,13 @@ With the Laplacian's gradient \Cref{eq:laplacian-gradient}, we can write down th
 \end{align}
 
 The Fisher consists of nine different terms.
-Eventually, we would like to approximate it with a single Kronecker product, like KFAC~\citep{martens2015optimizing}. 
+Eventually, we would like to approximate it with a single Kronecker product, like KFAC~\citep{martens2015optimizing}.
 \toodoo{We could either work with the diagonal terms, or if all terms admit Kronecker representations we could also approximate this sum of Kroneckers by the Kronecker of the sums...?}
 We begin by studying the diagonal terms $\mF_{\textcolor{blue}{\bullet}, \textcolor{blue}{\bullet}}^{(i)}$ and call them zeroth, first and second order diagonal terms for $\textcolor{blue}{\bullet} = \vz, \nabla u, \nabla^2 u$, respectively.
 \toodoo{Other question: might it be possible to write the nine terms as a Kronecker product of a sum of 3 matrices with a sum of 3 matrices?}
 
-\paragraph{Computing $\mJ_{\mW^{(i)}}\textcolor{blue}{\bullet}$} 
-Let us first compute the Jacobians $\mJ_{\mW^{(i)}}\textcolor{blue}{\bullet}$ for which we envoke~\eqref{eq:spatialDerivatives}. 
+\paragraph{Computing $\mJ_{\mW^{(i)}}\textcolor{blue}{\bullet}$}
+Let us first compute the Jacobians $\mJ_{\mW^{(i)}}\textcolor{blue}{\bullet}$ for which we envoke~\eqref{eq:spatialDerivatives}.
 We already know the Jacobian from the linear layer's forward pass,
 \begin{subequations}\label{eq:fisher-jacobians}
   \begin{align}
@@ -313,7 +313,7 @@ We already know the Jacobian from the linear layer's forward pass,
     \jac_{\mW}\left( \mW^{\top} \vx \right) = \mI \otimes \vx^{\top}\,,
   \end{align}
   and the Jacobian from the Hessian backpropagation is
-  \begin{align}
+  \begin{align}\label{subeq:fisher-jacobians-hbp}
     \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes \mW^{\top}\mX + \mI \otimes \mW^{\top}\mX^{\top}\,.
   \end{align}
 \end{subequations}
@@ -321,30 +321,88 @@ We already know the Jacobian from the linear layer's forward pass,
   Might be worth to double-check for correctness.}
 
 JM double checked and got the following:
-Using the vec-trick~\eqref{eq:vecTrick} we obtain 
+Using the vec-trick~\eqref{eq:vecTrick} we obtain
 \[  \jac_{\mW}(\mW \vx) = \vx^\top\otimes \mI \]
-and 
+and
 \[ \jac_\mW(\flatten(\mW^\top \vx)) = \jac_\mW(\flatten(\vx^\top\mW)^\top)) = \jac_\mW(K\flatten(\vx^\top\mW))) = K\jac_\mW(\flatten(\vx^\top\mW))) = K (\mI\otimes \vx^\top),  \]
-where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A) = \flatten(A^\top)$. 
-%I think this does not agree with $\mI\otimes \vx^\top$ as 
-%Note that we need the commutation matrix
-%\[ (\mI\otimes \vx) \]
-Note that 
+where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A) = \flatten(A^\top)$.
+% I think this does not agree with $\mI\otimes \vx^\top$ as
+% Note that we need the commutation matrix
+% \[ (\mI\otimes \vx) \]
+Note that
 \[ (W+A)^\top X (W+A) - W^\top X W = W^\top X A + A^\top X W + O(\lVert A \rVert^2) \]
-and hence 
+and hence
 \[ \jac_W(W^\top X W)A = . \]
-By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW^\top)\flatten(\mX)$ and hence 
+By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW^\top)\flatten(\mX)$ and hence
 \[ \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes (\mW^{\top}\mX) + K (\mI \otimes (\mW^{\top}\mX^{\top})). \]
 \toodoo{Ok, I thought this made sense, but now it confuses me...}
 
+At a first glance, it looks like the Fisher consists of 16 terms, as there are 4 terms from the Jacobians in \Cref{eq:fisher-jacobians}.
+However, we can simplify into 9 terms, as the Jacobian from \Cref{subeq:fisher-jacobians-hbp} uses a symmetric $\mX$ (the Hessian w.r.t.\,the layer's output).
+So we have
+\begin{align*}
+  \jac_{\mW}\left( \mW^{\top} \left( \gradsquared{\vz^{(i)}}u  \right)\mW \right)
+  &= \mI \otimes
+    \left[
+    \mW^{\top} \left( \gradsquared{\vz^{(i)}}u  \right)
+    \right]
+    +
+    \mI \otimes
+    \left[
+    \mW^{\top}\left( \gradsquared{\vz^{(i)}}u  \right)^{\top}
+    \right]
+  \\
+  &=
+    2 \mI \otimes
+    \left[
+    \mW^{\top} \left( \gradsquared{\vz^{(i)}}u \right)
+    \right]
+    \,.
+\end{align*}
+We can now write down the gradient from \Cref{eq:laplacian-gradient}, whose
+self-outer product forms the Gramian for a linear layer, as
+\begin{align*}
+  \begin{split}
+    \grad{\mW^{(i)}} \Delta u_{\vtheta}
+    &=
+      \underbrace{
+      \left(
+      {\vz^{(i-1)}}^\top\otimes \mI
+      \right)^{\top}
+      \grad{\vz^{(i)}}\Delta u
+      }_{(1)}
+      +
+      \underbrace{
+      \left(
+      \mI \otimes \grad{\vz^{(i)}}u
+      \right)^{\top}
+      \grad{\grad{\vz^{(i-1)}}u}\Delta u
+      }_{(2)}
+      +
+      \underbrace{
+      2
+      \left(
+      \mI \otimes
+      \left[
+      {\mW^{(i)}}^{\top} \left( \gradsquared{\vz^{(i)}}u \right)
+      \right]
+      % \jac_{\mW^{(i)}}\gradsquared{\vz^{(i-1)}}u
+      \right)^{\top}
+      \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u
+      }_{(3)}
+      \,,
+  \end{split}
+\end{align*}
+where (1) is the contribution from the forward pass, (2) is the contribution from the gradient backpropagation, and (3) is the contribution from the Hessian backpropagation.
+\toodoo{Visualize the different contributions on a $3\times 3$ grid.}
 
 The Jacobians from \Cref{eq:fisher-jacobians} allow to express the Fisher in
-terms of Kronecker-structured expressions consisting of 16 terms in total.
+terms of Kronecker-structured expressions consisting of 9 terms in total.
 
 \toodoo{F.D.\,Write down the full expression for the Fisher.
-  Propose ways to Kronecker-approximate each of the 16 terms, such that we end up with a single Kronecker product in the end.}
+  Propose ways to Kronecker-approximate each of the 9 terms, such that we end up with a single Kronecker product in the end.}
 
-Overall, with~\eqref{eq:spatialDerivatives} this yields 
+Overall, with~\eqref{eq:spatialDerivatives} this yields
 \begin{align}
   \begin{split}
     \jac_{\mW^{(i)}}\vz^{(i)}
@@ -353,12 +411,12 @@ Overall, with~\eqref{eq:spatialDerivatives} this yields
     \\
     \jac_{\mW^{(i)}}\grad{\vz^{(i-1)}}u
     &=
-      I\otimes 
+      I\otimes
       \grad{\vz^{(i)}}u
     \\
     \jac_{\mW^{(i)}}\gradsquared{\vz^{(i-1)}}u
     &=
-    \mI \otimes (\mW^{\top}\gradsquared{\vz^{(i)}}u) + K (\mI \otimes (\mW^{\top}(\gradsquared{\vz^{(i)}}u)^{\top}))
+      \mI \otimes (\mW^{\top}\gradsquared{\vz^{(i)}}u) + K (\mI \otimes (\mW^{\top}(\gradsquared{\vz^{(i)}}u)^{\top}))
   \end{split}
 \end{align}
 
@@ -406,7 +464,7 @@ when $\textcolor{blue}{\bullet} = \textcolor{red}{\bullet} = \vz^{(i)}$
   \end{split}
 \end{align}
 \toodoo{I think the subscript should be $\nabla_{\vz^{(i)}} \Delta u$ instead of $\nabla_{\vz^{(i-1)}} \Delta u$ or am I missing something? }
-Note however, that in comparison to traditional KFAC, there are Laplacian terms. 
+Note however, that in comparison to traditional KFAC, there are Laplacian terms.
 \Cref{eq:original-kfac} illustrates that the Kronecker structure emerges from
 the Jacobians. So we need to investigate these objects closer for the remaining
 terms of \Cref{eq:fisher}.
