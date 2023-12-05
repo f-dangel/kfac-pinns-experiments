@@ -33,6 +33,8 @@ def main():
     activations = manual_forward(layers, X)
     gradients = manual_backward(layers, activations)
     hessians = manual_hessian_backward(layers, activations, gradients)
+    # X has shape [batch_size, D_in]
+    # hessian_X has shape [batch_size, D_in, D_in]
     hessian_X = hessians[0]
     laplacian_X = einsum(hessian_X, "batch d d ->")
 
