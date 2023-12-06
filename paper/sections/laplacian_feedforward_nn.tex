@@ -131,7 +131,7 @@ per-layer parameter and feature Hessians $\gradsquared{\vz^{(i)}}u,
 \gradsquared{\vtheta^{(i)}}u$. In \Cref{fig:hbp-dependencies} we depict the dependencies of
 intermediate gradients and Hessians for computing $\gradsquared{\vx}u_{\vtheta}$:
 \begin{itemize}
-\item $\grad{\vz^{(i-1)}}u$ depends on $\grad{\vz^{(i)}}$ due to the recursion in \Cref{eq:gradient-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ in the gradient backpropagation \Cref{eq:gradient-backpropagation}.
+\item $\grad{\vz^{(i-1)}}u$ depends on $\grad{\vz^{(i)}}u$ due to the recursion in \Cref{eq:gradient-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ in the gradient backpropagation \Cref{eq:gradient-backpropagation}.
 
 \item $\gradsquared{\vz^{(i-1)}}u$ depends on $\gradsquared{\vz^{(i)}}u$ and $\grad{\vz^{(i)}} u$ due to the recursion in \Cref{eq:hessian-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ and Hessian $\gradsquared{\vz^{(i-1)}}[\vz^{(i)}]_k$ in the Hessian backpropagation \Cref{eq:gradient-backpropagation}.
 \end{itemize}
@@ -148,7 +148,7 @@ $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
 \end{figure}
 
 \paragraph{Hessian backpropagation through nonlinear layers}
-We mostly consider nonlinear layers without trainable parameters and consist of a componentwise nonlinearity $z\mapsto \sigma(z)$ for some $\sigma\colon\mathbb R\to\mathbb R$ and we assume $\sigma$ to be twice continuously differentiable (I guess one ask for weaker things). 
+We mostly consider nonlinear layers without trainable parameters that consist of a componentwise nonlinearity $z\mapsto \sigma(z)$ for some $\sigma\colon\mathbb R\to\mathbb R$ and we assume $\sigma$ to be twice continuously differentiable (I guess one can ask for weaker things). 
 The Jacobian of such a nonlinear layer is given by 
 \begin{equation}
     \jac_{\vz^{(i-1)}}\vz^{(i)} = \operatorname{diag}(\sigma'(\vz^{(i-1)}))
@@ -161,7 +161,7 @@ Hessian terms are given by
 \begin{equation}
     \nabla^2_{\vz^{(i-1)}}[\vz^{(i)}]_k = \sigma''(\vz^{(i-1)}_k) e_k  e_k^\top.
 \end{equation}
-\toodoo{Someone should definitely double check}
+\toodoo{Someone should definitely double check. I could not find a mistake -- MZ}
 With these two identities we can backpropogate the input Hessian through the non-trainable nonlinear layers and obtain
 \begin{equation}
     \gradsquared{\vz^{(i-1)}}u
@@ -322,7 +322,7 @@ We already know the Jacobian from the linear layer's forward pass,
 
 JM double checked and got the following:
 Using the vec-trick~\eqref{eq:vecTrick} we obtain 
-\[  \jac_{\mW}(\mW \vx) = \vx^\top\otimes \mI \]
+\[  \jac_{\mW}(\flatten(\mW \vx)) = \vx^\top\otimes \mI \]
 and 
 \[ \jac_\mW(\flatten(\mW^\top \vx)) = \jac_\mW(\flatten(\vx^\top\mW)^\top)) = \jac_\mW(K\flatten(\vx^\top\mW))) = K\jac_\mW(\flatten(\vx^\top\mW))) = K (\mI\otimes \vx^\top),  \]
 where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A) = \flatten(A^\top)$. 
@@ -332,11 +332,10 @@ where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A)
 Note that 
 \[ (W+A)^\top X (W+A) - W^\top X W = W^\top X A + A^\top X W + O(\lVert A \rVert^2) \]
 and hence 
-\[ \jac_W(W^\top X W)A = . \]
-By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW^\top)\flatten(\mX)$ and hence 
-\[ \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes (\mW^{\top}\mX) + K (\mI \otimes (\mW^{\top}\mX^{\top})). \]
-\toodoo{Ok, I thought this made sense, but now it confuses me...}
-
+\[ \jac_W(\mW^\top \mX \mW)A = \mW^\top \mX \flatten(A) + A^\top \mX \mW = \mI \otimes (\mW^{\top}\mX) A + (\mI \otimes (\mW^{\top}\mX^{\top})) K A. \]
+\toodoo{someone should double check with the commutation matrices, maybe it doesn't really play a role here?}
+%By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW^\top)\flatten(\mX)$ and hence 
+%\[ \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes (\mW^{\top}\mX) + (\mI \otimes (\mW^{\top}\mX^{\top}))K. \]
 
 The Jacobians from \Cref{eq:fisher-jacobians} allow to express the Fisher in
 terms of Kronecker-structured expressions consisting of 16 terms in total.
@@ -364,9 +363,7 @@ Overall, with~\eqref{eq:spatialDerivatives} this yields
 
 
 \paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
-In order to evaluate the Fisher we also need to compute the terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ for all children, more specifically $\grad{\vz^{(i)}}\Delta u$, $\grad{\grad{\vz^{(i-1)}}u}\Delta u$ and $\grad{\gradsquared{\vz^{(i-1)}}u}\Delta u$.
-\toodoo{DO we need to understand how we compute this? We can definitely do this via backprop, but then additional terms would appear I guess}
-
+The terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ are automatically computed when computing the gradient of the loss via backdrop. 
 
 \paragraph{Zeroth order diagonal term}
 Note that one of the nine terms is the term similar to the original KFAC paper, namely
