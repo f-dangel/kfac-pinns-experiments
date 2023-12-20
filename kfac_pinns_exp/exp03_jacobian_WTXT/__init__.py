@@ -2,7 +2,7 @@
 
 Summary:
     1. The Jacobian `∂Z / ∂W = ∂vec(Z) / ∂vec(W)` is given by
-        `∂Z / ∂W = I ⊗ (Wᵀ X) + K (I ⊗ (Wᵀ X))ᵀ` where `⊗` denotes the Kronecker
+        `∂Z / ∂W = I ⊗ (Wᵀ X) + K (I ⊗ (Wᵀ Xᵀ))` where `⊗` denotes the Kronecker
         product and `K` is the permutation matrix that acts on a row-space formed
         by the indices `(m, n)` of `W` and applies the re-ordering `(m, n) ↦ (n, m)`.
 

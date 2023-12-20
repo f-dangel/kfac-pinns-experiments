@@ -314,50 +314,131 @@ We already know the Jacobian from the linear layer's forward pass,
   \end{align}
   and the Jacobian from the Hessian backpropagation is
   \begin{align}\label{subeq:fisher-jacobians-hbp}
-    \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes \mW^{\top}\mX + \mI \otimes \mW^{\top}\mX^{\top}\,.
+    \jac_{\mW}\left( \mW^{\top} \mX \mW \right)
+    =
+    \mI \otimes \mW^{\top}\mX
+    +
+    \mK \left(
+    \mI
+    \otimes
+    \mW^{\top}\mX^{\top}
+    \right)\,,
   \end{align}
 \end{subequations}
-\toodoo{F.D.\,derived the Jacobians from \Cref{eq:fisher-jacobians} by hand.
-  Might be worth to double-check for correctness.}
-
-JM double checked and got the following:
-Using the vec-trick~\eqref{eq:vecTrick} we obtain
-\[  \jac_{\mW}(\mW \vx) = \vx^\top\otimes \mI \]
-and
-\[ \jac_\mW(\flatten(\mW^\top \vx)) = \jac_\mW(\flatten(\vx^\top\mW)^\top)) = \jac_\mW(K\flatten(\vx^\top\mW))) = K\jac_\mW(\flatten(\vx^\top\mW))) = K (\mI\otimes \vx^\top),  \]
-where $K$ is the commutation matrix of the right dimensions, i.e., $K\flatten(A) = \flatten(A^\top)$.
-% I think this does not agree with $\mI\otimes \vx^\top$ as
-% Note that we need the commutation matrix
-% \[ (\mI\otimes \vx) \]
-Note that
-\[ (W+A)^\top X (W+A) - W^\top X W = W^\top X A + A^\top X W + O(\lVert A \rVert^2) \]
-and hence
-\[ \jac_W(W^\top X W)A = . \]
-By the vec-trick~\eqref{eq:vecTrick} we have $\flatten(\mW^\top\mX \mW) = (\mW^\top\otimes \mW^\top)\flatten(\mX)$ and hence
-\[ \jac_{\mW}\left( \mW^{\top} \mX \mW \right) = \mI \otimes (\mW^{\top}\mX) + K (\mI \otimes (\mW^{\top}\mX^{\top})). \]
-\toodoo{Ok, I thought this made sense, but now it confuses me...}
-
+where $\mK \in \sR^{\dim(\mZ) \times \dim(\mZ)}$ (denoting $\mZ := \mW^{\top}\mX \mW$) is a permutation matrix that, when multiplied onto a vector whose basis corresponds to that of the flattened output $\mZ$, modifies the order from first-varies-fastest into last-varies-fastest, i.e.
+\begin{equation*}
+  \mK \flatten(\mZ) = \flatten(\mZ^{\top})\,.
+\end{equation*}
+Re-introducing the layer indices (\eqref{eq:spatialDerivatives}), this yields
+\begin{align}
+  \begin{split}
+    \jac_{\mW^{(i)}}\vz^{(i)}
+    &=
+      {\vz^{(i-1)}}^\top\otimes \mI
+    \\
+    \jac_{\mW^{(i)}}\grad{\vz^{(i-1)}}u
+    &=
+      \mI\otimes
+      \grad{\vz^{(i)}}u
+    \\
+    \jac_{\mW^{(i)}}\gradsquared{\vz^{(i-1)}}u
+    &=
+      \mI \otimes
+      \left[
+      {\mW^{(i)}}^{\top}
+      \left(
+      \gradsquared{\vz^{(i)}}u
+      \right)
+      \right]
+      +
+      \mK
+      \left(
+      \mI \otimes
+      \left[
+      {\mW^{(i)}}^{\top}
+      \left(
+      \gradsquared{\vz^{(i)}}u
+      \right)^{\top}
+      \right]
+      \right)
+  \end{split}
+\end{align}
+We will now use symmetries in the objects used during Hessian backpropagation to simplify those equations further.
 At a first glance, it looks like the Fisher consists of 16 terms, as there are 4 terms from the Jacobians in \Cref{eq:fisher-jacobians}.
-However, we can simplify into 9 terms, as the Jacobian from \Cref{subeq:fisher-jacobians-hbp} uses a symmetric $\mX$ (the Hessian w.r.t.\,the layer's output).
-So we have
+However, we can simplify into 9 terms:
+
+First, $\gradsquared{\vz^{(i)}}u$ is symmetric, that is
 \begin{align*}
-  \jac_{\mW}\left( \mW^{\top} \left( \gradsquared{\vz^{(i)}}u  \right)\mW \right)
-  &= \mI \otimes
-    \left[
-    \mW^{\top} \left( \gradsquared{\vz^{(i)}}u  \right)
-    \right]
-    +
+  \jac_{\mW^{(i)}}\left( {\mW^{(i)}}^{\top} \left( \gradsquared{\vz^{(i)}}u  \right)\mW^{(i)} \right)
+  &=
     \mI \otimes
     \left[
-    \mW^{\top}\left( \gradsquared{\vz^{(i)}}u  \right)^{\top}
+    {\mW^{(i)}}^{\top} \left( \gradsquared{\vz^{(i)}}u  \right)
     \right]
-  \\
-  &=
-    2 \mI \otimes
+    +
+    \mK
+    \left(
+    \mI \otimes
     \left[
-    \mW^{\top} \left( \gradsquared{\vz^{(i)}}u \right)
+    {\mW^{(i)}}^{\top}
+    \left(
+    \gradsquared{\vz^{(i)}}u
+    \right)
     \right]
-    \,.
+    \right)
+    \shortintertext{and the transposed Jacobian is}
+  &\mI \otimes
+    \left[
+    \left( \gradsquared{\vz^{(i)}}u  \right) \mW^{(i)}
+    \right]
+    +
+    \left(
+    \mI \otimes
+    \left[
+    \left(
+    \gradsquared{\vz^{(i)}}u
+    \right)
+    \mW^{(i)}
+    \right]
+    \right)
+    \mK^{\top}\,.
+\end{align*}
+Second, we multiply the transpose Jacobian onto $\grad{\gradsquared{\vz^{(i-1)}}u}\Delta u$, which inherits symmetry from the Hessian, $[\grad{\gradsquared{\vz^{(i-1)}}u}\Delta u]_{j,k} = [\grad{\gradsquared{\vz^{(i-1)}}u}\Delta u]_{k,j}$.
+Due to this symmetry, the action of $\mK$ (or $\mK^{\top}$) does not alter it,
+\begin{align*}
+  \mK^{\top}\left( \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u \right) = \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u\,.
+\end{align*}
+In other words, it does not matter how we flatten (first- or last-varies-fastest).
+This simplifies the VJP to
+\begin{align*}
+  \left(
+  \mI \otimes
+  \left[
+  \left( \gradsquared{\vz^{(i)}}u  \right) \mW^{(i)}
+  \right]
+  \right)
+  \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u
+  +
+  \left(
+  \mI \otimes
+  \left[
+  \left(
+  \gradsquared{\vz^{(i)}}u
+  \right)
+  \mW^{(i)}
+  \right]
+  \right)
+  \mK^{\top}
+  \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u
+  =
+  2 \left(
+  \mI \otimes
+  \left[
+  \left( \gradsquared{\vz^{(i)}}u  \right) \mW^{(i)}
+  \right]
+  \right)
+  \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u
+  \,.
 \end{align*}
 We can now write down the gradient from \Cref{eq:laplacian-gradient}, whose
 self-outer product forms the Gramian for a linear layer, as
@@ -384,10 +465,9 @@ self-outer product forms the Gramian for a linear layer, as
       \left(
       \mI \otimes
       \left[
-      {\mW^{(i)}}^{\top} \left( \gradsquared{\vz^{(i)}}u \right)
+      \left( \gradsquared{\vz^{(i)}}u \right) \mW^{(i)}
       \right]
-      % \jac_{\mW^{(i)}}\gradsquared{\vz^{(i-1)}}u
-      \right)^{\top}
+      \right)
       \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u
       }_{(3)}
       \,,
@@ -402,23 +482,6 @@ terms of Kronecker-structured expressions consisting of 9 terms in total.
 \toodoo{F.D.\,Write down the full expression for the Fisher.
   Propose ways to Kronecker-approximate each of the 9 terms, such that we end up with a single Kronecker product in the end.}
 
-Overall, with~\eqref{eq:spatialDerivatives} this yields
-\begin{align}
-  \begin{split}
-    \jac_{\mW^{(i)}}\vz^{(i)}
-    &=
-      {\vz^{(i-1)}}^\top\otimes I
-    \\
-    \jac_{\mW^{(i)}}\grad{\vz^{(i-1)}}u
-    &=
-      I\otimes
-      \grad{\vz^{(i)}}u
-    \\
-    \jac_{\mW^{(i)}}\gradsquared{\vz^{(i-1)}}u
-    &=
-      \mI \otimes (\mW^{\top}\gradsquared{\vz^{(i)}}u) + K (\mI \otimes (\mW^{\top}(\gradsquared{\vz^{(i)}}u)^{\top}))
-  \end{split}
-\end{align}
 
 
 \paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
