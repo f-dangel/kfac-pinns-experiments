@@ -270,14 +270,15 @@ def manual_hook_gramian(
             layer_hess_output: Tensor,
             accumulator: Tensor = gram_grads,
         ) -> None:
-            """Backward hook which computes the Gram gradients from the Hessian backward pass.
+            """Backward hook computing Gram gradients from the Hessian backward pass.
 
             Modifies `gram_grads`.
 
             Args:
-                grad_hess_input: Gradient of the Laplacian w.r.t. the neural network's Hessian
-                    w.r.t. the layer input.
-                layer_hess_output: Hessian of the neural network w.r.t. the layer's output.
+                grad_hess_input: Gradient of the Laplacian w.r.t. the neural network's
+                    Hessian w.r.t. the layer input.
+                layer_hess_output: Hessian of the neural network w.r.t. the layer's
+                    output.
                 accumulator: Tensor to accumulate the Gram gradients in.
             """
             accumulator.add_(
