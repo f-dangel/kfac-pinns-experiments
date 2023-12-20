@@ -71,7 +71,7 @@ def autograd_gramian(model: Module, X: Tensor, param_names: List[str]) -> Tensor
 
         Args:
             x: Un-batched 1d input.
-            param: The parameters forming the block of the Gramian in same order as
+            params: The parameters forming the block of the Gramian in same order as
                 supplied in `param_names`.
 
         Returns:
