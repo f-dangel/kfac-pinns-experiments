@@ -287,7 +287,10 @@ def main():
 
             # 1) Laplacian and Gramian via autodiff (functorch)
             param_name = f"{layer_idx}.{name}"
-            gramian1 = autograd_gramian(model, X, param_name)
+            param = model.get_parameter(param_name)
+            gramian1 = autograd_gramian(model, X, [param_name]).reshape(
+                *param.shape, *param.shape
+            )
 
             # 2) manual Laplacian, gradients for Gramian via autograd
             gramian2 = manual_laplace_autograd_gramian(layers, X, layer_idx, name)

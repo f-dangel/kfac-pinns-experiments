@@ -1,7 +1,9 @@
 """Utility functions for automatic differentiation."""
 
+from typing import List
+
 from einops import einsum
-from torch import Tensor
+from torch import Tensor, cat
 from torch.func import functional_call, grad, hessian, vmap
 from torch.nn import Module, Parameter
 
@@ -46,64 +48,73 @@ def autograd_input_hessian(model: Module, X: Tensor) -> Tensor:
     return hess_f_X(X)
 
 
-def autograd_gramian(model: Module, X: Tensor, param_name: str) -> Tensor:
-    """Compute the model Laplacian's Gramian block stemming from a parameter.
+def autograd_gramian(model: Module, X: Tensor, param_names: List[str]) -> Tensor:
+    """Compute a block of the model Laplacian's Gramian.
 
     Args:
         model: The model whose Gramian will be computed. Must produce
             scalars as output.
         X: The input to the model. First dimension is the batch dimension.
-        param_name: The name of the parameter whose Gramian block is computed.
+        param_names: List of unique parameter names forming the block.
 
     Returns:
-        The Gramian block of the model Laplacian w.r.t. the parameter.
-        If `θ` is the parameter, its Gramian has shape `[*θ.shape, *θ.shape]`:
-        `∑ᵢ gᵢ @ gᵢᵀ` where `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}`.
+        The Gramian block of the model Laplacian w.r.t. the flattened and concatenated
+        parameters. If `θ` is the flattened and concatenated parameter, its Gramian has
+        shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}`.
     """
-    # freeze all other parameters
-    param_dict = {name: p for name, p in model.named_parameters() if name != param_name}
+    frozen = {
+        name: p for name, p in model.named_parameters() if name not in param_names
+    }
 
-    def f(x: Tensor, param: Parameter) -> Tensor:
+    def f(x: Tensor, *params: Parameter) -> Tensor:
         """Forward pass on an un-batched input.
 
         Args:
             x: Un-batched 1d input.
-            param: The parameter whose Gramian block is computed.
+            param: The parameters forming the block of the Gramian in same order as
+                supplied in `param_names`.
 
         Returns:
             Un-batched scalar output.
         """
-        return functional_call(model, {**param_dict, param_name: param}, x)
+        variable = dict(zip(param_names, params))
+        return functional_call(model, frozen | variable, x)
 
-    def laplacian(x: Tensor, param: Parameter) -> Tensor:
+    def laplacian(x: Tensor, *params: Parameter) -> Tensor:
         """Compute the Laplacian of the model for an un-batched input.
 
         Args:
             x: Un-batched 1d input.
-            param: The parameter whose Gramian block is computed.
+            params: The parameters forming the block of the Gramian in same order as
+                supplied in `param_names`.
 
         Returns:
             The scalar-valued Laplacian, i.e. Tr[∇ₓ²f(x, θ)].
         """
-        hess_f = hessian(f, 0)  # (x, θ) → ∇ₓ²f(x, θ)
-        return einsum(hess_f(x, param), "batch d d ->")
+        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇ₓ²f(x, θ)
+        return einsum(hess_f(x, *params), "batch d d ->")
 
-    def gramian(x: Tensor, param: Parameter) -> Tensor:
+    def gramian(x: Tensor, *params: Parameter) -> Tensor:
         """Compute the Gramian block of the model Laplacian for an un-batched input.
 
         Args:
             x: Un-batched 1d input.
-            param: The parameter whose Gramian block is computed.
+            params: The parameters forming the block of the Gramian in same order as
+                supplied in `param_names`.
 
         Returns:
             The Gramian block of the model Laplacian, i.e. `g @ gᵀ` where
-            `g = ∇_θ {Tr[∇ₓ²f(x, θ)}`. If `θ` is the parameter, the Gramian has shape
-            `[*θ.shape, *θ.shape]`.
+            `g = ∇_θ {Tr[∇ₓ²f(x, θ)}`. If `θ` are the flattened and concatenated
+            parameters, the Gramian has shape `[*θ.shape, *θ.shape]`.
         """
-        grad_laplacian = grad(laplacian, 1)  # (x, θ) → ∇_θ {Tr[∇ₓ²f(x, θ)]}
-        d_laplacian_flat = grad_laplacian(x, param).detach().flatten()
-        gramian_flat = einsum(d_laplacian_flat, d_laplacian_flat, "i,j->i j")
-        return gramian_flat.reshape(*param.shape, *param.shape)
+        argnums = tuple(range(1, len(params) + 1))
 
-    param = model.get_parameter(param_name)
-    return sum(gramian(x_n, param) for x_n in X)
+        # (x, θ) → ∇_θ {Tr[∇ₓ²f(x, θ)]}
+        grad_laplacian = grad(laplacian, argnums=argnums)
+
+        gram_grad = grad_laplacian(x, *params)
+        gram_grad = cat([g.detach().flatten() for g in gram_grad])
+        return einsum(gram_grad, gram_grad, "i,j -> i j")
+
+    params = tuple(model.get_parameter(name) for name in param_names)
+    return sum(gramian(x_n, *params) for x_n in X)
