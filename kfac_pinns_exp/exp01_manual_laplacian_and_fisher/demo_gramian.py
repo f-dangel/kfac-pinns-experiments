@@ -1,5 +1,6 @@
 """Demonstrate Gramian computation on a small toy MLP."""
 
+from functools import partial
 from typing import List
 
 from einops import einsum
@@ -160,16 +161,146 @@ def manual_gramian(
     )
 
 
+def manual_hook_gramian(
+    layers: List[Module], X: Tensor, layer_idx: int, param_name: str
+) -> Tensor:
+    """Compute the Gramian of the Laplacian of a parameter. Use tensor hooks.
+
+    Args:
+        layers: List of layers in the model.
+        X: Input data. First dimension is batch dimension.
+        layer_idx: Index of the layer that contains the parameter we want to use to
+            compute the Gramian.
+        param_name: Name of the parameter we want to use to compute the Gramian.
+
+    Returns:
+        Gramian of the neural network's Laplacian w.r.t. the parameter. Has shape
+        `[*p.shape, *p.shape]` where `p` denotes the parameter.
+
+    Raises:
+        NotImplementedError: If the parameter does not live in a linear layer.
+    """
+    if not isinstance(layers[layer_idx], Linear):
+        raise NotImplementedError(
+            f"Gramian only supports Linear layers. Got {layers[layer_idx]}."
+        )
+
+    activations = manual_forward(layers, X)
+    gradients = manual_backward(layers, activations)
+    hessians = manual_hessian_backward(layers, activations, gradients)
+    laplacian = einsum(hessians[0], "batch d d ->")
+
+    # extract quantities required for the Gramian of a layer's parameter
+    layer_input = activations[layer_idx]
+    layer_output = activations[layer_idx + 1]
+    layer_grad_input = gradients[layer_idx]
+    layer_grad_output = gradients[layer_idx + 1]
+    layer_hess_input = hessians[layer_idx]
+    layer_hess_output = hessians[layer_idx + 1]
+
+    # install hooks that accumulate the gradients for the Gramian in `gram_grads`
+    # { ∂(Δu(xᵢ)) / ∂W | i = 1, ..., batch_size }
+    assert isinstance(layers[layer_idx], Linear)
+    param = getattr(layers[layer_idx], param_name)
+    gram_grads = zeros(X.shape[0], *param.shape, device=param.device, dtype=param.dtype)
+
+    if param_name == "bias":
+        # only the layer's output contributes
+        def from_output(grad_output: Tensor, accumulator: Tensor = gram_grads) -> None:
+            accumulator += grad_output.detach()
+
+        layer_output.register_hook(from_output)
+
+    else:
+        assert param_name == "weight"
+        # layer's output, grad_input, and hess_input contribute
+
+        def from_output(
+            grad_output: Tensor, layer_input: Tensor, accumulator: Tensor = gram_grads
+        ) -> None:
+            """Backward hook which computes the Gram gradients from the forward pass.
+
+            Modifies `gram_grads`.
+
+            Args:
+                grad_output: Gradient of the Laplacian w.r.t. the layer's output.
+                layer_input: Layer's input.
+                accumulator: Tensor to accumulate the Gram gradients in.
+            """
+            accumulator.add_(
+                einsum(
+                    grad_output.detach(),
+                    layer_input.detach(),
+                    "batch d_out, batch d_in -> batch d_out d_in",
+                )
+            )
+
+        layer_output.register_hook(partial(from_output, layer_input=layer_input))
+
+        def from_grad_input(
+            grad_grad_input: Tensor,
+            layer_grad_output: Tensor,
+            accumulator: Tensor = gram_grads,
+        ) -> None:
+            accumulator.add_(
+                einsum(
+                    layer_grad_output.detach(),
+                    grad_grad_input.detach(),
+                    "batch d_out, batch d_in -> batch d_out d_in",
+                )
+            )
+
+        layer_grad_input.register_hook(
+            partial(from_grad_input, layer_grad_output=layer_grad_output)
+        )
+
+        def from_hess_input(
+            grad_hess_input: Tensor,
+            layer_hess_output: Tensor,
+            accumulator: Tensor = gram_grads,
+        ) -> None:
+            accumulator.add_(
+                einsum(
+                    grad_hess_input.detach(),
+                    param.detach(),
+                    layer_hess_output.detach(),
+                    "batch d_in1 d_in2, d_out1 d_in1, batch d_out1 d_out2 "
+                    + "-> batch d_out2 d_in2",
+                ),
+                alpha=2.0,
+            )
+
+        layer_hess_input.register_hook(
+            partial(from_hess_input, layer_hess_output=layer_hess_output)
+        )
+
+    # backpropagate
+    laplacian.backward()
+
+    # form the Gramian
+    if param_name == "bias":
+        gramian = einsum(gram_grads, gram_grads, "batch d1, batch d2 -> d1 d2")
+    else:
+        assert param_name == "weight"
+        gramian = einsum(
+            gram_grads,
+            gram_grads,
+            "batch d_out1 d_in1, batch d_out2 d_in2 -> d_out1 d_in1 d_out2 d_in2",
+        )
+    return gramian
+
+
 def main():
     """Compute the Gramian for one weight matrix in a toy MLP.
 
-    We compare three approaches:
+    We compare four approaches:
 
-    1) Computing the Laplacian manually and the Gramian automatically.
-
-    2) Computing both the Laplacian and Gramian manually.
-
-    3) Computing both the Laplacian and Gramian automatically.
+    Approach | Laplacian | Gramian
+    ---------|-----------|---------
+    1        | autograd  | autograd
+    2        | manual    | autograd
+    3        | manual    | manual
+    4        | manual    | hooks
     """
     # setup
     manual_seed(0)
@@ -191,23 +322,27 @@ def main():
         for name in ["weight", "bias"]:
             print(f"\tParameter {name!r}")
 
-            # 1) manual Laplacian, gradients for Gramian via autograd
-            gramian1 = manual_laplace_autograd_gramian(layers, X, layer_idx, name)
+            # 1) Laplacian and Gramian via autodiff (functorch)
+            param_name = f"{layer_idx}.{name}"
+            gramian1 = autograd_gramian(model, X, param_name)
 
-            # 2) manual Laplacian and Gramian
-            gramian2 = manual_gramian(layers, X, layer_idx, name)
-
+            # 2) manual Laplacian, gradients for Gramian via autograd
+            gramian2 = manual_laplace_autograd_gramian(layers, X, layer_idx, name)
             same_1_2 = allclose(gramian1, gramian2)
-            print(f"\t\tsame(manual+auto, manual)? {same_1_2}")
+            print(f"\t\tsame(manual+auto, auto)? {same_1_2}")
             assert same_1_2
 
-            # 3) Laplacian and Gramian via autodiff (functorch)
-            param_name = f"{layer_idx}.{name}"
-            gramian3 = autograd_gramian(model, X, param_name)
-
+            # 3) manual Laplacian and Gramian
+            gramian3 = manual_gramian(layers, X, layer_idx, name)
             same_1_3 = allclose(gramian1, gramian3)
-            print(f"\t\tsame(manual+auto, auto)? {same_1_3}")
+            print(f"\t\tsame(manual+auto, manual)? {same_1_3}")
             assert same_1_3
+
+            # 4) manual Laplacian, Gramian via hooks
+            gramian4 = manual_hook_gramian(layers, X, layer_idx, name)
+            same_1_4 = allclose(gramian1, gramian4)
+            print(f"\t\tsame(manual+auto, hook)? {same_1_4}")
+            assert same_1_4
 
 
 if __name__ == "__main__":
