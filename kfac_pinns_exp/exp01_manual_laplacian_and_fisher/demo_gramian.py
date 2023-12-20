@@ -9,6 +9,11 @@ from torch.autograd import grad
 from torch.nn import Linear, Module, Sequential, Sigmoid
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
+from kfac_pinns_exp.hooks_gram_grads_linear import (
+    from_grad_input,
+    from_hess_input,
+    from_output,
+)
 from kfac_pinns_exp.manual_differentiation import (
     manual_backward,
     manual_forward,
@@ -204,96 +209,32 @@ def manual_hook_gramian(
     param = getattr(layers[layer_idx], param_name)
     gram_grads = zeros(X.shape[0], *param.shape, device=param.device, dtype=param.dtype)
 
-    if param_name == "bias":
-        # only the layer's output contributes
-        def from_output(grad_output: Tensor, accumulator: Tensor = gram_grads) -> None:
-            accumulator += grad_output.detach()
-
-        layer_output.register_hook(from_output)
-
-    else:
-        assert param_name == "weight"
-        # layer's output, grad_input, and hess_input contribute
-
-        def from_output(
-            grad_output: Tensor, layer_input: Tensor, accumulator: Tensor = gram_grads
-        ) -> None:
-            """Backward hook which computes the Gram gradients from the forward pass.
-
-            Modifies `gram_grads`.
-
-            Args:
-                grad_output: Gradient of the Laplacian w.r.t. the layer's output.
-                layer_input: Layer's input.
-                accumulator: Tensor to accumulate the Gram gradients in.
-            """
-            accumulator.add_(
-                einsum(
-                    grad_output.detach(),
-                    layer_input.detach(),
-                    "batch d_out, batch d_in -> batch d_out d_in",
-                )
+    if param_name in {"bias", "weight"}:
+        layer_output.register_hook(
+            partial(
+                from_output,
+                layer_input=layer_input,
+                param_name=param_name,
+                accumulator=gram_grads,
             )
-
-        layer_output.register_hook(partial(from_output, layer_input=layer_input))
-
-        def from_grad_input(
-            grad_grad_input: Tensor,
-            layer_grad_output: Tensor,
-            accumulator: Tensor = gram_grads,
-        ) -> None:
-            """Backward hook which computes the Gram gradients from the backward pass.
-
-            Modifies `gram_grads`.
-
-            Args:
-                grad_grad_input: Gradient of the Laplacian w.r.t. the neural network's
-                    gradient w.r.t. the layer input.
-                layer_grad_output: Gradient of the neural network w.r.t. the layer's
-                    output.
-                accumulator: Tensor to accumulate the Gram gradients in.
-            """
-            accumulator.add_(
-                einsum(
-                    layer_grad_output.detach(),
-                    grad_grad_input.detach(),
-                    "batch d_out, batch d_in -> batch d_out d_in",
-                )
-            )
-
-        layer_grad_input.register_hook(
-            partial(from_grad_input, layer_grad_output=layer_grad_output)
         )
 
-        def from_hess_input(
-            grad_hess_input: Tensor,
-            layer_hess_output: Tensor,
-            accumulator: Tensor = gram_grads,
-        ) -> None:
-            """Backward hook computing Gram gradients from the Hessian backward pass.
-
-            Modifies `gram_grads`.
-
-            Args:
-                grad_hess_input: Gradient of the Laplacian w.r.t. the neural network's
-                    Hessian w.r.t. the layer input.
-                layer_hess_output: Hessian of the neural network w.r.t. the layer's
-                    output.
-                accumulator: Tensor to accumulate the Gram gradients in.
-            """
-            accumulator.add_(
-                einsum(
-                    grad_hess_input.detach(),
-                    param.detach(),
-                    layer_hess_output.detach(),
-                    "batch d_in1 d_in2, d_out1 d_in1, batch d_out1 d_out2 "
-                    + "-> batch d_out2 d_in2",
-                ),
-                alpha=2.0,
+    if param_name == "weight":
+        # layer's output, grad_input, and hess_input contribute
+        layer_grad_input.register_hook(
+            partial(
+                from_grad_input,
+                layer_grad_output=layer_grad_output,
+                accumulator=gram_grads,
             )
-
+        )
         layer_hess_input.register_hook(
-            partial(from_hess_input, layer_hess_output=layer_hess_output)
+            partial(
+                from_hess_input,
+                layer_hess_output=layer_hess_output,
+                weight=param,
+                accumulator=gram_grads,
+            )
         )
 
     # backpropagate
@@ -346,7 +287,10 @@ def main():
 
             # 1) Laplacian and Gramian via autodiff (functorch)
             param_name = f"{layer_idx}.{name}"
-            gramian1 = autograd_gramian(model, X, param_name)
+            param = model.get_parameter(param_name)
+            gramian1 = autograd_gramian(model, X, [param_name]).reshape(
+                *param.shape, *param.shape
+            )
 
             # 2) manual Laplacian, gradients for Gramian via autograd
             gramian2 = manual_laplace_autograd_gramian(layers, X, layer_idx, name)
