@@ -360,7 +360,7 @@ def main():
             print(f"\t\tsame(manual+auto, manual)? {same_1_3}")
             assert same_1_3
 
-            # 4) manual Laplacian, Gramian via hooks
+            # 4) via hooks
             gramian4 = manual_hook_gramian(layers, X, layer_idx, name)
             same_1_4 = allclose(gramian1, gramian4)
             print(f"\t\tsame(manual+auto, hook)? {same_1_4}")
