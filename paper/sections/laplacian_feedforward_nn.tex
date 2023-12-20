@@ -131,7 +131,7 @@ per-layer parameter and feature Hessians $\gradsquared{\vz^{(i)}}u,
 \gradsquared{\vtheta^{(i)}}u$. In \Cref{fig:hbp-dependencies} we depict the dependencies of
 intermediate gradients and Hessians for computing $\gradsquared{\vx}u_{\vtheta}$:
 \begin{itemize}
-\item $\grad{\vz^{(i-1)}}u$ depends on $\grad{\vz^{(i)}}$ due to the recursion in \Cref{eq:gradient-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ in the gradient backpropagation \Cref{eq:gradient-backpropagation}.
+\item $\grad{\vz^{(i-1)}}u$ depends on $\grad{\vz^{(i)}}u$ due to the recursion in \Cref{eq:gradient-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ in the gradient backpropagation \Cref{eq:gradient-backpropagation}.
 
 \item $\gradsquared{\vz^{(i-1)}}u$ depends on $\gradsquared{\vz^{(i)}}u$ and $\grad{\vz^{(i)}} u$ due to the recursion in \Cref{eq:hessian-backpropagation}, and on $\vz^{(i-1)}, \vtheta^{(i)}$ due to the Jacobian $\mJ_{\vz^{(i-1)}}\vz^{(i)}$ and Hessian $\gradsquared{\vz^{(i-1)}}[\vz^{(i)}]_k$ in the Hessian backpropagation \Cref{eq:gradient-backpropagation}.
 \end{itemize}
@@ -161,7 +161,7 @@ Hessian terms are given by
 \begin{equation}
   \nabla^2_{\vz^{(i-1)}}[\vz^{(i)}]_k = \sigma''(\vz^{(i-1)}_k) e_k  e_k^\top.
 \end{equation}
-\toodoo{Someone should definitely double check}
+\toodoo{Someone should definitely double check. I could not find a mistake -- MZ}
 With these two identities we can backpropogate the input Hessian through the non-trainable nonlinear layers and obtain
 \begin{equation}
   \gradsquared{\vz^{(i-1)}}u
@@ -485,9 +485,7 @@ terms of Kronecker-structured expressions consisting of 9 terms in total.
 
 
 \paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
-In order to evaluate the Fisher we also need to compute the terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ for all children, more specifically $\grad{\vz^{(i)}}\Delta u$, $\grad{\grad{\vz^{(i-1)}}u}\Delta u$ and $\grad{\gradsquared{\vz^{(i-1)}}u}\Delta u$.
-\toodoo{DO we need to understand how we compute this? We can definitely do this via backprop, but then additional terms would appear I guess}
-
+The terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ are automatically computed when computing the gradient of the loss via backdrop.
 
 \paragraph{Zeroth order diagonal term}
 Note that one of the nine terms is the term similar to the original KFAC paper, namely

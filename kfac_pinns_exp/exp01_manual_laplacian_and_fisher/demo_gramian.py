@@ -242,6 +242,17 @@ def manual_hook_gramian(
             layer_grad_output: Tensor,
             accumulator: Tensor = gram_grads,
         ) -> None:
+            """Backward hook which computes the Gram gradients from the backward pass.
+
+            Modifies `gram_grads`.
+
+            Args:
+                grad_grad_input: Gradient of the Laplacian w.r.t. the neural network's
+                    gradient w.r.t. the layer input.
+                layer_grad_output: Gradient of the neural network w.r.t. the layer's
+                    output.
+                accumulator: Tensor to accumulate the Gram gradients in.
+            """
             accumulator.add_(
                 einsum(
                     layer_grad_output.detach(),
@@ -259,6 +270,17 @@ def manual_hook_gramian(
             layer_hess_output: Tensor,
             accumulator: Tensor = gram_grads,
         ) -> None:
+            """Backward hook computing Gram gradients from the Hessian backward pass.
+
+            Modifies `gram_grads`.
+
+            Args:
+                grad_hess_input: Gradient of the Laplacian w.r.t. the neural network's
+                    Hessian w.r.t. the layer input.
+                layer_hess_output: Hessian of the neural network w.r.t. the layer's
+                    output.
+                accumulator: Tensor to accumulate the Gram gradients in.
+            """
             accumulator.add_(
                 einsum(
                     grad_hess_input.detach(),
@@ -293,13 +315,14 @@ def manual_hook_gramian(
 def main():
     """Compute the Gramian for one weight matrix in a toy MLP.
 
-    We compare three approaches:
+    We compare four approaches:
 
-    1) Computing the Laplacian manually and the Gramian automatically.
-
-    2) Computing both the Laplacian and Gramian manually.
-
-    3) Computing both the Laplacian and Gramian automatically.
+    Approach | Laplacian | Gramian
+    ---------|-----------|---------
+    1        | autograd  | autograd
+    2        | manual    | autograd
+    3        | manual    | manual
+    4        | manual    | hooks
     """
     # setup
     manual_seed(0)
@@ -321,22 +344,20 @@ def main():
         for name in ["weight", "bias"]:
             print(f"\tParameter {name!r}")
 
-            # 1) manual Laplacian, gradients for Gramian via autograd
-            gramian1 = manual_laplace_autograd_gramian(layers, X, layer_idx, name)
+            # 1) Laplacian and Gramian via autodiff (functorch)
+            param_name = f"{layer_idx}.{name}"
+            gramian1 = autograd_gramian(model, X, param_name)
 
-            # 2) manual Laplacian and Gramian
-            gramian2 = manual_gramian(layers, X, layer_idx, name)
-
+            # 2) manual Laplacian, gradients for Gramian via autograd
+            gramian2 = manual_laplace_autograd_gramian(layers, X, layer_idx, name)
             same_1_2 = allclose(gramian1, gramian2)
-            print(f"\t\tsame(manual+auto, manual)? {same_1_2}")
+            print(f"\t\tsame(manual+auto, auto)? {same_1_2}")
             assert same_1_2
 
-            # 3) Laplacian and Gramian via autodiff (functorch)
-            param_name = f"{layer_idx}.{name}"
-            gramian3 = autograd_gramian(model, X, param_name)
-
+            # 3) manual Laplacian and Gramian
+            gramian3 = manual_gramian(layers, X, layer_idx, name)
             same_1_3 = allclose(gramian1, gramian3)
-            print(f"\t\tsame(manual+auto, auto)? {same_1_3}")
+            print(f"\t\tsame(manual+auto, manual)? {same_1_3}")
             assert same_1_3
 
             # 4) via hooks
