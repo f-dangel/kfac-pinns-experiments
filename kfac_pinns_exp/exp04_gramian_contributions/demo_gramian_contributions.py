@@ -2,11 +2,11 @@
 
 from functools import partial
 from itertools import product
-from typing import List
+from typing import List, Tuple
 
 from einops import einsum, rearrange
 from torch import Tensor, allclose, manual_seed, rand, zeros, zeros_like
-from torch.nn import Linear, Module, Sequential, Sigmoid
+from torch.nn import Linear, Module, Parameter, Sequential, Sigmoid
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.hooks_gram_grads_linear import (
@@ -157,6 +157,41 @@ def gramian_term(
     return gram
 
 
+def get_layer_idx_and_name(param: Parameter, layers: List[Module]) -> Tuple[int, str]:
+    """Get the layer index and parameter name of a parameter.
+
+    Args:
+        param: Parameter to get the layer index and parameter name of.
+        layers: List of layers to search for the parameter.
+
+    Returns:
+        Index of the layer containing the parameter and the name of the parameter.
+
+    Raises:
+        ValueError: If the parameter is not found in the list of layers.
+    """
+    for idx, layer in enumerate(layers):
+        for name, layer_param in layer.named_parameters():
+            if param.data_ptr() == layer_param.data_ptr():
+                return idx, name
+
+    raise ValueError(f"Parameter {param} not found in layers {layers}.")
+
+
+def get_block_idx(param, model: Module) -> int:
+    """Get the block index of a parameter.
+
+    Args:
+        param: Parameter to get the block index of.
+        model: Model containing the parameter.
+
+    Returns:
+        Index of the parameter block in the sequential model.
+    """
+    block_ids = [p.data_ptr() for p in model.parameters()]
+    return block_ids.index(param.data_ptr())
+
+
 def main():
     """Compute the different contributions to the Gramian and check their sum.
 
@@ -184,55 +219,37 @@ def main():
         autograd_gramian(model, X, [name for name, _ in model.named_parameters()]), dims
     )
 
-    def param_to_block(layer_idx: int, param_name: str) -> int:
-        """Get the block index of a parameter.
+    for param1, param2 in product(model.parameters(), model.parameters()):
+        layer_idx1, param_name1 = get_layer_idx_and_name(param1, layers)
+        layer_idx2, param_name2 = get_layer_idx_and_name(param2, layers)
+        print(f"{layer_idx1} {param_name1} @ {layer_idx2} {param_name2}")
 
-        Args:
-            layer_idx: Index of the layer containing the parameter.
-            param_name: Name of the parameter.
+        # ground truth
+        block_idx1 = get_block_idx(param1, model)
+        block_idx2 = get_block_idx(param2, model)
+        true_block = blocked_gram[block_idx1][block_idx2]
 
-        Returns:
-            Index of the parameter block in the sequential model.
-        """
-        param = getattr(layers[layer_idx], param_name)
-        block_ids = [p.data_ptr() for p in model.parameters()]
-        return block_ids.index(param.data_ptr())
+        # the sum over all contributions must match the true block
+        manual_block = zeros_like(true_block)
 
-    layers_with_params_idxs = [0, 2, 4, 6]
-    param_names = ["weight", "bias"]
-
-    for layer_idx1, layer_idx2 in product(
-        layers_with_params_idxs, layers_with_params_idxs
-    ):
-        for param_name1, param_name2 in product(param_names, param_names):
-            print(f"{layer_idx1} {param_name1} @ {layer_idx2} {param_name2}")
-
-            # ground truth
-            row_block_idx = param_to_block(layer_idx1, param_name1)
-            col_block_idx = param_to_block(layer_idx2, param_name2)
-            true_block = blocked_gram[row_block_idx][col_block_idx]
-
-            # the sum over all contributions must match the true block
-            manual_block = zeros_like(true_block)
-
-            for param1_child, param2_child in product(CHILDREN, CHILDREN):
-                manual_block.add_(
-                    gramian_term(
-                        layers,
-                        X,
-                        layer_idx1,
-                        param_name1,
-                        param1_child,
-                        layer_idx2,
-                        param_name2,
-                        param2_child,
-                        flat_params=True,
-                    )
+        for child1, child2 in product(CHILDREN, CHILDREN):
+            manual_block.add_(
+                gramian_term(
+                    layers,
+                    X,
+                    layer_idx1,
+                    param_name1,
+                    child1,
+                    layer_idx2,
+                    param_name2,
+                    child2,
+                    flat_params=True,
                 )
+            )
 
-            same = allclose(manual_block, true_block)
-            print(f"\tSame(auto, hook)? {same}")
-            assert same
+        same = allclose(manual_block, true_block)
+        print(f"\tSame(auto, hook)? {same}")
+        assert same
 
 
 if __name__ == "__main__":
