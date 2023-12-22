@@ -19,6 +19,7 @@ from kfac_pinns_exp.manual_differentiation import (
     manual_forward,
     manual_hessian_backward,
 )
+from kfac_pinns_exp.utils import separate_into_tiles
 
 CHILDREN = ("output", "grad_input", "hess_input")
 
@@ -178,14 +179,10 @@ def main():
     model = Sequential(*layers)
 
     # compute the full Gramian with functorch and chunk it into blocks
-    full_gram = autograd_gramian(
-        model, X, [name for name, _ in model.named_parameters()]
+    dims = [p.numel() for p in model.parameters()]
+    blocked_gram = separate_into_tiles(
+        autograd_gramian(model, X, [name for name, _ in model.named_parameters()]), dims
     )
-    block_dims = [p.numel() for p in model.parameters()]
-    # row-wise
-    blocked_gram = full_gram.split(block_dims, dim=0)
-    # column-wise
-    blocked_gram = [row_block.split(block_dims, dim=1) for row_block in blocked_gram]
 
     def param_to_block(layer_idx: int, param_name: str) -> int:
         """Get the block index of a parameter.

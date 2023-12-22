@@ -58,10 +58,10 @@ install-test:
 .PHONY: test test-light
 
 test:
-	@pytest -vx --run-optional-tests=expensive --cov=kfac_pinns_exp test
+	@pytest -vx --run-optional-tests=expensive --cov=kfac_pinns_exp --doctest-modules test kfac_pinns_exp
 
 test-light:
-	@pytest -vx --cov=kfac_pinns_exp test
+	@pytest -vx --cov=kfac_pinns_exp --doctest-modules test kfac_pinns_exp
 
 .PHONY: lint
 
