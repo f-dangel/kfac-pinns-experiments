@@ -476,6 +476,73 @@ self-outer product forms the Gramian for a linear layer, as
 where (1) is the contribution from the forward pass, (2) is the contribution from the gradient backpropagation, and (3) is the contribution from the Hessian backpropagation.
 \toodoo{Visualize the different contributions on a $3\times 3$ grid.}
 
+
+\begin{figure}
+  \centering
+  Full Gramian\\
+  \includegraphics[width=0.43\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_full.png}
+
+  \begin{tabular}{ccc}
+    (forward, forward)
+    &
+      (forward, gradient)
+    &
+      (forward, Hessian)
+    \\
+    \includegraphics[width=0.33\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_output_output.png}
+    &
+      \includegraphics[width=0.33\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_output_grad_input.png}
+    &
+      \includegraphics[width=0.33\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_output_hess_input.png}
+    \\
+    &
+      (gradient, gradient)
+    &
+      (gradient, Hessian)
+    \\
+    &
+      \includegraphics[width=0.33\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_grad_input_grad_input.png}
+    &
+      \includegraphics[width=0.33\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_grad_input_hess_input.png}
+    \\
+    &
+    &
+      (Hessian, Hessian)
+    \\
+    &
+    &
+      \includegraphics[width=0.33\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_hess_input_hess_input.png}
+  \end{tabular}
+  \caption{Contributions to the Gramian from different children in the
+    computation graph.}\label{fig:gramian-contribution-children}
+\end{figure}
+
+\begin{figure}
+  \centering
+  Full Gramian\\
+  \includegraphics[width=0.43\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_full.png}
+
+  \begin{minipage}[t]{0.325\linewidth}
+    \centering
+    Block diagonal
+    \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_block_diag.png}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.325\linewidth}
+    \centering
+    Summed children diagonal
+    \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_diag_children.png}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.325\linewidth}
+    \centering
+    Summed children off-diagonal
+    \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_offdiag_children.png}
+  \end{minipage}
+  \caption{Contribution of terms with identical versus non-identical children to the Gramian's block diagonal.
+    The strongest contribution to its block diagonal stems from the terms with identical children.}\label{fig:gramian-contribution-summed-children}
+\end{figure}
+
 The Jacobians from \Cref{eq:fisher-jacobians} allow to express the Fisher in
 terms of Kronecker-structured expressions consisting of 9 terms in total.
 

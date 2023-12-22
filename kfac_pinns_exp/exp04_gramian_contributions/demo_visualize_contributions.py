@@ -2,8 +2,10 @@
 
 from itertools import product
 from os import makedirs, path
+from typing import List
 
 import matplotlib.pyplot as plt
+from numpy import cumsum
 from torch import allclose, manual_seed, rand, zeros_like
 from torch.nn import Linear, Sequential, Sigmoid
 
@@ -19,6 +21,34 @@ from kfac_pinns_exp.utils import combine_tiles, separate_into_tiles
 HEREDIR = path.dirname(path.abspath(__file__))
 FIGDIR = path.join(HEREDIR, "fig")
 makedirs(FIGDIR, exist_ok=True)
+
+
+def highlight_block_diagonal(ax: plt.Axes, dims: List[int]):
+    """Highlight block diagonals.
+
+    Args:
+        ax: Axes onto which the highlighting will be applied.
+        dims: Dimensions of the blocks on the diagonal.
+    """
+    style = {
+        "linewidth": 1,
+        "color": "w",
+    }
+
+    boundaries = cumsum([0] + dims)
+    # need to provide relative values in [0; 1] for line lengths
+    boundaries_rel = boundaries / boundaries[-1]
+
+    for i in range(len(boundaries) - 1):
+        start, end = boundaries[i : i + 2]
+        start_rel, end_rel = boundaries_rel[i : i + 2]
+
+        # NOTE imshow centers pixels at integers -> shift by -0.5
+        # NOTE y axis orientation for imshow is inverse of that for axvline -> 1-...
+        ax.axhline(y=start - 0.5, xmin=start_rel, xmax=end_rel, **style)
+        ax.axhline(y=end - 0.5, xmin=start_rel, xmax=end_rel, **style)
+        ax.axvline(x=start - 0.5, ymin=1 - start_rel, ymax=1 - end_rel, **style)
+        ax.axvline(x=end - 0.5, ymin=1 - start_rel, ymax=1 - end_rel, **style)
 
 
 def main():
@@ -77,8 +107,7 @@ def main():
     # make sure the contributions sum up to the full Gramian
     assert allclose(sum(contributions.values()), gram)
 
-    # visualize the contributions, use a shared color limit
-
+    # use a shared color limit
     vmin = min(*[c.min() for c in contributions.values()], gram.min())
     vmax = max(*[c.max() for c in contributions.values()], gram.max())
 
@@ -86,9 +115,27 @@ def main():
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.axis("off")  # turn off ticks and tick labels
     im = ax.imshow(gram, vmin=vmin, vmax=vmax)
+    highlight_block_diagonal(ax, dims)
     # positioning of the color bar from https://stackoverflow.com/a/43425119
-    fig.colorbar(im, orientation="horizontal", pad=0.1)
+    fig.colorbar(im, orientation="horizontal", location="top", pad=0.1)
     fig.savefig(path.join(FIGDIR, "gram_full.png"), bbox_inches="tight")
+    plt.close(fig)
+
+    # visualize the block-diagonal Gram matrix
+    block_diag_gram = separate_into_tiles(gram, dims)
+    # set off-diagonal blocks to zero
+    for i, j in product(range(len(dims)), range(len(dims))):
+        print(i, j)
+        if i != j:
+            block_diag_gram[i][j] = zeros_like(block_diag_gram[i][j])
+    block_diag_gram = combine_tiles(block_diag_gram)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.axis("off")  # turn off ticks and tick labels
+    im = ax.imshow(block_diag_gram, vmin=vmin, vmax=vmax)
+    highlight_block_diagonal(ax, dims)
+    # positioning of the color bar from https://stackoverflow.com/a/43425119
+    fig.savefig(path.join(FIGDIR, "gram_block_diag.png"), bbox_inches="tight")
     plt.close(fig)
 
     # visualize the contributions
@@ -104,11 +151,34 @@ def main():
         fig, ax = plt.subplots(figsize=(6, 6))
         ax.axis("off")  # turn off ticks and tick labels
         im = ax.imshow(mat, vmin=vmin, vmax=vmax)
+        highlight_block_diagonal(ax, dims)
         plt.savefig(
             path.join(FIGDIR, f"gram_{child1}_{child2}.png"), bbox_inches="tight"
         )
         plt.close(fig)
         done.append({child1, child2})
+
+    # visualize the sum of terms from identical children
+    diag_children = sum(contributions[(c, c)] for c in CHILDREN)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.axis("off")  # turn off ticks and tick labels
+    im = ax.imshow(diag_children, vmin=vmin, vmax=vmax)
+    highlight_block_diagonal(ax, dims)
+    plt.savefig(path.join(FIGDIR, "gram_diag_children.png"), bbox_inches="tight")
+    plt.close(fig)
+
+    # visualize the sum of terms from different children
+    offdiag_children = sum(
+        contributions[(c1, c2)] for c1, c2 in product(CHILDREN, CHILDREN) if c1 != c2
+    )
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.axis("off")  # turn off ticks and tick labels
+    im = ax.imshow(offdiag_children, vmin=vmin, vmax=vmax)
+    highlight_block_diagonal(ax, dims)
+    plt.savefig(path.join(FIGDIR, "gram_offdiag_children.png"), bbox_inches="tight")
+    plt.close(fig)
 
 
 if __name__ == "__main__":
