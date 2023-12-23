@@ -121,9 +121,14 @@ For linear layers, convolutional layers, and ReLU layers, it is zero.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.6\linewidth]{figures/HBP_graph.png}
-  \caption{Dependencies during gradient and Hessian backpropagation when computing the Hessian $\gradsquared{\vx}u_{\vtheta}$.}\label{fig:hbp-dependencies}
-  \label{fig:hbp-dependencies}
+  \resizebox{\linewidth}{!}{%
+    \input{figures/computation_graph_laplacian.tex}
+  }
+  \caption{Computation graph of a sequential neural network's Laplacian $\Delta u$ with $u \in \sR$.
+    Arrows indicate dependencies between intermediates.
+    Note that $\vz^{(0)}\coloneqq \vx$, $\vz^{(L)} \coloneqq u$, $\grad_uu = 1$, and $\gradsquared{u}u = \vzero$.
+    For the Gramian, we are interested in how the neural network parameters enter the Laplacian's computation.
+    They are used during (i) the forward pass, (ii) the backward pass for the gradient, and (iii) the backward pass for the Hessian.}\label{fig:hbp-dependencies}
 \end{figure}
 
 Following the procedure of \Cref{eq:hessian-backpropagation} yields the
@@ -140,6 +145,16 @@ intermediate gradients and Hessians for computing $\gradsquared{\vx}u_{\vtheta}$
 
 The Laplacian $\Delta u_{\vtheta}$ follows by taking the trace of
 $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
+
+Some insights while creating \Cref{fig:hbp-dependencies}:
+\begin{itemize}
+\item If the last layer is a linear layer, it's weight does not contribute to the Hessian during the Hessian backward pass.
+  This is because the incoming Hessian is $\vzero$, and the Hessian backpropagation is $\mW^T\vzero \mW = \vzero$.
+  \toodoo{Does something similar apply for the contribution from the gradient backpropagation?}
+
+\item About the bias terms.
+  I think they only contribute through the forward pass, but not otherwise as they do not show up in any of the operations used during gradient/Hessian backpropagation.
+\end{itemize}
 
 \begin{figure}[t]
   \centering

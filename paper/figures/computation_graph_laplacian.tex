@@ -1,0 +1,107 @@
+\input{figures/computation_graph_styles.tex}
+\begin{tikzpicture}
+  % arrange nodes in a matrix
+  \matrix [%
+  row sep=5ex,%
+  column sep=5.5ex,%
+  ampersand replacement=\&,% in order to put this inside of a scalebox
+  ]{%
+    % neural network parameters
+    \node {Parameters};
+    \&
+    \&
+    \&
+    \node [paramNode] (param-1) {$\vtheta^{(1)}$};
+    \&
+    \node [dotsNode] (param-2) {$\dots$};
+    \&
+    \node [paramNode] (param-3) {$\vtheta^{(i-1)}$};
+    \&
+    \node [paramNode] (param-4) {$\vtheta^{(i)}$};
+    \&
+    \node [dotsNode] (param-5) {$\dots$};
+    \&
+    \node [paramNode] (param-6) {$\vtheta^{(L)}$};
+    \\
+    % forward pass
+    \node {Forward};
+    \&
+    \&
+    \node [inputNode] (forward-0) {$\vx$};
+    \&
+    \node [forwardNode] (forward-1) {$\vz^{(1)}$};
+    \&
+    \node [dotsNode] (forward-2) {$\dots$};
+    \&
+    \node [forwardNode] (forward-3) {$\vz^{(i-1)}$};
+    \&
+    \node [forwardNode] (forward-4) {$\vz^{(i)}$};
+    \&
+    \node [dotsNode] (forward-5) {$\dots$};
+    \&
+    \node [forwardNode] (forward-6) {$u$};
+    \\
+    % gradients
+    \node {Backward};
+    \&
+    \&
+    \node [gradientNode] (gradient-0) {$\grad{\vx}u$};
+    \&
+    \node [gradientNode] (gradient-1) {$\grad{\vz^{(1)}}u$};
+    \&
+    \node [dotsNode] (gradient-2) {$\dots$};
+    \&
+    \node [gradientNode] (gradient-3) {$\grad{\vz^{(i-1)}}u$};
+    \&
+    \node [gradientNode] (gradient-4) {$\grad{\vz^{(i)}}u$};
+    \&
+    \node [dotsNode] (gradient-5) {$\dots$};
+    \&
+    \node [gradientNode] (gradient-6) {$\grad{u}u$};
+    \\
+    % Hessians
+    \node {Hess.\,backward};
+    \&
+    \node [hessianNode] (laplacian) {$\Delta u$};
+    \&
+    \node [hessianNode] (hessian-0) {$\gradsquared{\vx}u$};
+    \&
+    \node [hessianNode] (hessian-1) {$\gradsquared{\vz^{(1)}}u$};
+    \&
+    \node [dotsNode] (hessian-2) {$\dots$};
+    \&
+    \node [hessianNode] (hessian-3) {$\gradsquared{\vz^{(i-1)}}u$};
+    \&
+    \node [hessianNode] (hessian-4) {$\gradsquared{\vz^{(i)}}u$};
+    \&
+    \node [dotsNode] (hessian-5) {$\dots$};
+    \&
+    \node [hessianNode] (hessian-6) {$\gradsquared{u}u$};
+    \\
+  };
+  % dependency arrows
+  \foreach \i in {1,...,6} {
+    \draw [-Latex, thick] (param-\i) to (forward-\i);
+  }
+  \foreach \i in {0,...,5} {
+    \draw [-Latex, thick] (forward-\i) to (gradient-\i);
+    \draw [-Latex, thick] (gradient-\i) to (hessian-\i);
+    \draw [-Latex, thick, out=225, in=135] (forward-\i) to (hessian-\i);
+  }
+  \foreach \i in {0,...,5} {
+    \pgfmathsetmacro{\j}{int(\i+1)}
+    \draw [-Latex, thick] (forward-\i) to (forward-\j);
+    \draw [-Latex, thick] (gradient-\j) to (gradient-\i);
+    \draw [-Latex, thick] (hessian-\j) to (hessian-\i);
+  }
+  \foreach \i in {0,...,5} {
+    \pgfmathsetmacro{\j}{int(\i+1)}
+    \draw [-Latex, thick, out=215, in=45] (param-\j) to (gradient-\i);
+    \draw [-Latex, thick, out=235, in=45] (param-\j) to (hessian-\i);
+  }
+  \draw [-Latex, thick] (hessian-0) to (laplacian);
+\end{tikzpicture}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:

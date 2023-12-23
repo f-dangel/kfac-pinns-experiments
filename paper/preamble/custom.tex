@@ -15,6 +15,39 @@
 \usepackage{todonotes} % for TODOs, loads xcolor with []
 \newcommand{\toodoo}[1]{{\tt\color{red} #1}}
 \usepackage{comment} % for comment environment
+
+% ===================================================================
+% FIGURES & COLORS
+% ===================================================================
+\usepackage{tikz} % for drawings in LaTeX
+\usetikzlibrary{arrows.meta} % for prettier arrows
+
+% VECTOR INSTITUTE PRIMARY COLORS
+\definecolor{VectorBlack}{RGB}{34, 34, 34}
+\definecolor{VectorGray}{RGB}{239, 238, 237}
+% VECTOR INSTITUTE SECONDARY COLORS
+\definecolor{VectorBlue}{RGB}{59, 69, 227}
+\definecolor{VectorPink}{RGB}{253, 8, 238}
+\definecolor{VectorOrange}{RGB}{250, 173, 26}
+\definecolor{VectorTeal}{RGB}{82, 199, 222}
+
+% PAPER COLOR THEME
+\colorlet{maincolor}{VectorBlue}
+\colorlet{secondcolor}{VectorPink}
+\colorlet{thirdcolor}{VectorOrange}
+\colorlet{fourthcolor}{VectorTeal}
+\colorlet{fifthcolor}{VectorGray}
+
+% ===================================================================
+% LINKS & REFERENCES
+% ===================================================================
+\hypersetup{%
+  colorlinks,
+  citecolor = maincolor,%
+  linkcolor = maincolor,%
+  urlcolor = secondcolor,%
+}%
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
