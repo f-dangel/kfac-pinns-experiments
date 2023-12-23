@@ -1,0 +1,65 @@
+\subsection{Energy natural gradients: Definition of the Gramiain / Fisher}
+
+%\begin{itemize}
+%    \item recently, energy NGs have been proposed
+%    \item one can show that they mimic Newtons method in function space
+%    \item yield very good accuracy
+%    \item
+%\end{itemize}
+
+Natural gradients have been introduced by Amari~\cite{?} and have shown great success in RL and other problems...
+The general idea is to replace the vanilla GD update rule by a preconditioned version
+    \[ \theta_{k+1} = \theta_k - \eta_k G(\theta_k)^{-1} \nabla L(\theta_k), \]
+where $G(\theta)\in\mathbb R^{p\times p}$, $G(\theta)_{ij} \coloneqq g_{u_\theta}(\partial_{\theta_i} u_\theta, \partial_{\theta_j} u_\theta)$ is a matrix capturing the geometry of the function space geometry of the problem and its parametrization.
+
+In the classic case, $G$ is the Fisher information matrix
+\begin{equation}
+    F_I(\theta)_{ij} = \sum_{x} \frac{\partial_{\theta_i}p_\theta(x)\partial_{\theta_j}p_\theta(x)}{p_\theta(x)} = \sum_{x} \partial_{\theta_i} \log p_\theta(x) \partial_{\theta_j} \log p_\theta(x).
+\end{equation}
+
+In the PINN setting however, our models are functions $u_\theta$ rather than probability measures $p_\theta$ and the loss involves PDE terms.
+%In order to adjust the definition of
+To capture the geometric properties of this specific problem we consider the following Fisher / Gramian matrix %to this problemThe energy natural gradient is for this example to use the Fischer/Gramian of the form
+\begin{equation*}
+  F(\theta) = F_\Omega(\theta) + F_{\partial\Omega}(\theta)
+\end{equation*}
+where
+\begin{equation}\label{eq:FisherInterior}
+  F_\Omega(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_\Omega} \partial_{\theta_i} \Delta u_\theta(x_k) \partial_{\theta_j} \Delta u_\theta(x_k)
+  % = \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
+\end{equation}
+% where $f_\theta = \Delta u_\theta$.
+and
+\begin{equation}
+  F_{\partial\Omega}(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_{\partial\Omega}} \partial_{\theta_i} u_\theta(x_k^b) \partial_{\theta_j} u_\theta (x_k^b).
+  % = \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
+\end{equation}
+In more compact form and written as Jacobian products, this can be expressed as
+\begin{equation}\label{eq:Jacobian_Fischer}
+  F_\Omega(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta)
+  \quad \text{and} \quad
+  F_{\partial\Omega}(\theta) = Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta).
+\end{equation}
+Here, $Dr_\Omega(\theta)$ and $Dr_{\partial\Omega}(\theta)$  denote the \emph{Jacobians} of the maps
+\begin{equation*}
+  r_{\Omega}\colon \Theta \to \mathbb{R}^{N_\Omega}, \quad r_{\Omega}(\theta) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u_\theta(x_1), \dots, \Delta u_\theta(x_{N_{\Omega}}))
+\end{equation*}
+and
+\begin{equation*}
+  r_{\partial\Omega}\colon \Theta \to \mathbb{R}^{{N_\partial\Omega}}, \quad r_{\partial\Omega}(\theta) = \frac{1}{\sqrt{N_{\partial\Omega}}}(u_\theta(x^b_1), \dots, u_\theta(x^b_{N_{\partial\Omega}}))
+\end{equation*}
+
+\paragraph{Interpretation as Gau\ss-Newton in the residual}
+Consider the combined residual map
+\begin{equation*}
+    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad \theta \mapsto \begin{pmatrix}
+        r_\Omega(\theta) \\ r_{\partial\Omega}(\theta)
+    \end{pmatrix}.
+\end{equation*}
+Then (with the right choice of the inner product) $L(\theta) = \frac12 \lVert r(\theta) \rVert_2^2$ and hence the Gau\ss-Newton matrix is given by
+\[ Dr(\theta)^\top Dr(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta) + Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta) = F(\theta). \]
+\todo[inline]{maybe we should also compare to typical GN approaches like CG / Cholesky decomposition? Doesn't sound like much fun though}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:

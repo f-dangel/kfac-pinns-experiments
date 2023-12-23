@@ -1,343 +1,116 @@
-\documentclass[11pt]{article}
-\usepackage{arxiv}
-\usepackage{amsfonts}
-\usepackage{amsmath}
-\usepackage{amsthm}
-\usepackage{pxfonts}
-\usepackage{mathtools}
-\usepackage{tocloft}
-\usepackage{dsfont}
-\usepackage{todonotes}%loads xcolor with []
-\usepackage{extarrows}
-\usepackage{titlesec}
-\usepackage{enumitem}
-\usepackage{comment}
+\documentclass{article}
 
-\usepackage{wrapfig}
-\usepackage{caption}
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2023
 
+\usepackage[preprint]{neurips_2023}
 
-\usepackage{hyperref}
-\usepackage{subcaption}
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+% \usepackage[preprint]{neurips_2023}
 
-% Definitions of handy macros can go here
-\newcommand{\toodoo}[1]{{\tt\color{red} #1}}
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{neurips_2023}
 
-\theoremstyle{definition}
-\newtheorem{definition}{Definition}[]
-\newtheorem{example}[definition]{Example}
-\newtheorem{remark}[definition]{Remark}
-\newtheorem{setting}[definition]{Setting}
-\newtheorem{assumption}[definition]{Assumption}
-\newtheorem{hypothesis}[definition]{Hypothesis}
-\theoremstyle{plain}
-\newtheorem{theorem}[definition]{Theorem}
-\newtheorem{corollary}[definition]{Corollary}
-\newtheorem{proposition}[definition]{Proposition}
-\newtheorem{lemma}[definition]{Lemma}
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{neurips_2023}
 
-\renewcommand{\labelenumi}{\textup{(\textit{\roman{enumi}})}}
-\setlength\cftparskip{0pt}
-\setlength\cftbeforesecskip{2pt}
-
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\bm}[1]{\boldsymbol{#1}}
-\newcommand{\Rn}{\R^n}
-\newcommand{\dx}{\mathrm{d}x}
-\newcommand{\rami}[1]{\textcolor{blue}{#1}}
-
-\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
-
+\input{preamble/custom_early.tex}
+\input{preamble/neurips_2023.tex}
 \input{preamble/goodfellow.tex} % follow DL notation from the Goodfellow book
 \input{preamble/custom.tex}
-
-\title{KFAC PINNs % Kronecker Factored Approximations of Energy Natural Gradients for PINN Formulations of Second-order PDEs
-}
-\date{November 2022}
-
-\author{Felix Dangel, Johannes M\"uller \& Marius Zeinhofer}
+\input{preamble/metadata.tex}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-%Solving second-order PDEs via a Kronecker factored approximation of energy natural gradients for PINNs. 
-Kronecker Factored Approximations of Energy Natural Gradients for PINN Formulations of Second-order PDEs.
+  PINNs are hard to train with first-order methods.
+  To train PINNs efficiently, we need to take into account the geometry implied by the PDE operator.
+  Existing methods that consider this geometry compute and invert the full Gramian.
+  However, these ENGD-based methods do not scale well to architectures with many parameters due to the quadratic memory and cubic time complexity of storing and inverting the Gramian.
+  The challenge to develop approximations to the Gramian is that it requires taking the parameter derivative of the PDE operator, which itself contains higher-order derivative.
+  Here, we propose a Kronecker factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
 \end{abstract}
+
 \section{Introduction}
-PINNs are difficult to optimize.
-\begin{itemize}
-    \item PINNs receive ever growing amount of attention 
-    \item their failure to produce high accuracy solution when trained with variants of GD like Adam is well documented 
-    \item L-BFGS yields improved but very high accuracy
-    \item Other suggestions: reweighting of the loss, specialized sampling strategies, greedy training, reformulation as saddle point problem 
-    \item recently, a variant of NG based on the geometry of the specific energy / PDE was proposed; yields greatly improved accuracy over direct gradient-based optimizers and enjoys the nice property that it can be shown to mimic Newton's method in function space; for PINNs it can be seen as Gau\ss-Newton method in the space of residuals, for other problems as a generalized GN? 
-    \item whereas, this method was shown to be able to produce highly accurate approximations of the solution of the PDE it comes with a considerable iteration cost as it involves the solution of a linear system of the size of the number of parameters. Hence, this is only feasible for networks of small to moderate size when done naively.
-    \item we use the idea of KFAC and provide an efficient implementation 
-\end{itemize}
 
-\subsection{Contributions and outline}
+\input{sections/introduction.tex}
 
-\subsection{Related work}
+\section{Background}
 
-\begin{itemize}
-    \item OG KFAC papers: \cite{martens2015optimizing}, \cite{martens2018kroneckerfactored}, double check similarities to RNNs 
-    \item KFAC for Rayleigh quotients: 
-    \item PINNs: recent preconditioning papers 
-\end{itemize}
+\input{sections/background_pinns.tex}
+\input{sections/background_engd.tex}
+\input{sections/background_kfac.tex}
 
-\subsection{Notation and conventions}
+\section{KFAC for PINNs}
 
-\section{Preliminaries}
-
-\subsection{Physics informed neural networks (PINNs)}
-%\begin{itemize}
-%    \item PINNs are one of the most promising approaches to neural network based PDE solvers
-%    \item  
-%\end{itemize}
-Let us consider the Poisson equation %and how to write the Gramian/Fisher as the product of a Jacobian and its transpose, see equation \eqref{eq:Jacobian_Fischer}.
-%Is this what you were after Felix?
-%I think it differs from the standard setting in the sense that suddenly the Laplacian shows up.
-%It can also be used to derive a matrix-free version of the energy natural gradient descent, like done in Hessian-free optimization.
-%$\bullet$ We consider the Poisson equation
-\begin{align*}\tag{PE}\label{eq:PE}
-  -\Delta u & = f \quad \text{in }\Omega \\
-  u & = g \quad \text{on }\partial\Omega
-\end{align*}
-where $f\in L^2(\Omega)$ and $g\in H^{3/2}(\partial\Omega)$ are some given rhs and boundary values.
-The function space energy is given by
-\[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds. \]
-Note that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$. Hence, we use the following loss function to train the parameters $\theta$ of a neural network
-\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
-Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}. 
-In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
-\begin{align*}
-  L(\theta)
-  &=
-    \frac{1}{2N_\Omega} L_\Omega(\theta) + \frac{1}{2N_{\partial\Omega}}L_{\partial\Omega}(\theta)
-  \\
-  &=
-    \frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\theta(x_i) + f(x_i))^2 + \frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\theta(x^b_i) - g(x^b_i))^2
-\end{align*}
-where we denote by $(x_i)$, $i=1,\dots,N_\Omega$ the points in the interior of $\Omega$ and by $(x^b_i)$, $i=1,\dots,N_{\partial\Omega}$ the points on the boundary.
-We need quite a lot of these points in practice, it can be in the thousands, can be resamples at every iteration of the training process. 
-And we need them in one batch, too. 
-
-\begin{itemize}
-    \item If you run GD / Adam you get no good accuracy~\cite{?}
-    \item L-BFGS improves things, but is not super satisfactory 
-\end{itemize}
-
-\subsection{Energy natural gradients: Definition of the Gramiain / Fisher}
-
-%\begin{itemize}
-%    \item recently, energy NGs have been proposed
-%    \item one can show that they mimic Newtons method in function space 
-%    \item yield very good accuracy 
-%    \item 
-%\end{itemize}
-
-Natural gradients have been introduced by Amari~\cite{?} and have shown great success in RL and other problems... 
-The general idea is to replace the vanilla GD update rule by a preconditioned version 
-    \[ \theta_{k+1} = \theta_k - \eta_k G(\theta_k)^{-1} \nabla L(\theta_k), \]
-where $G(\theta)\in\mathbb R^{p\times p}$, $G(\theta)_{ij} \coloneqq g_{u_\theta}(\partial_{\theta_i} u_\theta, \partial_{\theta_j} u_\theta)$ is a matrix capturing the geometry of the function space geometry of the problem and its parametrization. 
-
-In the classic case, $G$ is the Fisher information matrix 
-\begin{equation}
-    F_I(\theta)_{ij} = \sum_{x} \frac{\partial_{\theta_i}p_\theta(x)\partial_{\theta_j}p_\theta(x)}{p_\theta(x)} = \sum_{x} \partial_{\theta_i} \log p_\theta(x) \partial_{\theta_j} \log p_\theta(x). 
-\end{equation}
-
-In the PINN setting however, our models are functions $u_\theta$ rather than probability measures $p_\theta$ and the loss involves PDE terms.
-%In order to adjust the definition of 
-To capture the geometric properties of this specific problem we consider the following Fisher / Gramian matrix %to this problemThe energy natural gradient is for this example to use the Fischer/Gramian of the form
-\begin{equation*}
-  F(\theta) = F_\Omega(\theta) + F_{\partial\Omega}(\theta)
-\end{equation*}
-where
-\begin{equation}\label{eq:FisherInterior}
-  F_\Omega(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_\Omega} \partial_{\theta_i} \Delta u_\theta(x_k) \partial_{\theta_j} \Delta u_\theta(x_k)
-  % = \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
-\end{equation}
-% where $f_\theta = \Delta u_\theta$.
-and
-\begin{equation}
-  F_{\partial\Omega}(\theta)_{ij} = \frac1{{N_\Omega}} \sum_{k=1}^{N_{\partial\Omega}} \partial_{\theta_i} u_\theta(x_k^b) \partial_{\theta_j} u_\theta (x_k^b).
-  % = \frac1{{N_\Omega}} \sum_{i=1}^{N_\Omega} (\partial_{\theta_i} f_\theta) (\partial_{\theta_j} f_\theta ),
-\end{equation}
-In more compact form and written as Jacobian products, this can be expressed as
-\begin{equation}\label{eq:Jacobian_Fischer}
-  F_\Omega(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta)
-  \quad \text{and} \quad
-  F_{\partial\Omega}(\theta) = Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta).
-\end{equation}
-Here, $Dr_\Omega(\theta)$ and $Dr_{\partial\Omega}(\theta)$  denote the \emph{Jacobians} of the maps
-\begin{equation*}
-  r_{\Omega}\colon \Theta \to \mathbb{R}^{N_\Omega}, \quad r_{\Omega}(\theta) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u_\theta(x_1), \dots, \Delta u_\theta(x_{N_{\Omega}}))
-\end{equation*}
-and
-\begin{equation*}
-  r_{\partial\Omega}\colon \Theta \to \mathbb{R}^{{N_\partial\Omega}}, \quad r_{\partial\Omega}(\theta) = \frac{1}{\sqrt{N_{\partial\Omega}}}(u_\theta(x^b_1), \dots, u_\theta(x^b_{N_{\partial\Omega}}))
-\end{equation*}
-
-\paragraph{Interpretation as Gau\ss-Newton in the residual}
-Consider the combined residual map 
-\begin{equation*}
-    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad \theta \mapsto \begin{pmatrix}
-        r_\Omega(\theta) \\ r_{\partial\Omega}(\theta)
-    \end{pmatrix}.
-\end{equation*}
-Then (with the right choice of the inner product) $L(\theta) = \frac12 \lVert r(\theta) \rVert_2^2$ and hence the Gau\ss-Newton matrix is given by 
-\[ Dr(\theta)^\top Dr(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta) + Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta) = F(\theta). \]
-\todo[inline]{maybe we should also compare to typical GN approaches like CG / Cholesky decomposition? Doesn't sound like much fun though}
-
-\subsection{Kronecker-factored Approximate Curvature (KFAC)}
-
-\begin{itemize}
-    \item KFAC for regression 
-    \item reduction of per iteration complexity 
-\end{itemize}
-
-\section{Laplacian of a Feed-forward Neural Network / 
-Kronecker structure of the Gramian / Fisher}
+\subsection{The Laplacian's Computation Graph}
+We restrict the discussion to feed-forward sequential neural networks.
 \input{sections/laplacian_feedforward_nn.tex}
 
-\subsection{Explicit computations for a shallow network}
-\begin{comment}
-    For the one-dimensional shallow case we have
-\[ u_\theta(x) = \sum_{i=1}^m a_i\sigma(b_i x + c_i) + d. \]
-Then 
-\[ u_\theta'(x) = \sum_{i=1}^m a_ib_i\sigma'(b_i x + c_i) \]
-and 
-\[ u_\theta''(x) = \sum_{i=1}^m a_ib_i^2\sigma''(b_i x + c_i). \]
-The parameter derivative of the Laplacian (i.e., second-order derivative)
-\begin{align*}
-     \partial_{a_i}u_\theta''(x) & = b_i^2\sigma''(b_i x + c_i) \\
-     \partial_{b_i}u_\theta''(x) & = 2a_ib_i\sigma''(b_i x + c_i) + a_i b_i^2x\sigma^{(3)}(b_i x + c_i) \\
-     \partial_{c_i}u_\theta''(x) & = a_i b_i^2\sigma^{(3)}(b_i x + c_i) \\
-     \partial_{d}u_\theta''(x) & = 0.
-\end{align*}
-The parameter derivative of the Laplacian (i.e., second-order derivative)
-\begin{align*}
-     \partial_{a_i}u_\theta''(x) & = b_i^2\sigma''(b_i x + c_i) \\
-     \partial_{b_i}u_\theta''(x) & = 2a_ib_i\sigma''(b_i x + c_i) + a_i b_i^2x\sigma^{(3)}(b_i x + c_i) \\
-     \partial_{c_i}u_\theta''(x) & = a_i b_i^2\sigma^{(3)}(b_i x + c_i) \\
-     \partial_{d}u_\theta''(x) & = 0.
-\end{align*}
-\end{comment}
+\subsection{Kronecker Structure of the Gramian}
 
-First, we do the Hessian calculation as explicitly as possible. For this, we consider the easy case of a shallow network with one-dimensional output
-\[ u_\theta(x) = \sum_{i=1}^m a_i\sigma(b_i^\top x + c_i) + d. \]
-Then 
-\[ \nabla_x u_\theta(x) = \sum_{i=1}^m a_ib_i\sigma'(b_i x + c_i) \]
-or 
-\[ \partial_{x_j} u_\theta(x) = \sum_{i=1}^m a_i(b_i)_j\sigma'(b_i x + c_i). \]
-Consequently, we compute 
-\[ \partial_{x_k}\partial_{x_j} u_\theta(x) = \sum_{i=1}^m a_i(b_i)_j(b_i)_k\sigma'(b_i x + c_i) \]
-which yields the Hessian
-\[ \nabla^2_x u_\theta(x) = \sum_{i=1}^m a_i\sigma''(b_i x + c_i) \cdot b_ib_i^\top = \sum_{i=1}^m a_i\sigma''(b_i x + c_i) \cdot  b_i\otimes b_i \]
-and the Laplacian is given by 
-\[ \Delta_x u_\theta(x) = \sum_{i=1}^m a_i\sigma''(b_i x + c_i) \operatorname{tr}(b_ib_i^\top) = \sum_{i=1}^m a_i\sigma''(b_i x + c_i)  \operatorname{tr}(b_i\otimes b_i). \]
-The parameter derivatives of the Hessian are given 
-\begin{align*}
-     \partial_{a_i}\nabla_x^2 u_\theta(x) & = \sigma''(b_i x + c_i) b_ib_i^\top \\
-     \nabla_{b_i}\nabla_x^2 u_\theta(x) & = a_i\sigma''(b_i x + c_i) (b_i\otimes I+I\otimes b_i) + a_i \sigma^{(3)}(b_i x + c_i) \cdot  (I\otimes x^\top)(b_i\otimes b_i) \quad ?? \\
-     %+ a_i x\sigma^{(3)}(b_i x + c_i) \cdot b_ib_i^\top \\
-     \partial_{c_i}\nabla_x^2 u_\theta(x) & = a_i b_i^2\sigma^{(3)}(b_i x + c_i) \\
-     \partial_{d}\nabla_x^2 u_\theta(x) & = 0.
-\end{align*}
-The parameter derivatives of the Laplacian are given 
-\begin{align*}
-     \partial_{a_i}\Delta_x u_\theta(x) & = \sigma''(b_i x + c_i) \operatorname{tr}(b_ib_i^\top) \\
-     \nabla_{b_i}\Delta_x u_\theta(x) & = 2a_i\sigma''(b_i x + c_i) + a_i \sigma^{(3)}(b_i x + c_i) \operatorname{tr}(b_ib_i^\top) \cdot x \\
-     \partial_{c_i}\Delta_x u_\theta(x) & = a_i \sigma^{(3)}(b_i x + c_i)\operatorname{tr}(b_ib_i^\top) \\
-     \partial_{d}\Delta_x u_\theta(x) & = 0.
-\end{align*}
+This subsection describes the Jacobians of the operations with the weight matrix in
+a linear layer during the computation of the Laplacian and ends by providing an
+equation for the Gramian block.
 
+\subsection{Kroneckerfactored Approximate Gramian (KFAG)}
 
-\paragraph{Writing as linear algebra}
-
-Consider a shallow network
-\[ u_\theta(x) = W_2\sigma(W_1 x), \]
-where $x\in\mathbb R^d$, $W_1\in\mathbb R^{m\times d}, W_2\in\mathbb R^{1\times m}$.
-
-\paragraph{Task: }
-Understand the structure, in particular the computational graph of $f_\theta = \Delta u_\theta$.
-
-\paragraph{One dimensional case: }
-Assume first that $d=1$.
-Then
-\[ D_x u_\theta(x) = W_2 \operatorname{diag}(\sigma'(W_1 x)) W_1 \]
-and
-\[ D^2_x u_\theta(x) = W_2%(W_1^\top\otimes W_2)
-  \operatorname{diag}(\operatorname{diag}(\sigma''(W_1 x)) W_1)W_1. % = W_2 \operatorname{diag}\sigma''(W_1 x) W_1^2 = W_2\odot W_1^2 \sigma''(W_1x),
-\]
-In another form
-\[D^2 u_\theta(x) = W_2 \operatorname{diag}(\operatorname{diag}\sigma''(W_1 x) W_1) W_1 = W_2 \operatorname{diag}\sigma''(W_1 x) W_1^2 = W_2\odot W_1^2 \sigma''(W_1x),
-\]
-where $(W_2\odot W_1^2)_k = (W_2)_k \cdot (W_1)_k^2$.
-% where $(W_2\odot W_1^2)_k = (W_2)_k \cdot (W_1)_k^2$.
-% The Laplacian is then given as
-% \[ f_\theta(x) = \Delta u_\theta(x) = \operatorname{tr}(D_x^2u_\theta(x)) =\operatorname{tr}(W_2 \operatorname{diag}(\operatorname{diag}(\sigma''(W_1 x)) W_1) W_1).  \]
-% Differentiation with respect to $W_2$ yields
-% \[ \frac{\partial f_\theta(x)}{\partial W_2} = \frac{\partial \Delta u_\theta(x)}{ \partial W_2} =  \]
-
-One can also rewrite the diagonalization operator via a Hadamard product as $\operatorname{diag}(x) = (x\mathds{1}^\top)\odot I$, where $\mathds{1}$ denotes the all one vector, $I$ the identity and $\odot$ the Hadamard (i.e., entrywise) product of two matrices.
-Not sure whether this helps though...
-
-\paragraph{Multi-dimensional case}
+This subsection describes the Kronecker approximation we propose for the per-layer Gramian.
+It should also justify that the approximation is similar to that in other works.
 
 \section{Generalization to other PDEs}
-Essential to the formula above is that the discrete bilinear form (not explicitly stated above) can be written in the way
-\begin{equation}\label{eq:gramian_asssumption}
-  a^h(u,v)
-  =
-  \langle T(u), T(v) \rangle_{\mathbb R^N}.
-\end{equation}
-This implies
-\begin{equation*}
-  F(\theta) = D(T\circ P)^T \cdot D(T \circ P).
-\end{equation*}
-If you compute the entries of $F$ this yields
-\begin{equation*}
-  F(\theta)_{ij} = \langle T(\partial_{\theta_i}u_\theta), T(\partial_{\theta_j}u_\theta) \rangle_{\mathbb R^N}.
-\end{equation*}
-In the case of the Laplacian this $G$ will be one of the summands, so for example $F_\Omega$.
-The map $T$ needs to be linear and is a combination of PDE operators and point evaluation, in the case of the Laplacian
-\begin{equation*}
-  T:C^2(\Omega) \to \mathbb R^{N_\Omega}, \quad T(u) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u(x_1), \dots, \Delta u(x_{N_{\Omega}})).
-\end{equation*}
-The map $P$ is the parametrization, i.e., $\theta\mapsto u_\theta$.
-I think the form \eqref{eq:gramian_asssumption} is true for all of the PDEs we have in mind...but Johannes should double check that.
 
-
-% \paragraph{One dimensional case: }
+\input{sections/generalization.tex}
 
 \section{Experiments}
 
+We want to show the following things:
+\begin{itemize}
+\item We can safely discard the Gramian's off-diagonal blocks without harming
+  training performance. This reduces the Gramian's size, but still imposes
+  strong constraints on scalability.
+
+\item Our proposed Kronecker approximation works roughly as well as the
+  full/block diagonal Gramian, while being much cheaper to compute, store, and
+  invert.
+
+\item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitibely expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
+\end{itemize}
+
 Todos:
 \begin{itemize}
-    \item concrete example ground truth: 2d Poisson on unit square with sine target
+\item concrete example ground truth: 2d Poisson on unit square with sine target
 \end{itemize}
 
 Ideas:
 \begin{itemize}
-    \item try out different approximations
-    \begin{itemize}
-        \item Ground truth
-        \item Block diagonal exact
-        \item Diagonal 
-        \item Block diagonal with different approximations
-    \end{itemize}
+\item try out different approximations
+  \begin{itemize}
+  \item Ground truth
+  \item Block diagonal exact
+  \item Diagonal
+  \item Block diagonal with different approximations
+  \end{itemize}
 \end{itemize}
 
 \section{Conclusion}
 
-
-
+\begin{ack} % automatically suppressed in anonymized submission
+  Acknowledgments go here.
+\end{ack}
 
 \bibliography{references}
 \bibliographystyle{apalike}
+
+\appendix
+
+\input{sections/appendix.tex}
+\input{sections/laplacian_shallow_net.tex}
+
 \end{document}
 
 %%% Local Variables:

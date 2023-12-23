@@ -1,0 +1,26 @@
+Essential to the formula above is that the discrete bilinear form (not explicitly stated above) can be written in the way
+\begin{equation}\label{eq:gramian_asssumption}
+  a^h(u,v)
+  =
+  \langle T(u), T(v) \rangle_{\mathbb R^N}.
+\end{equation}
+This implies
+\begin{equation*}
+  F(\theta) = D(T\circ P)^T \cdot D(T \circ P).
+\end{equation*}
+If you compute the entries of $F$ this yields
+\begin{equation*}
+  F(\theta)_{ij} = \langle T(\partial_{\theta_i}u_\theta), T(\partial_{\theta_j}u_\theta) \rangle_{\mathbb R^N}.
+\end{equation*}
+In the case of the Laplacian this $G$ will be one of the summands, so for example $F_\Omega$.
+The map $T$ needs to be linear and is a combination of PDE operators and point evaluation, in the case of the Laplacian
+\begin{equation*}
+  T:C^2(\Omega) \to \mathbb R^{N_\Omega}, \quad T(u) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u(x_1), \dots, \Delta u(x_{N_{\Omega}})).
+\end{equation*}
+The map $P$ is the parametrization, i.e., $\theta\mapsto u_\theta$.
+I think the form \eqref{eq:gramian_asssumption} is true for all of the PDEs we have in mind...but Johannes should double check that.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
