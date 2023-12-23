@@ -1,0 +1,28 @@
+% Use different numbering in appendix to make it clear that a
+% section/table/algorithm is not in the main text
+\renewcommand\thefigure{\thesection\arabic{figure}}
+\renewcommand\thetable{\thesection\arabic{table}}
+\renewcommand{\theequation}{\thesection\arabic{equation}}
+
+% modified title header from main page, code extracted from NeurIPS template
+\makeatletter
+\vbox{%
+  \hsize\textwidth
+  \linewidth\hsize
+  \vskip 0.1in
+  \@toptitlebar
+  \centering
+  {\LARGE\bf \@title (Supplementary Material)\par}
+  \@bottomtitlebar
+  \vskip 0.3in \@minus 0.1in
+}
+\makeatother
+
+% APPENDIX TOC
+\startcontents[sections]
+\printcontents[sections]{l}{1}{\setcounter{tocdepth}{2}}
+\vspace{2em}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:

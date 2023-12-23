@@ -2,12 +2,19 @@
 % MATH
 % ===================================================================
 \usepackage{nicefrac} % fractions that fit into inline text
+\usepackage{dsfont} % for \mathds command
 
 % ===================================================================
 % REFERENCES
 % ===================================================================
 \usepackage{cleveref} % automatically adds type of reference, MUST BE LOADED AFTER AMSMATH
 
+% ===================================================================
+% TODOS & COMMENTS
+% ===================================================================
+\usepackage{todonotes} % for TODOs, loads xcolor with []
+\newcommand{\toodoo}[1]{{\tt\color{red} #1}}
+\usepackage{comment} % for comment environment
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"

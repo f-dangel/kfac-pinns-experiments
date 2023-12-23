@@ -1,0 +1,42 @@
+\subsection{Physics informed neural networks (PINNs)}
+%\begin{itemize}
+%    \item PINNs are one of the most promising approaches to neural network based PDE solvers
+%    \item
+%\end{itemize}
+Let us consider the Poisson equation %and how to write the Gramian/Fisher as the product of a Jacobian and its transpose, see equation \eqref{eq:Jacobian_Fischer}.
+%Is this what you were after Felix?
+%I think it differs from the standard setting in the sense that suddenly the Laplacian shows up.
+%It can also be used to derive a matrix-free version of the energy natural gradient descent, like done in Hessian-free optimization.
+%$\bullet$ We consider the Poisson equation
+\begin{align*}\tag{PE}\label{eq:PE}
+  -\Delta u & = f \quad \text{in }\Omega \\
+  u & = g \quad \text{on }\partial\Omega
+\end{align*}
+where $f\in L^2(\Omega)$ and $g\in H^{3/2}(\partial\Omega)$ are some given rhs and boundary values.
+The function space energy is given by
+\[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds. \]
+Note that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$. Hence, we use the following loss function to train the parameters $\theta$ of a neural network
+\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
+Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}.
+In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
+\begin{align*}
+  L(\theta)
+  &=
+    \frac{1}{2N_\Omega} L_\Omega(\theta) + \frac{1}{2N_{\partial\Omega}}L_{\partial\Omega}(\theta)
+  \\
+  &=
+    \frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\theta(x_i) + f(x_i))^2 + \frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\theta(x^b_i) - g(x^b_i))^2
+\end{align*}
+where we denote by $(x_i)$, $i=1,\dots,N_\Omega$ the points in the interior of $\Omega$ and by $(x^b_i)$, $i=1,\dots,N_{\partial\Omega}$ the points on the boundary.
+We need quite a lot of these points in practice, it can be in the thousands, can be resamples at every iteration of the training process.
+And we need them in one batch, too.
+
+\begin{itemize}
+    \item If you run GD / Adam you get no good accuracy~\cite{?}
+    \item L-BFGS improves things, but is not super satisfactory
+\end{itemize}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
