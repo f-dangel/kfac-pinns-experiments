@@ -1,0 +1,80 @@
+\input{figures/computation_graph_styles.tex}
+\begin{tikzpicture}
+  % arrange nodes in a matrix
+  \matrix [%
+  row sep=5ex,%
+  column sep=5.5ex,%
+  ampersand replacement=\&,% in order to put this inside of a scalebox
+  ]{%
+    % neural network parameters
+    \&
+    \&
+    \node [dotsNode] (param-1) {$\dots$};
+    \&
+    \node [paramNode] (weight) {$\mW^{(i)}$};
+    % \node [paramNode, anchor=west, xshift=0.5ex] (bias) at (weight.east) {$\vb^{(i)}$};
+    \&
+    \node [dotsNode] (param-3) {$\dots$};
+    \\
+    % forward pass
+    \&
+    \node [dotsNode] (forward-1) {$\dots$};
+    \&
+    \node [forwardNode] (forward-2) {$\vz^{(i-1)}$};
+    \&
+    \node [forwardNode] (forward-3) {$\vz^{(i)}$};
+    \&
+    \node [dotsNode] (forward-4) {$\dots$};
+    \\
+    % gradients
+    \&
+    \node [dotsNode] (gradient-1) {$\dots$};
+    \&
+    \node [gradientNode] (gradient-2) {$\grad{\vz^{(i-1)}}u$};
+    \&
+    \node [gradientNode] (gradient-3) {$\grad{\vz^{(i)}}u$};
+    \&
+    \node [dotsNode] (gradient-4) {$\dots$};
+    \\
+    % Hessians
+    \node [hessianNode] (laplacian) {$\Delta u$};
+    \&
+    \node [dotsNode] (hessian-1) {$\dots$};
+    \&
+    \node [hessianNode] (hessian-2) {$\gradsquared{\vz^{(i-1)}}u$};
+    \&
+    \node [hessianNode] (hessian-3) {$\gradsquared{\vz^{(i)}}u$};
+    \&
+    \node [dotsNode] (hessian-4) {$\dots$};
+    \\
+  };
+  % dependency arrows
+  \foreach \i in {1,3} {
+    \pgfmathsetmacro{\j}{int(\i+1)}
+    \draw [-Latex, thick] (param-\i) to (forward-\j);
+  }
+  \foreach \i in {1,...,4} {
+    \draw [-Latex, thick] (forward-\i) to (gradient-\i);
+    \draw [-Latex, thick] (gradient-\i) to (hessian-\i);
+    \draw [-Latex, thick, out=225, in=135] (forward-\i) to (hessian-\i);
+  }
+  \foreach \i in {1,...,3} {
+    \pgfmathsetmacro{\j}{int(\i+1)}
+    \draw [-Latex, thick] (forward-\i) to (forward-\j);
+    \draw [-Latex, thick] (gradient-\j) to (gradient-\i);
+    \draw [-Latex, thick] (hessian-\j) to (hessian-\i);
+  }
+  \foreach \i in {1,3} {
+    \pgfmathsetmacro{\j}{int(\i)}
+    \draw [-Latex, thick, out=215, in=45] (param-\i) to (gradient-\j);
+    \draw [-Latex, thick, out=235, in=45] (param-\j) to (hessian-\j);
+  }
+  \draw [-Latex, thick] (hessian-1) to (laplacian);
+  \draw [-Latex, ultra thick, secondcolor] (weight) to (forward-3);
+  \draw [-Latex, ultra thick, secondcolor, out=215, in=45] (weight) to (gradient-2);
+  \draw [-Latex, ultra thick, secondcolor, out=235, in=45] (weight) to (hessian-2);
+\end{tikzpicture}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
