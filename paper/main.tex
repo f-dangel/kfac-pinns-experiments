@@ -99,6 +99,13 @@ Ideas:
 
 \section{Conclusion}
 
+\paragraph{Limitations:}
+\begin{itemize}
+\item Only works for sequential networks
+\item Hessian backpropagation requires memory quadratic in the intermediate features size and therefore becomes impractical for large intermediates like in CNNs.
+\item Our implementation is likely manual and relatively hard to automate with the current graph inspection tools offered by ML frameworks.
+\end{itemize}
+
 \begin{ack} % automatically suppressed in anonymized submission
   Acknowledgments go here.
 \end{ack}
