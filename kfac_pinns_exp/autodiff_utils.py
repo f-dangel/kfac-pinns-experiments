@@ -1,8 +1,8 @@
 """Utility functions for automatic differentiation."""
 
-from typing import List
+from typing import List, Tuple
 
-from einops import einsum
+from einops import einsum, rearrange
 from torch import Tensor, cat
 from torch.func import functional_call, grad, hessian, vmap
 from torch.nn import Module, Parameter
@@ -48,19 +48,23 @@ def autograd_input_hessian(model: Module, X: Tensor) -> Tensor:
     return hess_f_X(X)
 
 
-def autograd_gramian(model: Module, X: Tensor, param_names: List[str]) -> Tensor:
-    """Compute a block of the model Laplacian's Gramian.
+def autograd_gram_grads(
+    model: Module, X: Tensor, param_names: List[str], detach: bool = True
+) -> Tuple[Tensor]:
+    """Compute the gradients used in the Gramian.
 
     Args:
-        model: The model whose Gramian will be computed. Must produce
-            scalars as output.
+        model: The model whose Laplacian's Gramian is considered. Must produce
+            scalar outputs.
         X: The input to the model. First dimension is the batch dimension.
         param_names: List of unique parameter names forming the block.
+        detach: Whether to detach the gradients from the computational graph.
+            Default: `True`.
 
     Returns:
-        The Gramian block of the model Laplacian w.r.t. the flattened and concatenated
-        parameters. If `θ` is the flattened and concatenated parameter, its Gramian has
-        shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}`.
+        The Gramian's gradients `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` w.r.t. the specified parameters
+        in tuple format. For each parameter `p`, the Gram gradient has shape
+        `[batch_size, *p.shape]`.
     """
     frozen = {
         name: p for name, p in model.named_parameters() if name not in param_names
@@ -94,27 +98,43 @@ def autograd_gramian(model: Module, X: Tensor, param_names: List[str]) -> Tensor
         hess_f = hessian(f, argnums=0)  # (x, θ) → ∇ₓ²f(x, θ)
         return einsum(hess_f(x, *params), "batch d d ->")
 
-    def gramian(x: Tensor, *params: Parameter) -> Tensor:
-        """Compute the Gramian block of the model Laplacian for an un-batched input.
+    argnums = tuple(range(1, len(param_names) + 1))
+    gram_grads = vmap(grad(laplacian, argnums=argnums))
 
-        Args:
-            x: Un-batched 1d input.
-            params: The parameters forming the block of the Gramian in same order as
-                supplied in `param_names`.
+    # need to replicate the parameters `batch_size` times
+    batch_size = X.shape[0]
+    params = []
+    for name in param_names:
+        p = model.get_parameter(name)
+        keep = p.ndim * [-1]
+        params.append(p.unsqueeze(0).expand(batch_size, *keep))
 
-        Returns:
-            The Gramian block of the model Laplacian, i.e. `g @ gᵀ` where
-            `g = ∇_θ {Tr[∇ₓ²f(x, θ)}`. If `θ` are the flattened and concatenated
-            parameters, the Gramian has shape `[*θ.shape, *θ.shape]`.
-        """
-        argnums = tuple(range(1, len(params) + 1))
+    result = gram_grads(X, *params)
+    if detach:
+        result = tuple(r.detach() for r in result)
 
-        # (x, θ) → ∇_θ {Tr[∇ₓ²f(x, θ)]}
-        grad_laplacian = grad(laplacian, argnums=argnums)
+    return result
 
-        gram_grad = grad_laplacian(x, *params)
-        gram_grad = cat([g.detach().flatten() for g in gram_grad])
-        return einsum(gram_grad, gram_grad, "i,j -> i j")
 
-    params = tuple(model.get_parameter(name) for name in param_names)
-    return sum(gramian(x_n, *params) for x_n in X)
+def autograd_gramian(model: Module, X: Tensor, param_names: List[str]) -> Tensor:
+    """Compute a block of the model Laplacian's Gramian.
+
+    Args:
+        model: The model whose Gramian will be computed. Must produce
+            scalars as output.
+        X: The input to the model. First dimension is the batch dimension.
+        param_names: List of unique parameter names forming the block.
+
+    Returns:
+        The Gramian block of the model Laplacian w.r.t. the flattened and concatenated
+        parameters. If `θ` is the flattened and concatenated parameter, its Gramian has
+        shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}`.
+    """
+    gram_grads = cat(
+        [
+            rearrange(g, "batch ... -> batch (...)")
+            for g in autograd_gram_grads(model, X, param_names)
+        ],
+        dim=1,
+    )
+    return einsum(gram_grads, gram_grads, "batch i, batch j -> i j")
