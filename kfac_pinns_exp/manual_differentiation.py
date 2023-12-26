@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from einops import einsum
 from torch import Tensor, arange, ones_like, zeros, zeros_like
-from torch.nn import Linear, Module, Sigmoid
+from torch.nn import Linear, Module, ReLU, Sigmoid
 
 
 def manual_forward(layers: List[Module], x: Tensor) -> List[Tensor]:
@@ -112,6 +112,9 @@ def manual_backward_layer(
     elif isinstance(layer, Sigmoid):
         # σ' = σ(1 - σ)
         grad_inputs = grad_outputs * outputs * (1 - outputs)
+    elif isinstance(layer, ReLU):
+        # ReLU' = 1 if x > 0, 0 otherwise
+        grad_inputs = grad_outputs * (outputs > 0).float()
     else:
         raise NotImplementedError(f"Backpropagation through {layer} not implemented.")
 
@@ -278,6 +281,24 @@ def manual_hessian_backward_layer(
         idxs = arange(num_features, device=outputs_flat.device)
         hess_inputs_flat[:, idxs, idxs] += local_curvature_flat_diag
 
+        hess_inputs = hess_inputs_flat.reshape(hess_inputs_shape)
+    elif isinstance(layer, ReLU):
+        num_features = inputs.shape[1:].numel()
+
+        hess_outputs_flat = hess_outputs.reshape(batch_size, num_features, num_features)
+        outputs_flat = outputs.flatten(start_dim=1)
+        grad_outputs_flat = grad_outputs.flatten(start_dim=1)
+
+        # backpropagate incoming curvature
+        d_relu_flat = (outputs_flat > 0).to(outputs_flat.dtype)
+        hess_inputs_flat = einsum(
+            d_relu_flat,
+            hess_outputs_flat,
+            d_relu_flat,
+            "batch d1, batch d1 d2, batch d2 -> batch d1 d2",
+        )
+
+        # NOTE no local curvature is added by ReLU
         hess_inputs = hess_inputs_flat.reshape(hess_inputs_shape)
     else:
         raise NotImplementedError(
