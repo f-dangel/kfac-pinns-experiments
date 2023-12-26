@@ -178,7 +178,7 @@ def get_layer_idx_and_name(param: Parameter, layers: List[Module]) -> Tuple[int,
     raise ValueError(f"Parameter {param} not found in layers {layers}.")
 
 
-def get_block_idx(param, model: Module) -> int:
+def get_block_idx(param: Parameter, model: Module) -> int:
     """Get the block index of a parameter.
 
     Args:
