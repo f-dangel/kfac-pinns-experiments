@@ -7,7 +7,7 @@
 %    \item
 %\end{itemize}
 
-Natural gradients have been introduced by Amari~\cite{?} and have shown great success in RL and other problems...
+Natural gradients have been introduced by \citet{amari2000natural} and have shown great success in RL and other problems...
 The general idea is to replace the vanilla GD update rule by a preconditioned version
     \[ \theta_{k+1} = \theta_k - \eta_k G(\theta_k)^{-1} \nabla L(\theta_k), \]
 where $G(\theta)\in\mathbb R^{p\times p}$, $G(\theta)_{ij} \coloneqq g_{u_\theta}(\partial_{\theta_i} u_\theta, \partial_{\theta_j} u_\theta)$ is a matrix capturing the geometry of the function space geometry of the problem and its parametrization.
