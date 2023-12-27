@@ -62,8 +62,8 @@ def autograd_gram_grads(
             Default: `True`.
 
     Returns:
-        The Gramian's gradients `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` w.r.t. the specified parameters
-        in tuple format. For each parameter `p`, the Gram gradient has shape
+        The Gramian's gradients `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` w.r.t. the specified
+        parameters in tuple format. For each parameter `p`, the Gram gradient has shape
         `[batch_size, *p.shape]`.
     """
     frozen = {
