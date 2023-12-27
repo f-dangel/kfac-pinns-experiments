@@ -56,10 +56,8 @@ def main():
     # setup
     manual_seed(0)
     batch_size = 10
-    X = rand(batch_size, 5)
+    X = rand(batch_size, 4)
     layers = [
-        Linear(5, 4),
-        Sigmoid(),
         Linear(4, 3),
         Sigmoid(),
         Linear(3, 2),
@@ -138,24 +136,15 @@ def main():
     plt.close(fig)
 
     # visualize the contributions
-    done = []
     for child1, child2 in contributions.keys():
-        if {child1, child2} in done:
-            continue
-
-        mat = contributions[(child1, child2)]
-        if child1 != child2:
-            mat = mat + contributions[(child2, child1)]
-
         fig, ax = plt.subplots(figsize=(6, 6))
         ax.axis("off")  # turn off ticks and tick labels
-        im = ax.imshow(mat, vmin=vmin, vmax=vmax)
+        im = ax.imshow(contributions[(child1, child2)], vmin=vmin, vmax=vmax)
         highlight_block_diagonal(ax, dims)
         plt.savefig(
             path.join(FIGDIR, f"gram_{child1}_{child2}.png"), bbox_inches="tight"
         )
         plt.close(fig)
-        done.append({child1, child2})
 
     # visualize the sum of terms from identical children
     diag_children = sum(contributions[(c, c)] for c in CHILDREN)

@@ -539,18 +539,9 @@ Some insights while creating \Cref{fig:hbp-dependencies} that might explain the 
       \grad{\gradsquared{\vz^{(L-1)}}} \Delta u
       =
       \vzero
-      \shortintertext{and}
-      \mF^{(L)}_{\bullet, \gradsquared{\vz^{(L-1)}}u}
-    &=
-      \vzero
-      =
-      \mF^{(L)}_{\gradsquared{\vz^{(L-1)}}u, \bullet}
-      \qquad \forall \bullet\,.
   \end{align*}
-  We can see this effect clearly in the (forward, Hessian) and (Hessian, Hessian) panels of \Cref{fig:gramian-contribution-children} where any row/column associated to the last layer's weight is zero.
-  \toodoo{F.D.
-    Surprisingly, this does not seem to hold for the (gradient, Hessian) panel.
-    Could be numerical artifacts because overall the Gramian's elements are pretty small, or a bug in my code.}
+  and the associated block in $ \mF^{(L)}_{\bullet, \gradsquared{\vz^{(L-1)}}u}, \mF^{(L)}_{\gradsquared{\vz^{(L-1)}}u, \bullet} $ is zero.
+  We can see this effect clearly in the ($\bullet$, Hessian) and ($\bullet$, Hessian) panels of \Cref{fig:gramian-contribution-children} where either row or column blocks associated to the last layer's weight are zero.
 
   A similar argument implies that for a network consisting only of linear layers and ReLU activations, the Hessian backpropagation will be zero for all layers.
   Consequentially, the Laplacian will be $\vzero$.
@@ -559,14 +550,8 @@ Some insights while creating \Cref{fig:hbp-dependencies} that might explain the 
 \item So far we only discussed weights.
   Bias terms are even simpler because they only contribute in the forward pass, irrespective of which layer they reside in.
   They are not used in any operation of the backward and Hessian backward procedure.
-  We should see that in all panels except for (forward, forward) of \Cref{fig:gramian-contribution-children}.
-  \toodoo{However, currently only the (gradient, gradient), (gradient, Hessian), and (Hessian, Hessian) panels are consistent with this.
-    Need to debug why there is an expectation mismatch for (forward, gradient) and (forward, Hessian).}
+  Hence, in all panels except for (forward, forward) of \Cref{fig:gramian-contribution-children} the row/column blocks associated with bias terms are zero.
 \end{itemize}
-
-\toodoo{F.D.\,Write down the full expression for the Fisher, grouping the terms with identical and non-identical children.}
-
-\toodoo{Propose ways to Kronecker-approximate the terms from identical children in to a single Kronecker product.}
 
 \paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
 The terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ are automatically computed when computing the gradient of the loss via backdrop.
