@@ -1,4 +1,4 @@
-Here we derive the Laplacian of a feed-forward neural network with scalar output, that is $\Delta u_{\vtheta} \coloneqq \Tr(\gradsquared{\vx} u_{\theta})$.
+Here we derive the Laplacian of a feed-forward NN with scalar output, that is $\Delta u \coloneqq \Tr(\gradsquared{\vx} u)$.
 The goal is to make the dependence of the Laplacian w.r.t.\,a weight $\mW$ in one layer of the network explicit.
 Then we can write down the Jacobian $\jac_{\mW}(\Delta u_{\vtheta})$ which is required for the Fisher used by energy NGD.
 
@@ -7,49 +7,7 @@ The Laplacian follows by taking the trace of the latter.
 Finally, we express the Laplacians gradient w.r.t.
 a single layer's weight $\mW$, i.e.\,$\nicefrac{\partial \Delta u_{\vtheta}}{\partial \mW}$, in terms of $\mW$'s children in the compute graph.
 
-% \subsection{Feed-forward Neural Networks}
-\paragraph{Layer notation} Consider a sequential neural network $u_{\vtheta}$ with depth $L$ that consists of layers $f^{(i)}_{\vtheta^{(i)}}$ with trainable parameters $\vtheta^{(i)} \in \sR^{d^{(i)}}, i=1,\dots, L,$ that transform an input $\vx \in \sR^M$ into a prediction $u_{\vtheta}(\vx)\in \sR^C$ via intermediate representations $\vz^{(i)} \in \sR^{h^{(i)}}, i= 0, \dots, L$,
-\begin{align}
-  \begin{split}
-    u_{\vtheta}
-    &=
-      f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
-    \\
-    f^{(i)}_{\vtheta^{(i)}}\colon \sR^{h^{(i-1)}}
-    &\to
-      \sR^{h^{(i)}}\,,
-    \\
-    \vz^{(i-1)}
-    &\mapsto
-      \vz^{(i)} = f^{(i)}_{\vtheta^{(i)}}(\vz^{(i-1)})
-  \end{split}
-\end{align}
-where $\vz^{(0)} \coloneqq \vx$, $\vz^{(L)} \coloneqq \vu$, and $\vtheta = ({\vtheta^{(1)}}^{\top}, \dots, {\vtheta^{(L)}}^{\top})^{\top}$ is the concatenation of parameters over layers.
-A parameter might be empty, e.g.\,if the layer is an activation layer.
-
-
-
-% \subsection{Derivatives}
-
-\paragraph{Flattening} Above, we assumed all quantities ($\vz^{(i)}, \vtheta^{(i)}$) to be vectors.
-In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
-Our index convention to vectorize will be first-varies-fastest, which means column-stacking for a matrix (row index varies first, column index varies second).
-We denote the flattening operation by $\flatten(\cdot)$.
-Very useful is the so called \emph{vec-trick} stating that
-\begin{equation}\label{eq:vecTrick}
-  \flatten(AXB) = (B^\top\otimes A)\flatten{X}
-\end{equation}
-for matrices $A, X, B$. In particular, this shows that $B^\top\otimes A$ is the  matrix representing the linear mapping $X\mapsto AXB$ and hence $J_X(AXB) = B^\top\otimes A$.
-
-\paragraph{Jacobian \& Hessian} The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
-Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
-It collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
-For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ w.r.t.\,a matrix $\mA$, we simply have $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
-Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ w.r.t.\,a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
-For the Hessian $\gradsquared{\mA} b$ of a scalar $b$ w.r.t.\,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
-We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
-
-\subsection{Computing the input Hessian via backpropagation}
+\subsubsection{Computing the input Hessian via backpropagation}
 
 Gradient backpropagation describes a recursive procedure to compute gradients by backpropagating a signal via vector-Jacobian products (VJPs).
 A similar procedure can be derived to compute Hessians w.r.t.\,nodes in a graph ($\vz^{(i)}$ or $\vtheta^{(i)}$).
@@ -145,16 +103,6 @@ intermediate gradients and Hessians for computing $\gradsquared{\vx}u_{\vtheta}$
 
 The Laplacian $\Delta u_{\vtheta}$ follows by taking the trace of
 $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
-
-Some insights while creating \Cref{fig:hbp-dependencies}:
-\begin{itemize}
-\item If the last layer is a linear layer, it's weight does not contribute to the Hessian during the Hessian backward pass.
-  This is because the incoming Hessian is $\vzero$, and the Hessian backpropagation is $\mW^T\vzero \mW = \vzero$.
-  \toodoo{Does something similar apply for the contribution from the gradient backpropagation?}
-
-\item About the bias terms.
-  I think they only contribute through the forward pass, but not otherwise as they do not show up in any of the operations used during gradient/Hessian backpropagation.
-\end{itemize}
 
 \begin{figure}[t]
   \centering
@@ -514,9 +462,96 @@ For the Gramian's block diagonal (leftmost panel), we can see that the contribut
 This is a first promising observation: Since we tackle the approximation of the Gramian's block diagonal, we can focus on the contributions from identical nodes.
 These are also simpler to compute because they can be computed at one stage of backpropagation.
 
-\toodoo{F.D.\,Write down the full expression for the Fisher, grouping the terms with identical and non-identical children.}
+Some insights while creating \Cref{fig:hbp-dependencies} that might explain the structures of the Gramian displayed in \Cref{fig:gramian-contribution-children}:
+\begin{itemize}
+\item Assume the NN's first layer is a linear layer with weight matrix $\mW^{(1)}$.
+  Then, we have that the Laplacian's derivative w.r.t.\, the input Hessian is
+  \begin{equation*}
+    \grad{\gradsquared{\vx}u}\Delta \vx = \flatten(\mI)\,.
+  \end{equation*}
+  This is because the relation between the two is taking the trace.
+  Then, we can write down the (Hessian, Hessian) contribution to the Gramian
+  exactly as
+  \begin{align*}
+    \mF^{(1)}_{\gradsquared{\vx}u, \gradsquared{\vx}u}
+    &=
+      \left\{
+      2
+      \left(
+      \mI \otimes
+      \left[
+      \left( \gradsquared{\vz^{(1)}}u \right) \mW^{(0)}
+      \right]
+      \right)
+      \flatten(\mI)
+      \right\}
+      \left\{
+      2
+      \left(
+      \mI \otimes
+      \left[
+      \left( \gradsquared{\vz^{(1)}}u \right) \mW^{(0)}
+      \right]
+      \right)
+      \flatten(\mI)
+      \right\}^{\top}
+    \\
+    &=
+      \left\{
+      2
+      \flatten
+      \left(
+      \mI \otimes
+      \left[
+      \left( \gradsquared{\vz^{(1)}}u \right) \mW^{(0)}
+      \right]
+      \right)
+      \right\}
+      \left\{
+      2
+      \flatten
+      \left(
+      \mI \otimes
+      \left[
+      \left( \gradsquared{\vz^{(1)}}u \right) \mW^{(0)}
+      \right]
+      \right)
+      \right\}^{\top}
+    \\
+    &=
+      \text{(F.D. Not sure if this can be further simplified.)}
+  \end{align*}
 
-\toodoo{Propose ways to Kronecker-approximate the terms from identical children in to a single Kronecker product.}
+\item If the last layer is a linear layer, it's weight does not contribute to the Hessian during the Hessian backward pass.
+  This is because the incoming Hessian is $\gradsquared{u}u = \vzero$, and the Hessian backpropagation is $\gradsquared{\vz^{(L-1)}}u = {\mW^{(L)}}^T\vzero \mW^{(L)} = \vzero$.
+  Only the activation layer before the last linear layer will start introducing curvature.
+  Hence,
+  \begin{align*}
+    \grad{\mW^{(L)}} \Delta u
+    &=
+      2
+      \left(
+      \mI \otimes
+      \left[
+      \vzero \mW^{(L)}
+      \right]
+      \right)
+      \grad{\gradsquared{\vz^{(L-1)}}} \Delta u
+      =
+      \vzero
+  \end{align*}
+  and the associated block in $ \mF^{(L)}_{\bullet, \gradsquared{\vz^{(L-1)}}u}, \mF^{(L)}_{\gradsquared{\vz^{(L-1)}}u, \bullet} $ is zero.
+  We can see this effect clearly in the ($\bullet$, Hessian) and ($\bullet$, Hessian) panels of \Cref{fig:gramian-contribution-children} where either row or column blocks associated to the last layer's weight are zero.
+
+  A similar argument implies that for a network consisting only of linear layers and ReLU activations, the Hessian backpropagation will be zero for all layers.
+  Consequentially, the Laplacian will be $\vzero$.
+  This makes sense because ReLU-activated networks are piece-wise linear~\cite{arora2018understanding}, hence their Laplacian vanishes almost everywhere.
+
+\item So far we only discussed weights.
+  Bias terms are even simpler because they only contribute in the forward pass, irrespective of which layer they reside in.
+  They are not used in any operation of the backward and Hessian backward procedure.
+  Hence, in all panels except for (forward, forward) of \Cref{fig:gramian-contribution-children} the row/column blocks associated with bias terms are zero.
+\end{itemize}
 
 \paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
 The terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ are automatically computed when computing the gradient of the loss via backdrop.
@@ -534,10 +569,10 @@ when $\textcolor{blue}{\bullet} = \textcolor{red}{\bullet} = \vz^{(i)}$
       \right)
       \left[
       \left(
-      \textcolor{blue}{\grad{\vz^{(i-1)}}\Delta u}
+      \textcolor{blue}{\grad{\vz^{(i)}}\Delta u}
       \right)
       \left(
-      \textcolor{red}{\grad{\vz^{(i-1)}}\Delta u}
+      \textcolor{red}{\grad{\vz^{(i)}}\Delta u}
       \right)^{\top}
       \right]
       \left(
@@ -549,16 +584,15 @@ when $\textcolor{blue}{\bullet} = \textcolor{red}{\bullet} = \vz^{(i)}$
       \textcolor{red}{{\vz^{(i-1)}}^{\top}}
       \otimes
       \left(
-      \textcolor{blue}{\grad{\vz^{(i-1)}}\Delta u}
+      \textcolor{blue}{\grad{\vz^{(i)}}\Delta u}
       \right)
       \left(
-      \textcolor{red}{\grad{\vz^{(i-1)}}\Delta u}
+      \textcolor{red}{\grad{\vz^{(i)}}\Delta u}
       \right)^{\top}
     \\
     &\coloneqq \mA_{\text{KFAC}}^{(i)} \otimes \mB_{\text{KFAC}}^{(i)}\,.
   \end{split}
 \end{align}
-\toodoo{I think the subscript should be $\nabla_{\vz^{(i)}} \Delta u$ instead of $\nabla_{\vz^{(i-1)}} \Delta u$ or am I missing something? }
 Note however, that in comparison to traditional KFAC, there are Laplacian terms.
 \Cref{eq:original-kfac} illustrates that the Kronecker structure emerges from
 the Jacobians. So we need to investigate these objects closer for the remaining

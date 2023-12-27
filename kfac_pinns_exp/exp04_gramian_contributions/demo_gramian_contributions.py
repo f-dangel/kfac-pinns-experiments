@@ -178,7 +178,7 @@ def get_layer_idx_and_name(param: Parameter, layers: List[Module]) -> Tuple[int,
     raise ValueError(f"Parameter {param} not found in layers {layers}.")
 
 
-def get_block_idx(param, model: Module) -> int:
+def get_block_idx(param: Parameter, model: Module) -> int:
     """Get the block index of a parameter.
 
     Args:
@@ -233,19 +233,42 @@ def main():
         manual_block = zeros_like(true_block)
 
         for child1, child2 in product(CHILDREN, CHILDREN):
-            manual_block.add_(
-                gramian_term(
-                    layers,
-                    X,
-                    layer_idx1,
-                    param_name1,
-                    child1,
-                    layer_idx2,
-                    param_name2,
-                    child2,
-                    flat_params=True,
-                )
+            term = gramian_term(
+                layers,
+                X,
+                layer_idx1,
+                param_name1,
+                child1,
+                layer_idx2,
+                param_name2,
+                child2,
+                flat_params=True,
             )
+
+            # check properties
+            # blocks stemming from a bias with child != 'output' are zero
+            if any(
+                "bias" in name and child != "output"
+                for name, child in [(param_name1, child1), (param_name2, child2)]
+            ):
+                print(layer_idx1, param_name1, child1, layer_idx2, param_name2, child2)
+                assert allclose(term, zeros_like(term))
+
+            # blocks stemming from the last weight with child == 'hess_input' are zero
+            assert isinstance(layers[-1], Linear)
+            if any(
+                "weight" in name
+                and child == "hess_input"
+                and layer_idx == len(layers) - 1
+                for name, child, layer_idx in [
+                    (param_name1, child1, layer_idx1),
+                    (param_name2, child2, layer_idx2),
+                ]
+            ):
+                print(layer_idx1, param_name1, child1, layer_idx2, param_name2, child2)
+                assert allclose(term, zeros_like(term))
+
+            manual_block.add_(term)
 
         same = allclose(manual_block, true_block)
         print(f"\tSame(auto, hook)? {same}")

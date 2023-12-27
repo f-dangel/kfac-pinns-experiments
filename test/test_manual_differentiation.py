@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from pytest import mark
 from torch import Tensor, allclose, manual_seed, rand, rand_like
 from torch.autograd import grad
-from torch.nn import Linear, Module, Sequential, Sigmoid
+from torch.nn import Linear, Module, ReLU, Sequential, Sigmoid
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
 from kfac_pinns_exp.manual_differentiation import (
@@ -21,6 +21,18 @@ CASES = [
         "input_fn": lambda: rand(4, 10),
         "seed": 0,
         "id": "linear-sigmoid-linear",
+    },
+    {
+        "layers_fn": lambda: [
+            Linear(10, 5),
+            ReLU(),
+            Linear(5, 3),
+            Sigmoid(),  # needed to introduce some curvature
+            Linear(3, 1),
+        ],
+        "input_fn": lambda: rand(4, 10),
+        "seed": 0,
+        "id": "linear-relu-linear-sigmoid-linear",
     },
 ]
 CASE_IDS = [case["id"] for case in CASES]
