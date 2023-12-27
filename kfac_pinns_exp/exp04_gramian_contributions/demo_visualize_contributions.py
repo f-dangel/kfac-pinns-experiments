@@ -125,7 +125,6 @@ def main():
     block_diag_gram = separate_into_tiles(gram, dims)
     # set off-diagonal blocks to zero
     for i, j in product(range(len(dims)), range(len(dims))):
-        print(i, j)
         if i != j:
             block_diag_gram[i][j] = zeros_like(block_diag_gram[i][j])
     block_diag_gram = combine_tiles(block_diag_gram)
