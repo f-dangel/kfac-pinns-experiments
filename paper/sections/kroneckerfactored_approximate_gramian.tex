@@ -1,6 +1,105 @@
 This subsection describes the Kronecker approximation we propose for the per-layer Gramian.
 It should also justify that the approximation is similar to that in other works.
 
+\begin{table}
+  \centering
+  \caption{Overview of Kronecker approximations for matrix multiplication with a weight $\mW \in \sR^{D_1 \times D_2}$ in the presence and absence of weight sharing and transposition.
+    Transposition changes to which Kronecker factor the input/grad output contributes.
+    Weight sharing requires an additional approximation to obtain a single Kronecker factor.
+  }\label{tab:kronecker-approximations-basic-operations}
+  \resizebox{\linewidth}{!}{%
+    \begin{tabular}{cccccc}
+      \toprule
+      (share,
+      &
+        Input
+      &
+        Output
+      &
+        Grad output
+      &
+        Jacobian
+      &
+        Gramian proxy
+      \\
+      \quad transp.)
+      &
+        $\tX$
+      &
+        $\tZ$
+      &
+        $\grad{\tZ}\ell$ % \coloneqq \grad{\flatten(\tZ)}\ell$
+      &
+        $\jac_{\mW}\tZ$ % \coloneqq \jac_{\flatten(\mW)}\flatten(\tZ)$
+      &
+        $(\jac_{\mW}\tZ)^{\top} \grad{\tZ}\ell (\grad{\tZ}\ell)^{\top} \jac_{\mW}\tZ
+        \approx \mA \otimes \mB$
+      \\
+      \midrule
+      (\xmark, \xmark)
+      &
+        $\vx \in \sR^{D_2}$
+      &
+        $\vz = \mW \vx \in \sR^{D_1}$
+      &
+        $\grad{\vz}\ell \in \sR^{D_1}$
+      &
+        $\vx^{\top} \otimes \mI_{D_1}$
+      &
+        $\vx \vx^{\top} \otimes \grad{\vz}\ell (\grad{\vz}\ell)^{\top}$
+      \\
+      (\xmark, \cmark)
+      &
+        $\vx \in \sR^{D_1}$
+      &
+        $\vz = \mW^{\top} \vx \in \sR^{D_2}$
+      &
+        $\grad{\vz}\ell \in \sR^{D_2}$
+      &
+        $\mI_{D_2} \otimes \vx^{\top}$
+      &
+        $\grad{\vz}\ell (\grad{\vz}\ell)^{\top} \otimes \vx \vx^{\top}$
+      \\
+      (\cmark, \xmark)
+      &
+        $\mX \in \sR^{D_2 \times S}$
+      &
+        $\mZ = \mW \mX \in \sR^{D_1 \times S}$
+      &
+        $\grad{\mZ}\ell \in \sR^{S D_1}$
+      &
+        $\mX^{\top} \otimes \mI_{D_1}$
+      &
+        $
+        \mX \mX^{\top}
+        \otimes
+        \frac{1}{S}
+        \flatten^{-1}(\grad{\mZ}\ell) {\flatten^{-1}(\grad{\mZ}\ell) }^{\top}
+        $
+      \\
+      (\cmark, \cmark)
+      &
+        $\mX \in \sR^{D_1 \times S}$
+      &
+        $\mZ = \mW^{\top} \mX \in \sR^{D_2 \times S}$
+      &
+        $\grad{\mZ}\ell \in \sR^{S D_2}$
+      &
+        $\mK \left( \mI_{D_2} \otimes \mX^{\top} \right)$
+      &
+        $
+        \frac{1}{S}
+        \flatten^{-1}(\grad{\mZ}\ell) {\flatten^{-1}(\grad{\mZ}\ell)}^{\top}
+        \otimes
+        \mX \mX^{\top}
+        $
+      \\
+
+      \bottomrule
+    \end{tabular}
+  }
+\end{table}
+
 \toodoo{F.D.
   Warning: The below write-up is a first attempt to come up with a Kronecker approximation.
   I still need to find more intuitive explanations, ideally with ideas from other KFAC papers.}
