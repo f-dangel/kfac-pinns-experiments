@@ -106,6 +106,116 @@ It should also justify that the approximation is similar to that in other works.
   Warning: The below write-up is a first attempt to come up with a Kronecker approximation.
   I still need to find more intuitive explanations, ideally with ideas from other KFAC papers.}
 
+\paragraph{Some intuition:} Consider a weight matrix $\mW \in \sR^{D_1 \times
+  D_2}$ inside a neural network that produces a loss $\ell$. We want to compute
+the Gramian $\mF(\mW) = \grad{\mW}\ell (\grad{\mW}\ell)^{\top}$. Consider the following scenarios:
+\begin{enumerate}
+\item \textbf{(No sharing, no transpose)} The matrix is used to form the matrix vector product $\vz = \mW \vx \in \sR^{D_2}$ with an input vector $\vx \in \sR^{D_1}$.
+  The Gramian is then
+  \begin{align*}
+    \mF(\mW) = \vx \vx^{\top} \otimes \grad{\vz}\ell (\grad{\vz}\ell)^{\top}\,.
+  \end{align*}
+  The input to the matrix multiply forms the first Kronecker factor, the gradient w.r.t.\,the matrix multiply's output forms the second Kronecker factor.
+
+\item \textbf{(No sharing, transpose)} The matrix is used to form the transpose matrix vector product $\vz = \mW^{\top} \vx \in \sR^{D_1}$.
+  The Gramian is then
+  \begin{align*}
+    \mF(\mW) = \grad{\vz}\ell (\grad{\vz}\ell)^{\top} \otimes \vx \vx^{\top}\,.
+  \end{align*}
+  The gradient w.r.t.\,the transpose matrix multiply's output forms the first Kronecker factor, the input to the matrix multiply forms the second Kronecker factor.
+  I.e.
+  the Gramian w.r.t.\,the transpose matrix is just the Gramian of the non-transposed matrix, but with swapped Kronecker factors.
+
+\item \textbf{(Sharing, no transpose)} The matrix is used to form the matrix matrix product $\mZ = \mW \mX \in \sR^{D_2 \times S}$ with an input matrix $\mX \in \sR^{D_1 \times S}$ consisting of $S$ vector-valued columns which share the same weights.
+  The Gramian is then
+  \begin{align*}
+    \mF(\mW) =
+    \left(
+    \mX
+    \otimes
+    \mI_{D_2}
+    \right)
+    \grad{\mZ}\ell (\grad{\mZ}\ell)^{\top}
+    \left(
+    \mX^{\top}
+    \otimes
+    \mI_{D_2}
+    \right)
+  \end{align*}
+  Note that this does not simplify into a single Kronecker product.
+  We need to apply another approximation.
+  One way to obtain a single Kronecker factor is to seek an approximation for the central term such that $\grad{\mZ}\ell (\grad{\mZ}\ell)^{\top} \approx \mI \otimes \mU$ with $\mU \in \sR^{D_1 \times D_1}$.
+  Let's look for the matrix that minimizes the reconstruction error
+  $\left\lVert \grad{\mZ}\ell (\grad{\mZ}\ell)^{\top} - \mI \otimes \mU
+  \right\rVert_{\text{F}}^2$. The solution to this is given by the average
+  diagonal blocks of $\grad{\mZ}\ell (\grad{\mZ}\ell)^{\top}$. We can write it
+  as
+  \begin{align}
+    \mU
+    =
+    \frac{1}{S}
+    \flatten^{-1}
+    \left(
+    \grad{\mZ}\ell
+    \right)
+    \left[
+    \flatten^{-1}
+    \left(
+    \grad{\mZ}\ell
+    \right)
+    \right]^{\top}
+  \end{align}
+  where $\flatten^{-1} \left(\grad{\mZ}\ell \right) \in \sR^{D_1 \times S}$.
+  With this approximation, we can express the Gramian as a single Kronecker product:
+  \begin{align*}
+    \begin{split}
+      \mF(\mW)
+      &\approx
+      \left(
+      \mX
+      \otimes
+      \mI_{D_2}
+      \right)
+      \left(
+      \mI
+      \otimes
+      \mU
+      \right)
+      \left(
+      \mX^{\top}
+      \otimes
+      \mI_{D_2}
+      \right)
+      \\
+      &=
+        \mX \mX^{\top}
+        \otimes
+        \mU
+      \\
+      &=
+        \mX \mX^{\top}
+        \otimes
+        \frac{1}{S}
+        \flatten^{-1}
+        \left(
+        \grad{\mZ}\ell
+        \right)
+        \left[
+        \flatten^{-1}
+        \left(
+        \grad{\mZ}\ell
+        \right)
+        \right]^{\top}
+    \end{split}
+  \end{align*}
+  Again, note that the input to the matrix multiply forms the first Kronecker factor, the gradient w.r.t.\,the matrix multiply's output forms the second Kronecker factor.
+  However, we needed additional approximations to obtain a single Kronecker product.
+
+\item \textbf{(Sharing, transpose)} The matrix is used to form the transpose matrix matrix product $\mZ = \mW^{\top} \mX \in \sR^{D_1 \times S}$ with $\mX \in \sR^{D_2 \times S}$.
+  The Gramian is then
+  \toodoo{F.D. seems like I have never computed this before. Need to do that.}
+\end{enumerate}
+
 \paragraph{Single datum case} As a first step, let's write down only the diagonal terms of the Gramian, i.e.\,the terms caused by the same children and try to simplify each term into a Kronecker product of same dimension:
 \begin{align}
   \begin{split}
