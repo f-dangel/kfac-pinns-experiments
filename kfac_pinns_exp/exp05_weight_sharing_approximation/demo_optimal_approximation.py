@@ -21,7 +21,7 @@ def main():
     vec_G = G.T.flatten()  # column-stacking, like in the literature
     ggT = einsum("i,j->ij", vec_G, vec_G)
 
-    I = eye(S)
+    I_S = eye(S)
     U = rand(D_out, D_out, requires_grad=True)
     U_opt = (G @ G.T) / S  # expected solution
 
@@ -32,7 +32,7 @@ def main():
             The objective value.
         """
         optimizer.zero_grad()
-        error = ((kron(I, U) - ggT) ** 2).sum()
+        error = ((kron(I_S, U) - ggT) ** 2).sum()
         error.backward()
         return error
 
