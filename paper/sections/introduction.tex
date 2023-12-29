@@ -2,11 +2,11 @@ PINNs are difficult to optimize.
 \begin{itemize}
     \item PINNs receive ever growing amount of attention
     \item their failure to produce high accuracy solution when trained with variants of GD like Adam is well documented
-    \item L-BFGS yields improved but very high accuracy
+    \item L-BFGS yields improved but still not very high accuracy
     \item Other suggestions: reweighting of the loss, specialized sampling strategies, greedy training, reformulation as saddle point problem
     \item recently, a variant of NG based on the geometry of the specific energy / PDE was proposed; yields greatly improved accuracy over direct gradient-based optimizers and enjoys the nice property that it can be shown to mimic Newton's method in function space; for PINNs it can be seen as Gau\ss-Newton method in the space of residuals, for other problems as a generalized GN?
     \item whereas, this method was shown to be able to produce highly accurate approximations of the solution of the PDE it comes with a considerable iteration cost as it involves the solution of a linear system of the size of the number of parameters. Hence, this is only feasible for networks of small to moderate size when done naively.
-    \item we use the idea of KFAC and provide an efficient implementation
+    \item we use the idea of KFAC and provide an efficient implementation; however, PDE terms appear in the Gramian, so existing implementations can not be used off the shelve 
 \end{itemize}
 
 \paragraph{Contribution:} \toodoo{Formulate our goal.}
