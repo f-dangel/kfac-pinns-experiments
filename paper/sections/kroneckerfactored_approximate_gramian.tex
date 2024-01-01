@@ -1,5 +1,6 @@
-This subsection describes the Kronecker approximation we propose for the per-layer Gramian.
-It should also justify that the approximation is similar to that in other works.
+This subsection describes the Kronecker approximation we propose for the per-layer Gramian and justify that the approximation is similar to the concepts used in other KFAC works.
+We will rely on a similar intuition than \citet{eschenhagen2023kroneckerfactored} in the presence of weight sharing.
+However, we will use a slightly different motivation to obtain the Kronecker structure in the presence of weight sharing.
 
 \begin{table}
   \centering
@@ -111,12 +112,6 @@ It should also justify that the approximation is similar to that in other works.
   }
 \end{table}
 
-\toodoo{F.D.
-  Warning: The below write-up is a first attempt to come up with a Kronecker approximation.
-  I still need to find more intuitive explanations, ideally with ideas from other KFAC papers.}
-
-We will rely on a similar intuition than \citet{eschenhagen2023kroneckerfactored} in the presence of weight sharing.
-However, we will use a slightly different motivation to obtain the Kronecker structure in the presence of weight sharing.
 
 \paragraph{Some intuition:} Consider a weight matrix $\mW \in \sR^{D_1 \times
   D_2}$ inside a neural network that produces a loss $\ell$. We want to compute
@@ -535,35 +530,6 @@ We can just do that in the same way as the original KFAC paper, which gives us
   \right)
 \end{align}
 \Cref{eq:gram-kronecker-approximations-unbatched,eq:gram-kronecker-approximations-batched} are our proposed approximation for the Gramian.
-
-\toodoo{--- F.D.
-  Below is an alternative write-up which starts from the perspective of weight sharing.
-  I haven't quite figured out the exact connection yet.}
-
-We will Kronecker-approximate the Gramian using the recently introduced generalization of KFAC to weight-sharing layers in~\citet{eschenhagen2023kroneckerfactored}.
-
-\paragraph{One datum, no weight sharing} Let's start with maximum likelihood estimation with a single data point $(\vx, \vy)$.
-Consider a linear layer inside a neural network which maps some vector-valued hidden feature of $\vx$, $\va \in \sR^{D_{\text{in}}}$ to a vector-valued output $\vz \in \sR^{D_{\text{out}}}$ via $\vz = \mW \va$.
-$\vz$ is then further processed and used to compute the negative log-likelihood loss $\ell(\vx, \vy, \mW) = - \log p(\vy \mid \vx, \mW)$.
-For this single-usage layer, the weigh matrix's Fisher is exactly Kroneckerfactored, $\mF(\mW) = \va \va^{\top} \otimes \E_{\hat{\vy} \sim p(\dot \mid \vx, \mW)}\left[ \vg \vg^{\top} \right]$ where $\vg = \grad{\vz} \ell(\vx, \hat{\vy}, \mW)$.
-In practise, we will use one sample from the model's likelihood to estimate the second expectation.
-This yields $\mF(\mW) \approx \va \va^{\top} \otimes \vg \vg^{\top}$
-
-\paragraph{One datum, weight sharing} Now consider a layer which is used
-multiple times in the computation graph. This means the layer will not process a
-single vector $\va$, but a sequence of vectors $\left\{ \va_1, \dots, \va_S
-\right\}$ where $S$ denotes weight sharing number. We can column-stack these
-vectors into a matrix $\mA \in \sR^{D_{\text{in}}\times S}$, likewise for the
-linear layer's outputs $\mZ \in \sR^{D_{\text{out}}\times S}$ and activation
-gradients $\mG \in \sR^{D_{\text{out}} \times S}$.
-
-As described in \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
-
-The first one is the \emph{expand} approximation, which takes the covariance over the shared vectors, $\mF(\mW) \approx \Cov_s[\va] \otimes S \Cov_s[\vg] = \nicefrac{1}{S} \sum_{s=1}^S \va_s \va_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top} \eqqcolon \mF^{(\text{expand})}(\mW)$ where $\vg_s = \grad{\vz_s} \ell(\vx, \hat{\vy}, \mW)$.
-We can express this in matrix notation as $\mF^{(\text{expand})}(\mW) = \nicefrac{1}{S} \mA \mA^{\top} \otimes \mG \mG^{\top}$.
-
-A more aggressive, though cheaper, approximation is the \emph{reduce} approximation, which uses the mean outer product, $\mF(\mW) \approx \E_s[\va] \E_s[\va]^{\top} \otimes S \E_s[\vg] S \E_s[\vg]^{\top} = \left(\nicefrac{1}{S} \sum_{s=1}^S \va_s \right) \left( \nicefrac{1}{S} \sum_{s=1}^S \va_s^{\top}\right) \otimes \left(\sum_{s=1}^S \vg_s \right) \left(\sum_{s=1}^S \vg_s^{\top} \right) \eqqcolon \mF^{(\text{reduce})}(\mW)$.
-We can express this in matrix form as $\mF^{(\text{reduce})}(\mW) = \left( \nicefrac{1}{S} \mA \vone \right) \left( \nicefrac{1}{S} \mA \vone \right)^{\top} \otimes \left(\mG \vone \right) \left( \mG \vone \right)^{\top}$.
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
