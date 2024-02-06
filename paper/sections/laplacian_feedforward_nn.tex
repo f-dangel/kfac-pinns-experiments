@@ -1,13 +1,13 @@
 Here we derive the Laplacian of a feed-forward NN with scalar output, that is $\Delta u \coloneqq \Tr(\gradsquared{\vx} u)$.
 The goal is to make the dependence of the Laplacian w.r.t.\,a weight $\mW$ in one layer of the network explicit.
 Then we can write down the Jacobian $\jac_{\mW}(\Delta u_{\vtheta})$ which is required for the Fisher used by energy NGD.
-
-We first lay out the notation for feedforward neural networks, then use the ideas of Hessian backpropagation \citep[HBP,][]{dangel2020modular} to derive a recursion for the Hessian $\gradsquared{\vx}u_{\vtheta}$.
+%We first lay out the notation for feedforward neural networks, then use the
+We do this based on the concept of \emph{Hessian backpropagation}~\citep[HBP,]{dangel2020modular} which yields a recursion for the Hessian $\gradsquared{\vx}u_{\vtheta}$.
 The Laplacian follows by taking the trace of the latter.
 Finally, we express the Laplacians gradient w.r.t.
 a single layer's weight $\mW$, i.e.\,$\nicefrac{\partial \Delta u_{\vtheta}}{\partial \mW}$, in terms of $\mW$'s children in the compute graph.
 
-\subsubsection{Computing the input Hessian via backpropagation}
+%\subsubsection{Computing the input Hessian via backpropagation}
 
 Gradient backpropagation describes a recursive procedure to compute gradients by backpropagating a signal via vector-Jacobian products (VJPs).
 A similar procedure can be derived to compute Hessians w.r.t.\,nodes in a graph ($\vz^{(i)}$ or $\vtheta^{(i)}$).
@@ -41,8 +41,8 @@ Recall the Hessian chain rule
 where $g_i$ dentotes the individual components of $g$, see~\cite{skorski2019chain}.
 The recursion for computing Hessians of $u$
 w.r.t.\,intermediate representations and parameters starts by initializing the
-recursion with $\gradsquared{\vz^{(L)}}u = \gradsquared{u} u = 0$, then
-backpropagates according to
+recursion with $\gradsquared{\vz^{(L)}}u = \gradsquared{u} u = 0$, and then
+backpropagating according to
 \begin{align}\label{eq:hessian-backpropagation}
   \begin{split}
     \gradsquared{\vz^{(i-1)}}u
@@ -114,7 +114,7 @@ $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
   \end{minipage}
   \hfill
   \begin{minipage}[b]{0.495\linewidth}
-    \caption{Direct dependencies of a linear layer's weight matrix in the Laplacian's computation graph.
+    \caption{Direct dependencies of a linear layer's weight matrix $\mW^{(i)}$ in the Laplacian's computation graph.
       There are three direct children: (i) The layer's output from the forward pass, (ii) the Laplacian's gradient w.r.t.\,the layer's input from the gradient backpropagation, and (iii) the Laplacian's Hessian w.r.t.\,the layer's input from the Hessian backpropagation.
       The gradients $\grad{\mW^{(i)}}\Delta u$ required for the Gramian are the vector-Jacobian products accumulated over those children.
     }\label{fig:laplacian-graph-weight}
@@ -124,18 +124,17 @@ $\gradsquared{\vx}u_{\vtheta}$ from above, and is hence recursively defined.
 \paragraph{Hessian backpropagation through nonlinear layers}
 We mostly consider nonlinear layers without trainable parameters and consist of a componentwise nonlinearity $z\mapsto \sigma(z)$ for some $\sigma\colon\mathbb R\to\mathbb R$ and we assume $\sigma$ to be twice continuously differentiable (I guess one ask for weaker things).
 The Jacobian of such a nonlinear layer is given by
-\begin{equation}
-  \jac_{\vz^{(i-1)}}\vz^{(i)} = \operatorname{diag}(\sigma'(\vz^{(i-1)}))
-\end{equation}
+%\begin{equation}
+  $\jac_{\vz^{(i-1)}}\vz^{(i)} = \operatorname{diag}(\sigma'(\vz^{(i-1)}))$
+%\end{equation}
 and the %Hessian acts as
 % \begin{equation*}
 %   (\nabla^2_{\vz^{(i-1)}\vz^{(i)})(u,v) = u\odot v\odot \sigma''(z). %u^\top \operatorname{diag}(\sigma''(\vz_{i-1}))v = (v\top)
 % \end{equation*}
 Hessian terms are given by
-\begin{equation}
-  \nabla^2_{\vz^{(i-1)}}[\vz^{(i)}]_k = \sigma''(\vz^{(i-1)}_k) e_k  e_k^\top.
-\end{equation}
-\toodoo{Someone should definitely double check. I could not find a mistake -- MZ}
+%\begin{equation}
+  $\nabla^2_{\vz^{(i-1)}}[\vz^{(i)}]_k = \sigma''(\vz^{(i-1)}_k) e_k  e_k^\top$. 
+%\end{equation}
 With these two identities we can backpropogate the input Hessian through the non-trainable nonlinear layers and obtain
 \begin{equation}
   \gradsquared{\vz^{(i-1)}}u
@@ -149,6 +148,7 @@ With these two identities we can backpropogate the input Hessian through the non
   e_k e_k^\top
   [\grad{\vz^{(i)}} u]_k\,,
 \end{equation}
+\todo{can we simplify this?}
 
 \paragraph{Hessian backpropagation through a linear layer} To de-clutter the dependency graph of \Cref{fig:hbp-dependencies}, we will now consider the dependency of $\Delta u_{\vtheta}$ w.r.t.\,the weight of a single layer.
 We assume this layer $i$ to be a linear layer with parameters $\mW^{(i)}$ such that $\vtheta^{(i)} = \flatten(\mW^{(i)})$,
@@ -185,10 +185,10 @@ Laplacian, highlighting its three direct children,
 
 \subsection{Computing the parameter derivative of the input Laplacian}
 Recall, that the entries of the Fisher are composed from parameter derivatives of the input Laplacian, see~\eqref{eq:FisherInterior}.
-Here, we only consider architectures where only the linear layers possess trainable parameters and therefore we compute the parameter $\partial_{\theta} \Delta u_\theta$ of the input Laplacian.
+Here, we consider architectures where only the linear layers possess trainable parameters. % and therefore we compute the parameter $\partial_{\theta} \Delta u_\theta$ of the input Laplacian.
 
-We have now identified the direct children of $\mW^{(i)}$ in the Laplacian's compute graph.
-This allows us to write down its derivative $\grad{\mW^{(i)}} \Delta u$, which---by the chain rule---is simply the accumulated backpropagated error from the direct children:
+We have identified the direct children of $\mW^{(i)}$ in the Laplacian's compute graph, see....
+This allows us to compute the gradient $\grad{\mW^{(i)}} \Delta u$ by the chain rule and obtain %, which---by the chain rule---is simply the accumulated backpropagated error from the direct children:
 \begin{align}\label{eq:laplacian-gradient}
   \begin{split}
     \grad{\mW^{(i)}} \Delta u_{\vtheta}
@@ -229,22 +229,22 @@ With the Laplacian's gradient \Cref{eq:laplacian-gradient}, we can write down th
       \left(
       \grad{\mW^{(i)}} \Delta u_{\vtheta}
       \right)^{\top}
-    \\
-    &=
-      \sum_{\textcolor{blue}{\bullet} \in \left\{ \vz^{(i)}, \grad{\vz^{(i-1)}}u, \gradsquared{\vz^{(i-1)}}u \right\}}
-      \sum_{\textcolor{red}{\bullet} \in \left\{ \vz^{(i)}, \grad{\vz^{(i-1)}}u, \gradsquared{\vz^{(i-1)}}u \right\}}
-      \left(
-      \left(
-      \jac_{\mW^{(i)}}\textcolor{blue}{\bullet}
-      \right)^{\top}
-      \grad{\textcolor{blue}{\bullet}}\Delta u
-      \right)
-      \left(
-      \left(
-      \jac_{\mW^{(i)}}\textcolor{red}{\bullet}
-      \right)^{\top}
-      \grad{\textcolor{red}{\bullet}}\Delta u
-      \right)^{\top}
+    %\\
+    %&=
+    %  \sum_{\textcolor{blue}{\bullet} \in \left\{ \vz^{(i)}, \grad{\vz^{(i-1)}}u, \gradsquared{\vz^{(i-1)}}u \right\}}
+    %  \sum_{\textcolor{red}{\bullet} \in \left\{ \vz^{(i)}, \grad{\vz^{(i-1)}}u, \gradsquared{\vz^{(i-1)}}u \right\}}
+    %  \left(
+    %  \left(
+    %  \jac_{\mW^{(i)}}\textcolor{blue}{\bullet}
+    %  \right)^{\top}
+    %  \grad{\textcolor{blue}{\bullet}}\Delta u
+    %  \right)
+    %  \left(
+    %  \left(
+    %  \jac_{\mW^{(i)}}\textcolor{red}{\bullet}
+    %  \right)^{\top}
+    %  \grad{\textcolor{red}{\bullet}}\Delta u
+    %  \right)^{\top}
     \\
     &=
       \sum_{\textcolor{blue}{\bullet} \in \left\{ \vz^{(i)}, \grad{\vz^{(i-1)}}u, \gradsquared{\vz^{(i-1)}}u \right\}}
@@ -264,7 +264,7 @@ With the Laplacian's gradient \Cref{eq:laplacian-gradient}, we can write down th
       \left(
       \jac_{\mW^{(i)}}\textcolor{red}{\bullet}
       \right)}_{
-      \coloneqq \mF^{(i)}_{\textcolor{blue}{\bullet}, \textcolor{red}{\bullet}}
+      \eqqcolon \mF^{(i)}_{\textcolor{blue}{\bullet}, \textcolor{red}{\bullet}}
       }\,.
   \end{split}
 \end{align}
@@ -415,7 +415,7 @@ This simplifies the VJP to
   \,.
 \end{align*}
 We can now write down the gradient from \Cref{eq:laplacian-gradient}, whose
-self-outer product forms the Gramian for a linear layer, as
+self-outer product forms the Gramian for a linear layer, as \todo{?}
 \begin{align*}
   \begin{split}
     \grad{\mW^{(i)}} \Delta u_{\vtheta}

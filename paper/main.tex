@@ -45,40 +45,11 @@
 \input{sections/background_engd.tex}
 \input{sections/background_kfac.tex}
 
-\section{KFAC for PINNs}
+\section{Kronecker-factored Approximate Gramians for PINNs}
 
 We restrict ourselves to feed-forward sequential NNs whose parameters are all in linear layers.
 To derive a Kronecker-factored approximation of the Gramian, we first describe how a layer's parameter enters the Laplacian's computation in \Cref{sec:laplacian-computation-graph}.
 This allows for expressing the exact Gramian as a sum over Kronecker-structured terms stemming from the parameter's direct children in the compute graph (\Cref{sec:kronecker-structure-gramian}).
-
-\paragraph{Sequential NNs} Consider a sequential neural network $u_{\vtheta}$ with depth $L$ that consists of layers $f^{(i)}_{\vtheta^{(i)}}$ with trainable parameters $\vtheta^{(i)} \in \sR^{d^{(i)}}, i=1,\dots, L,$ that transform an input $\vx \in \sR^M$ into a prediction $u_{\vtheta}(\vx)\in \sR^C$ via intermediate representations $\vz^{(i)} \in \sR^{h^{(i)}}, i= 0, \dots, L$,
-\begin{align}
-  \begin{split}
-    u_{\vtheta}
-    &=
-      f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
-    \\
-    f^{(i)}_{\vtheta^{(i)}}\colon \sR^{h^{(i-1)}}
-    &\to
-      \sR^{h^{(i)}}\,,
-    \\
-    \vz^{(i-1)}
-    &\mapsto
-      \vz^{(i)} = f^{(i)}_{\vtheta^{(i)}}(\vz^{(i-1)})
-  \end{split}
-\end{align}
-where $\vz^{(0)} \coloneqq \vx$, $\vz^{(L)} \coloneqq \vu$, and $\vtheta = ({\vtheta^{(1)}}^{\top}, \dots, {\vtheta^{(L)}}^{\top})^{\top}$ is the concatenation of parameters over layers.
-A parameter might be empty, e.g.\,if the layer is an activation layer.
-
-\paragraph{Flattening} Above, we assumed all quantities ($\vz^{(i)}, \vtheta^{(i)}$) to be vectors.
-In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
-Our index convention to vectorize will be first-varies-fastest, which means column-stacking for a matrix (row index varies first, column index varies second).
-We denote the flattening operation by $\flatten(\cdot)$.
-Very useful is the so called \emph{vec-trick} stating that
-\begin{equation}\label{eq:vecTrick}
-  \flatten(AXB) = (B^\top\otimes A)\flatten{X}
-\end{equation}
-for matrices $A, X, B$. In particular, this shows that $B^\top\otimes A$ is the  matrix representing the linear mapping $X\mapsto AXB$ and hence $J_X(AXB) = B^\top\otimes A$.
 
 \paragraph{Jacobian \& Hessian} The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
 Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
@@ -88,7 +59,7 @@ Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ w.r.t.\,a vector $\va
 For the Hessian $\gradsquared{\mA} b$ of a scalar $b$ w.r.t.\,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
 We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
 
-\subsection{The Laplacian's Computation Graph}\label{sec:laplacian-computation-graph}
+\subsection{Hessian Backpropagation}\label{sec:laplacian-computation-graph}
 \input{sections/laplacian_feedforward_nn.tex}
 
 \subsection{Kronecker Structure of the Gramian}\label{sec:kronecker-structure-gramian}
@@ -97,7 +68,7 @@ This subsection describes the Jacobians of the operations with the weight matrix
 a linear layer during the computation of the Laplacian and ends by providing an
 equation for the Gramian block.
 
-\subsection{Kroneckerfactored Approximate Gramian (KFAG)}
+\subsection{Kronecker-factored Approximate Gramian (KFAG)}
 \input{sections/kroneckerfactored_approximate_gramian.tex}
 
 \section{Generalization to other PDEs}
