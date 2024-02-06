@@ -32,8 +32,9 @@
   Existing methods that consider this geometry compute and invert the full Gramian.
   However, these ENGD-based methods do not scale well to architectures with many parameters due to the quadratic memory and cubic time complexity of storing and inverting the Gramian.
   The challenge to develop approximations to the Gramian is that it requires taking the parameter derivative of the PDE operator, which itself contains higher-order derivative.
-  Here, we propose a Kronecker factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
+  Here, we propose a Kronecker-factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
 \end{abstract}
+
 
 \section{Introduction}
 
@@ -105,6 +106,20 @@ equation for the Gramian block.
 \input{sections/generalization.tex}
 
 \section{Experiments}
+
+\subsection{Setup}
+\begin{itemize}
+    \item damping: try both constant and adaptive damping 
+    \item try without line search with learning rate schedule 
+    \item use weights and biases for large scale experiments 
+    \item next steps: modular code 
+\end{itemize}
+
+\subsection{A two-dimensional Poisson equation}
+
+
+
+\subsection{asdf}
 
 We want to show the following things:
 \begin{itemize}
