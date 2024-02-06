@@ -1,6 +1,5 @@
 """Demonstrate Laplacian computation on a small toy MLP."""
 
-
 from einops import einsum
 from torch import allclose, manual_seed, rand
 from torch.nn import Linear, Sequential, Sigmoid
