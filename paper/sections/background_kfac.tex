@@ -8,15 +8,7 @@ Kronecker-factored Approximate Curvature (KFAC) was introduced by~\citet{martens
 This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here. 
 Later, we will expand this to Gramian matrices with PDE terms. 
 
-Let us consider a supervised learning problem with empirical loss 
-\begin{equation}
-  L(\theta) = \sum_{n} \ell(y_n, u_\theta(x_n)). 
-\end{equation}
-The Fisher-information matrix commonly used here, has entries the entries 
-\begin{equation}
-  F(\theta)_{ij} = \sum_{n} \partial_{\theta_i} u_\theta(x_n)\partial_{\theta_j} u_\theta(x_n),
-\end{equation}
-see~\cite[text]{amari2000natural,martens2020new}
+
 We can first approximate the full Fisher information matrix by a block diagonal matric with blocks given by the weights of the individual layers of the neural network (NN) used for the supervised learning problem. 
 \todo{maybe make this more explicit?}
 

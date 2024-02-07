@@ -21,7 +21,7 @@ Hence, we discretize the integral and use the following loss function to train t
   %\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
 %Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}.
 %In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
-\begin{align*}
+\begin{align}
   L(\theta)
   &=
     %\frac{1}{2N_\Omega} 
@@ -30,11 +30,12 @@ Hence, we discretize the integral and use the following loss function to train t
   %\\&
   =
     \frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\theta(x_i) + f(x_i))^2 + \frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\theta(x^b_i) - g(x^b_i))^2,
-\end{align*}
+\end{align}
 where we denote by $(x_i)_{i=1,\dots,N_\Omega}$ the points in the interior of $\Omega$ and by $(x^b_i)_{i=1,\dots,N_{\partial\Omega}}$ the points on the boundary.
 The number and choice of the points can be controlled by the practitioner, where different sampling strategies have been developed~\cite[text]{keylist}.
 
-This approach is simple and intuitive and is usually associated with the possibility to work well for high-dimensional PDEs, however, it is well documented in the literature that it fails to produce satisfactory accuracy even for low-dimensional problems. 
+This approach is simple and intuitive and is usually associated with the possibility to work well for high-dimensional PDEs.
+However, it is well documented in the literature that first-order optimizers fail to produce satisfactory accuracy even for low-dimensional problems~\cite{}. 
 
 \begin{itemize}
     \item If you run GD / Adam you get no good accuracy~\cite{?}

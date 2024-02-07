@@ -24,6 +24,34 @@
 \startcontents[sections]
 \printcontents[sections]{l}{1}{\setcounter{tocdepth}{2}}
 \vspace{2em}
+
+In more compact form and written as Jacobian products, this can be expressed as
+\begin{equation}\label{eq:Jacobian_Fischer}
+  F_\Omega(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta)
+  \quad \text{and} \quad
+  F_{\partial\Omega}(\theta) = Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta).
+\end{equation}
+Here, $Dr_\Omega(\theta)$ and $Dr_{\partial\Omega}(\theta)$  denote the \emph{Jacobians} of the maps
+\begin{equation*}
+  r_{\Omega}\colon \Theta \to \mathbb{R}^{N_\Omega}, \quad r_{\Omega}(\theta) = \frac{1}{\sqrt{N_{\Omega}}}(\Delta u_\theta(x_1), \dots, \Delta u_\theta(x_{N_{\Omega}}))
+\end{equation*}
+and
+\begin{equation*}
+  r_{\partial\Omega}\colon \Theta \to \mathbb{R}^{{N_\partial\Omega}}, \quad r_{\partial\Omega}(\theta) = \frac{1}{\sqrt{N_{\partial\Omega}}}(u_\theta(x^b_1), \dots, u_\theta(x^b_{N_{\partial\Omega}})).
+\end{equation*}
+
+\paragraph{Interpretation as Gau\ss-Newton in the residual}
+Consider the combined residual map
+\begin{equation*}
+    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad \theta \mapsto \begin{pmatrix}
+        r_\Omega(\theta) \\ r_{\partial\Omega}(\theta)
+    \end{pmatrix}.
+\end{equation*}
+Then (with the right choice of the inner product) $L(\theta) = \frac12 \lVert r(\theta) \rVert_2^2$ and hence the Gau\ss-Newton matrix is given by
+\[ Dr(\theta)^\top Dr(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta) + Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta) = F(\theta). \]
+
+
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
