@@ -1,0 +1,84 @@
+PINNs use two losses: a boundary and an interior loss.
+When designing a Kronecker-factored curvature approximation, we have two choices:
+\begin{enumerate}
+\item We can approximate each loss individually with a Kronecker product, i.e.
+  \begin{align*}
+    \mK \coloneq \mA_1 \otimes \mA_2 + \mB_2 \otimes \mB_2
+  \end{align*}
+  where $\mA_{1,2}, \mB_{1,2}$ are invertible and positive definite.
+
+\item We can further approximate the above through a single Kronecker product, e.g.\,by summing,
+  \begin{align*}
+    \mK' \coloneq (\mA_1 + \mB_1) \otimes (\mA_2 + \mB_2) \approx \mK\,.
+  \end{align*}
+\end{enumerate}
+Eventually, we want to use their inverses.
+For $\mK'$, this is straightforward to do.
+For $\mK$, we need to invert the sum of two Kronecker products, which is more challenging.
+We can proceed as follows to invert $\mK$:
+\begin{enumerate}
+\item Simultaneously diagonalize $(\mA_i, \mB_i)$ by solving the generalized eigenvalue problem
+  \begin{align*}
+    \mA_i \mV_i = \mB \mV_i \mLambda_i
+  \end{align*}
+  where $\mV_i$'s columns are the (generalized) eigenvectors and $\mLambda_i$ is a diagonal matrix containing the (generalized) eigenvalues.
+
+\item Consider the expression
+  \begin{align*}
+    &\left(
+      \mA_1 \otimes \mA_2
+      +
+      \mB_1 \otimes \mB_2
+      \right)
+      \left(
+      \mV_1 \otimes \mV_2
+      \right)
+    \\
+    &=
+      \mB_1 \mV_1 \mLambda_1 \otimes \mB_2 \mV_2 \mLambda_2
+      +
+      \left( \mB_1 \otimes \mB_2 \right)
+      \left( \mV_1 \otimes \mV_2 \right)
+    \\
+    &=
+      \left( \mB_1 \otimes \mB_2 \right)
+      \left( \mV_1 \otimes \mV_2 \right)
+      \left(
+      \mLambda_1 \otimes \mLambda_2 + \mI \otimes \mI
+      \right)\,.
+  \end{align*}
+  Rearrange into
+  \begin{align*}
+    \left(
+    \mA_1 \otimes \mA_2
+    +
+    \mB_1 \otimes \mB_2
+    \right)
+    =
+    \left( \mB_1 \otimes \mB_2 \right)
+    \left( \mV_1 \otimes \mV_2 \right)
+    \left(
+    \mLambda_1 \otimes \mLambda_2 + \mI \otimes \mI
+    \right)
+    \left( \mV_1^{-1} \otimes \mV_2^{-1} \right)
+    \,.
+  \end{align*}
+
+  \item Take the inverse to obtain
+    \begin{align*}
+      \mK^{-1}
+      =
+      \left( \mV_1 \otimes \mV_2 \right)
+      \left(
+      \mLambda_1 \otimes \mLambda_2 + \mI \otimes \mI
+      \right)^{-1}
+      \left( \mV_1^{-1}\mB_1^{-1} \otimes \mV_2^{-1}\mB_2^{-1} \right)
+      \,.
+    \end{align*}
+    Notice that $\mLambda_1 \otimes \mLambda_2 + \mI \otimes \mI$ is diagonal, and therefore easy to invert.
+\end{enumerate}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
