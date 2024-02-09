@@ -271,9 +271,7 @@ With the Laplacian's gradient \Cref{eq:laplacian-gradient}, we can write down th
 
 The Fisher consists of nine different terms.
 Eventually, we would like to approximate it with a single Kronecker product, like KFAC~\citep{martens2015optimizing}.
-\toodoo{We could either work with the diagonal terms, or if all terms admit Kronecker representations we could also approximate this sum of Kroneckers by the Kronecker of the sums...?}
 We begin by studying the diagonal terms $\mF_{\textcolor{blue}{\bullet}, \textcolor{blue}{\bullet}}^{(i)}$ and call them zeroth, first and second order diagonal terms for $\textcolor{blue}{\bullet} = \vz, \nabla u, \nabla^2 u$, respectively.
-\toodoo{Other question: might it be possible to write the nine terms as a Kronecker product of a sum of 3 matrices with a sum of 3 matrices?}
 
 \paragraph{Computing $\mJ_{\mW^{(i)}}\textcolor{blue}{\bullet}$}
 Let us first compute the Jacobians $\mJ_{\mW^{(i)}}\textcolor{blue}{\bullet}$ for which we envoke~\eqref{eq:spatialDerivatives}.
@@ -404,6 +402,7 @@ This simplifies the VJP to
   \right)
   \mK^{\top}
   \grad{\gradsquared{\vz^{(i-1)}}u}\Delta u
+  \\
   =
   2 \left(
   \mI \otimes

@@ -5,8 +5,9 @@ from itertools import product
 from typing import List, Tuple
 
 from einops import einsum, rearrange
-from torch import Tensor, allclose, manual_seed, rand, zeros, zeros_like
+from torch import Tensor, allclose, autograd, manual_seed, rand, zeros, zeros_like
 from torch.nn import Linear, Module, Parameter, Sequential, Sigmoid
+from torch.utils.hooks import RemovableHandle
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.hooks_gram_grads_linear import (
@@ -67,8 +68,10 @@ def gram_grads_term(
     param = getattr(layers[layer_idx], param_name)
     gram_grads = zeros(X.shape[0], *param.shape, device=param.device, dtype=param.dtype)
 
+    hook_handles: List[RemovableHandle] = []
+
     if param_name in {"bias", "weight"} and child_name == "output":
-        layer_output.register_hook(
+        handle = layer_output.register_hook(
             partial(
                 from_output,
                 layer_input=layer_input,
@@ -76,16 +79,18 @@ def gram_grads_term(
                 accumulator=gram_grads,
             )
         )
+        hook_handles.append(handle)
     if param_name == "weight" and child_name == "grad_input":
-        layer_grad_input.register_hook(
+        handle = layer_grad_input.register_hook(
             partial(
                 from_grad_input,
                 layer_grad_output=layer_grad_output,
                 accumulator=gram_grads,
             )
         )
+        hook_handles.append(handle)
     if param_name == "weight" and child_name == "hess_input":
-        layer_hess_input.register_hook(
+        handle = layer_hess_input.register_hook(
             partial(
                 from_hess_input,
                 layer_hess_output=layer_hess_output,
@@ -93,9 +98,15 @@ def gram_grads_term(
                 accumulator=gram_grads,
             )
         )
+        hook_handles.append(handle)
 
-    # backpropagate
-    laplacian.backward()
+    # backpropagate, use `grad` to avoid writes to `param.grad`
+    params = [p for layer in layers for p in layer.parameters()]
+    autograd.grad(laplacian, params, allow_unused=True)
+
+    # remove hooks
+    for handle in hook_handles:
+        handle.remove()
 
     return gram_grads
 
