@@ -1,4 +1,54 @@
-\subsection{Physics informed neural networks (PINNs)}
+We work with the following standard feedforward networks. 
+
+\paragraph{Sequential NNs} Consider a sequential neural network $%u_{\vtheta} = f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
+u_{\vtheta} = f_{\vtheta^{(L)}} \circ f_{\vtheta^{(L-1)}} \circ \ldots \circ f_{\vtheta^{(1)}}
+$ with depth $L\in\mathbb N$ that consists of layers %$f^{(l)}_{\vtheta^{(l)}}$ 
+\begin{align}
+  \begin{split}
+    %u_{\vtheta}
+    %&=
+    %f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
+    %\\
+    f%^{(l)}
+    _{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}
+    &\to
+      \sR^{h^{(l)}}\,,
+    %\\
+    \quad \vz^{(l-1)}
+    %&
+    \mapsto
+      \vz^{(l)} = f%^{(l)}
+      _{\vtheta^{(l)}}(\vz^{(l-1)})
+  \end{split}
+\end{align}
+with trainable parameters $\vtheta^{(l)} \in \sR^{p^{(l)}}%, l=1,\dots, L,
+$ that transform an input $\vz_0=\vx \in \mathbb R^{d_{\operatorname{in}}}$ into a prediction $\vu = \vz^{(L)}\in \sR^{d_{\operatorname{out}}}$ via intermediate representations $\vz^{(l)} \in \sR^{h^{(l)}}%, l= 0, \dots, L
+$. 
+%where $\vz^{(0)} \coloneqq \vx$, $\vz^{(L)} \coloneqq \vu$, and 
+By $\vtheta = ({\vtheta^{(1)}}^{\top}, \dots, {\vtheta^{(L)}}^{\top})^{\top}$ we denote the concatenation of the parameters of the individual layers.
+% A parameter might be empty, e.g.\,if the layer is an activation layer.
+Here, we consider networks with alternating  linear and nonlinear layers. 
+Here, the weights of the linear layers are trainable and we denote them by $\vtheta^{(l)} = \mW^{(l)}$, where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
+The nonlinear layers are given by $\vz\mapsto \sigma(\vz)$ componentwise for a (typically smooth) activation function $\sigma\colon\mathbb R\to\mathbb R$. 
+%We denote the parameters of a linear layer by $\vtheta^{(l)} = \mW^{(l)}$ where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$. 
+
+\paragraph{Flattening} 
+%Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
+%In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
+%We consider the following vectorization of the matrices appearing as the trainable parameters of the network. 
+To vectorize the weight matrices of the linear layers we follow the % index convention to vectorize will be 
+\emph{first-varies-fastest} convention, which means column-stacking (row index varies first, column index varies second).
+We denote the corresponding flattening operation by $\flatten(\cdot)$. 
+Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$ 
+%\begin{equation}\label{eq:vecTrick}
+%  \flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}
+%\end{equation}
+for matrices $\mA, \mX, \mB$. In particular, this shows that $\mB^\top\otimes \mA$ is the  matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$. 
+
+
+
+
+\subsection{Physics-informed neural networks (PINNs)}
 %\begin{itemize}
 %    \item PINNs are one of the most promising approaches to neural network based PDE solvers
 %    \item
@@ -13,35 +63,35 @@ Let us consider a domain $\Omega\subseteq\mathbb R^d$ and the Poisson equation %
   u & = g \quad \text{on }\partial\Omega
 \end{align*}
 where $f\in L^2(\Omega)$ and $g\in H^{3/2}(\partial\Omega)$ are some given right hand side and boundary values.
-Here, $\Delta u = \sum_i \partial_{x_i}^2 u$ denotes the \emph{Laplacian} of the function $u$. 
-Let us consider the function space energy 
-  \[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds, \]
-which is designed such that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$. 
-Hence, we discretize the integral and use the following loss function to train the parameters $\theta$ of a neural network
+Here, $\Delta u = \sum_i \partial_{\vx_i}^2 u$ denotes the \emph{Laplacian} of the function $u$. 
+%Let us consider the function space energy 
+%  \[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds, \]
+%which is designed such that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$. 
+%Hence, we discretize the integral and use the following loss function t
+In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a neural network and train its parameters $\vtheta$ using the loss 
   %\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
 %Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}.
 %In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
 \begin{align}
-  L(\theta)
+  L(\vtheta)
   &=
     %\frac{1}{2N_\Omega} 
-    L_\Omega(\theta) + %\frac{1}{2N_{\partial\Omega}}
-    L_{\partial\Omega}(\theta)
+    %L_\Omega(\vtheta) + %\frac{1}{2N_{\partial\Omega}}
+    %L_{\partial\Omega}(\vtheta)
   %\\&
-  =
-    \frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\theta(x_i) + f(x_i))^2 + \frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\theta(x^b_i) - g(x^b_i))^2,
+  %=
+    \underbrace{\frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\vtheta(\vx_i) + f(\vx_i))^2}_{\eqqcolon L_\Omega(\vtheta)} + \underbrace{\frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^b_i) - g(\vx^b_i))^2}_{\eqqcolon L_{\partial\Omega}(\vtheta)},
 \end{align}
-where we denote by $(x_i)_{i=1,\dots,N_\Omega}$ the points in the interior of $\Omega$ and by $(x^b_i)_{i=1,\dots,N_{\partial\Omega}}$ the points on the boundary.
-The number and choice of the points can be controlled by the practitioner, where different sampling strategies have been developed~\cite[text]{keylist}.
+where $(x_n)_{n=1}^{N_\Omega}$ and  $(x^b_n)_{n=1}^{N_{\partial\Omega}}$ are points in the interior and on the boundary of $\Omega$ respectively.
+%The number and choice of the points can be controlled by the practitioner, where different sampling strategies have been developed~\cite[text]{keylist}.
+%This approach is simple and intuitive and is usually associated with the possibility to work well for high-dimensional PDEs.
+%However, it is well documented in the literature that first-order optimizers fail to produce satisfactory accuracy even for low-dimensional problems~\cite{}. 
 
-This approach is simple and intuitive and is usually associated with the possibility to work well for high-dimensional PDEs.
-However, it is well documented in the literature that first-order optimizers fail to produce satisfactory accuracy even for low-dimensional problems~\cite{}. 
-
-\begin{itemize}
-    \item If you run GD / Adam you get no good accuracy~\cite{?}
-    \item L-BFGS improves things, but is not super satisfactory
-    \item recently, function space inspired methods and preconditioners have been used with promising success~\cite[text]{CPINNs, ENG, preconditioning?, FS paper, Navier-Stokes}; we describe the approach we use here in more detail 
-\end{itemize}
+%\begin{itemize}
+%    \item If you run GD / Adam you get no good accuracy~\cite{?}
+%    \item L-BFGS improves things, but is not super satisfactory
+%    \item recently, function space inspired methods and preconditioners have been used with promising success~\cite[text]{CPINNs, ENG, preconditioning?, FS paper, Navier-Stokes}; we describe the approach we use here in more detail 
+%\end{itemize}
 
 %%% Local Variables:
 %%% mode: latex

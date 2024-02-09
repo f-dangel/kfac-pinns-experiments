@@ -1,24 +1,27 @@
-PINNs are difficult to optimize.
+
+%Physics-informed neural networks (PINNs) are among the most popular networks based approaches to the numerical solution of partial differential equations (PDEs). 
+The field of neural network based approaches to the numerical solution of partial differential equations (PDEs) is growing at an unprecedented speed and one of the most active subfields of scientific machine learning~\cite{?}. 
+Whereas the idea of training the parameters of a neural network to minimize the residual of a PDE can be traced back at least to the works of~\cite{dissanayake1994neural, lagaris1998artificial} this approach was only recently popularized under the name \emph{deep Galerkin method} (DGM) and \emph{Physics-informed neural networks} (PINNs) through the works of~\cite{sirignano2018dgm, raissi2019physics}, respectively.  
+Now it constitutes one of the most popular networks based approaches to the numerical solution of partial differential equations as it is easy to implement, can seamlessly incorporate data and is commonly attributed with the promise of being able to work well in high dimensions. 
+Despite their immense popularity, PINNs are known to be difficult to optimize and fail to provide satisfactory accuracy when trained with first-order methods even for simple problems~\cite{?}. 
+Various approaches have been suggested to improve the optimization including adaptive reweighting of the individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for the discretization of the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, curriculum learning~\citep{wang2022respecting, krishnapriyan2021characterizing}, and the use of quasi-Newton methods like L-BFGS~\citep{markidis2021old}. 
+However, none of this yields approximations of an accuracy comparable to the approximation error of the network. 
+Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful proconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning}. 
+Whereas these methods greatly improve the accuracy of PINNs they come with a significant computational cost for every iteration as one needs to solve a linear system of the size of the parameter space of the network. 
+Hence, this is only feasible for networks of small to moderate size when done naively. 
+
+
+\paragraph{Contributions} 
+We build on the idea of Kronecker-factored approximations known as KFAC proposed in the context of supervised learning to provide an efficient implementation of energy natural gradients. 
+Since, the preconditioner of ENGD involves PDE terms absent in regression problems, the existing KFAC machinery can not be used off the shelve. 
+More precisely, we summarize our contributions as follows: 
 \begin{itemize}
-    \item PINNs receive ever growing amount of attention
-    \item their failure to produce high accuracy solution when trained with variants of GD like Adam is well documented
-    \item Quasi-Newton methods like L-BFGS yield improved but still not very high accuracy
-    \item Other suggestions: reweighting of the loss, specialized sampling strategies, greedy training, reformulation as saddle point problem
-    \item recently, a variant of NG based on the geometry of the specific energy / PDE was proposed; yields greatly improved accuracy over direct gradient-based optimizers and enjoys the nice property that it can be shown to mimic Newton's method in function space; for PINNs it can be seen as Gau\ss-Newton method in the space of residuals, for other problems as a generalized GN?
-    \item whereas, this method was shown to be able to produce highly accurate approximations of the solution of the PDE it comes with a considerable iteration cost as it involves the solution of a linear system of the size of the number of parameters. Hence, this is only feasible for networks of small to moderate size when done naively.
-    \item we build on the idea of Kronecker-factored approximations known as KFAC proposed in the context of supervised learning to provide an efficient implementation of energy natural gradients; 
-    however, PDE terms appear in the Gramian, so existing implementations can not be used off the shelve 
+    \item We develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG), see~\Cref{?}.
+    \item We provide an efficient implementation of KFAG and demonstrate experimentally that it provides a good approximation of the true Gramian, see~\Cref{?}. 
+    \item We show that KFAG can be used to efficiently train PINNs of considerable size..., see~\Cref{?}. 
 \end{itemize}
 
-\paragraph{Contribution:} \toodoo{Formulate our goal.}
-
-\begin{itemize}
-    \item we develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method; we call it KFAG 
-    \item we provide an efficient implementation of KFAG; we experimentally show that it provides a good approximation of the true Gramian 
-    \item We demonstrate that KFAG can be used to efficiently train networks of considerable size in a PINN style setting 
-\end{itemize}
-
-\paragraph{Related work:}
+\paragraph{Related work}
 \begin{itemize}
 \item OG KFAC papers: \cite{martens2015optimizing}, \cite{martens2018kroneckerfactored}, double check similarities to RNNs
 \item KFAC for Rayleigh quotients:

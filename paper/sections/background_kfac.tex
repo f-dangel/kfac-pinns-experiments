@@ -1,54 +1,43 @@
 \subsection{Kronecker-factored Approximate Curvature (KFAC)}
 
-\toodoo{F.D.
-  Get to the point more quickly.
-  Make notation throughout subsection consistent.}
+%\toodoo{F.D.  Get to the point more quickly. Make notation  consistent.}
 
-Kronecker-factored Approximate Curvature (KFAC) was introduced by~\citet{martens2015optimizing} to approximate the per-layer Fisher information by a Kronecker product corresponding to a rank-one matrix ? . 
-This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here. 
-Later, we will expand this to Gramian matrices with PDE terms. 
+We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{?, martens2015optimizing, ?} as an approximation of the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction. 
+%We review the general principle here. 
+%This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here. 
+%Later, we will expand this to Gramian matrices with PDE terms. 
+\toodoo{We could also follow \cite{eschenhagen2023kroneckerfactored} for the notation} 
 
 
-We can first approximate the full Fisher information matrix by a block diagonal matric with blocks given by the weights of the individual layers of the neural network (NN) used for the supervised learning problem. 
-\todo{maybe make this more explicit?}
+\paragraph{Block-diagonal approximation}
+In the first step the Fisher-information matrix $\mF$ can be approximated by a block diagonal matrix with blocks corresponding to the Fisher-information matrices of the individual layers of the network, i.e., $\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$. 
+Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence reducing the computational complexity. 
 
-\paragraph{Sequential NNs} Consider a sequential neural network $u_{\vtheta}$ with depth $L$ that consists of layers $f^{(i)}_{\vtheta^{(i)}}$ with trainable parameters $\vtheta^{(i)} \in \sR^{d^{(i)}}, i=1,\dots, L,$ that transform an input $\vx \in \sR^M$ into a prediction $u_{\vtheta}(\vx)\in \sR^C$ via intermediate representations $\vz^{(i)} \in \sR^{h^{(i)}}, i= 0, \dots, L$,
+\paragraph{Kronecker-factored approximation of the blocks}
+We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point. 
+The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and note that by the vec-trick, we have $\jac_{\vtheta^{(l)}} \vz^{(l)} = \vz^{(l-1)} \otimes I$. 
+By the chain rule, we have
 \begin{align}
-  \begin{split}
-    u_{\vtheta}
-    &=
-      f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
-    \\
-    f^{(i)}_{\vtheta^{(i)}}\colon \sR^{h^{(i-1)}}
-    &\to
-      \sR^{h^{(i)}}\,,
-    \\
-    \vz^{(i-1)}
-    &\mapsto
-      \vz^{(i)} = f^{(i)}_{\vtheta^{(i)}}(\vz^{(i-1)})
-  \end{split}
+    \jac_{\vtheta^{(l)}} u_{\vtheta}(\vx_n) & = \jac_{\vtheta^{(l)}} \vz_n^{(l)} \jac_{\vz^{(l)}}  \vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n = 
+    \vz^{(l-1)}_n\otimes  \jac_{\vz^{(l)}}  \vz^{(L)}_n. 
 \end{align}
-where $\vz^{(0)} \coloneqq \vx$, $\vz^{(L)} \coloneqq \vu$, and $\vtheta = ({\vtheta^{(1)}}^{\top}, \dots, {\vtheta^{(L)}}^{\top})^{\top}$ is the concatenation of parameters over layers.
-% A parameter might be empty, e.g.\,if the layer is an activation layer.
-Here, we consider networks with alternating (affine) linear and nonlinear layers, where the weights of the linear layers are trainable and the nonlinear layers are given by $z\mapsto \sigma(z)$ componentwise, where $\sigma\colon\mathbb R\to\mathbb R$ is some (typically smooth) activation function. 
-We denote the parameters of a linear layer by $\vtheta^{(i)} = \mW^{(i)}$ where the layer is given by $\vz^{(i)} = \mW^{(i)} \vz^{(i-1)}$. 
-
-\paragraph{Flattening} Above, we assumed all quantities ($\vz^{(i)}, \vtheta^{(i)}$) to be vectors.
-In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
-Our index convention to vectorize will be first-varies-fastest, which means column-stacking for a matrix (row index varies first, column index varies second).
-We denote the flattening operation by $\flatten(\cdot)$.
-Very useful is the so called \emph{vec-trick} stating that
-\begin{equation}\label{eq:vecTrick}
-  \flatten(AXB) = (B^\top\otimes A)\flatten{X}
+%and hence 
+%\begin{align}
+%    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.  
+%\end{align}
+Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx (\sum_n \mA_n) \otimes (\sum_n \mB_n)$ we obtain 
+\begin{equation}
+    \mF(\vtheta^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top 
+    \approx \left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N\nabla_{\vz^{(l)}}  \vu_n\nabla_{\vz^{(l)}}  \vu_n^\top\right),
 \end{equation}
-for matrices $A, X, B$. In particular, this shows that $B^\top\otimes A$ is the  matrix representing the linear mapping $X\mapsto AXB$ and hence $J_X(AXB) = B^\top\otimes A$.
+see~\citep{eschenhagen2023kroneckerfactored}. 
+Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost. \todo{correct?} 
+%the inverse of a Kronecker-factored matrix is given by the Kronecker product of the individual inverses hence reducing the computational complexity of the corresponding linear system. 
 
-\paragraph{Kronecker structure of the blocks}
+\paragraph{Weight sharing}
+\todo{add}
 
-\begin{itemize}
-  \item deduce Kronecker structure of the individual blocks from the vec trick 
-  \item should we introduce the weight sharing here, or later? 
-\end{itemize}
+\clearpage
 
 Assume we have drawn a data set $\smash{\sD = \left\{ (\vx_n, \vy_n) \right\}_{n=1}^N}$ with $\smash{(\vx_n, \vy_n) \stackrel{\text{i.i.d}}{\sim} p_{\text{data}}(\vx, \vy)}$.
 We want to approximate the data-generating process through $p_{\vtheta}(\vx, \vy)$ by modelling a likelihood $p_{\vtheta}(\vy \mid \vx)$ for the labels with a neural network, that is we use $p_{\vtheta}(\vx, \vy) = p_{\text{data}}(\vx) p_{\vtheta}(\vy | \vx)$ and maximize $KL(p_{\text{data}} || p_{\vtheta})$.
@@ -94,7 +83,7 @@ Let's start with maximum likelihood estimation with a single data point $(\vx, \
 Consider a linear layer inside a neural network which maps some vector-valued hidden feature of $\vx$, $\va \in \sR^{D_{\text{in}}}$ to a vector-valued output $\vz \in \sR^{D_{\text{out}}}$ via $\vz = \mW \va$.
 $\vz$ is then further processed and used to compute the negative log-likelihood loss $\ell(\vx, \vy, \mW) = - \log p(\vy \mid \vx, \mW)$.
 For this single-usage layer, the weigh matrix's Fisher is exactly Kroneckerfactored, $\mF(\mW) = \va \va^{\top} \otimes \E_{\hat{\vy} \sim p(\vy \mid \vx, \mW)}\left[ \vg \vg^{\top} \right]$ where $\vg = \grad{\vz} \ell(\vx, \hat{\vy}, \mW)$.
-By applying the chain rule at the layer's output, the Kronecker structure emerges from the output-parameter Jacobian $\jac_{\mW}\vz = \va^{\top} \otimes \mI$.\todo{maybe we can add a short explicit computation}
+By applying the chain rule at the layer's output, the Kronecker structure emerges from the output-parameter Jacobian $\jac_{\mW}\vz = \va^{\top} \otimes \mI$.
 In practise, we will use one sample from the model's likelihood to estimate the expectation, $\mF(\mW) \approx \vz \vz^{\top} \otimes \vg \vg^{\top}$.
 
 % explain how batch axes are treated
@@ -136,7 +125,7 @@ In practise, we will use one sample from the model's likelihood to estimate the 
 This concept is known as weight sharing.
 This could be a linear layer with matrix-valued inputs like in attention, a convolution layer whose kernel is shared between patches of the input, or weights that are used multiple times throughout the computation graph (e.g.\, weight tying).
 This means the layer will not process a single vector $\va$, but a sequence of vectors $\left\{ \va_1, \dots, \va_S \right\}$ where $S$ denotes weight sharing number.
-We can column-stack these vectors into a matrix $\mA \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\mZ = \mW \mA \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG \in \sR^{D_{\text{out}} \times S}$.
+We can column-stack these vectors into a matrix $\mA \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\vz = \mW \mA \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG \in \sR^{D_{\text{out}} \times S}$.
 The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW} \mZ = \mA^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
 As described in \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
 We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed by~\citet{grosse2016kroneckerfactored}.

@@ -48,9 +48,9 @@
 
 \section{Kronecker-factored Approximate Gramians for PINNs}
 
-We restrict ourselves to feed-forward sequential NNs whose parameters are all in linear layers.
-To derive a Kronecker-factored approximation of the Gramian, we first describe how a layer's parameter enters the Laplacian's computation in \Cref{sec:laplacian-computation-graph}.
-This allows for expressing the exact Gramian as a sum over Kronecker-structured terms stemming from the parameter's direct children in the compute graph (\Cref{sec:kronecker-structure-gramian}).
+We restrict ourselves to feed-forward sequential NNs where only the parameters of the linear layers are trainable.
+To derive a Kronecker-factored approximation of the Gramian, we first describe how a layer's parameter enters the Laplacian's computation in~\Cref{sec:laplacian-computation-graph}.
+This allows for expressing the exact Gramian as a sum over Kronecker-structured terms stemming from the parameter's direct children in the compute graph, see~\Cref{sec:kronecker-structure-gramian}.
 
 \paragraph{Jacobian \& Hessian} The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
 Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
@@ -144,7 +144,7 @@ Ideas:
 \input{sections/laplacian_shallow_net.tex}
 
 \section{Inverting the Sum of Two Kronecker Matrices}
-\input{sections/inverse_sum_two_kronecker.tex}
+\input{paper/sections/inverse_kronecker_sum}
 
 \end{document}
 
