@@ -427,7 +427,9 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
     \item If we do this, should we formulate things for the Gauß-Newton rather than ENG?
 \end{itemize}
 
-Consider the following general PDE
+\section{Kronecker-factored approximate Gauß-Newton (KFAGN)}
+Here, we introduce a Kronecker-factored approximation of the Gauß-Newton algorithm for PINNs. 
+To this end we consider a general PDE of the form
 \begin{equation}
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
 \end{equation}
@@ -435,9 +437,9 @@ where we assume $\Psi\colon \mathbb R^K\to\mathbb R^M$ to be a smooth function.
 %We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
 Let us denote the residual by 
 \begin{equation}
-    r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta). 
-\end{equation}
-Further, we consider the PINN loss
+    r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta),
+\end{equation} 
+then for suitable integration points $\vx_n$ we consider the PINN loss
 \begin{equation}
     %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
     L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
@@ -461,32 +463,32 @@ However, a completely analogous approach can be taken for higher-order PDEs.
 How to compute the function values through a forward pass is well known. 
 Also, the computation of the gradient through forward mode differentiation is well-known and uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$. 
 If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by 
-\begin{align}
-       %\jac (f\circ g) & = \jac f(g) \jac g  \\  
+\begin{align} 
        \nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k. 
 \end{align}
 In particular, if $f(\vz) = \mW \vz + \vb$ is a linear layer, then the second order forward pass is given by 
-\begin{equation}
-       \nabla^2 (f\circ g) = \mW   \nabla^2 g?, 
-\end{equation}
-where $\nabla^2 g$ was already computed in the previous iteration. 
+\begin{align}
+    \jac (f\circ g)(\vz) & = \mW \jac g(\vz)  \\ 
+       \nabla^2 (f\circ g)(\vz) & = \mW   \nabla^2 g?, 
+\end{align}
+where $\jac g$ and $\nabla^2 g$ were already computed in the previous iteration of the forward pass. 
 If however, $f(\vz) = \sigma(\vz)$ is a nonlinear layer, we obtain $\jac f(\vz) = \operatorname{diag}(\sigma'(\vz))$ and the second order forward pass 
 \begin{align}
-    \jac (f\circ g)(z) & = 
+    \jac (f\circ g)(\vz) & =  \operatorname{diag}(\sigma'(g(\vz))) \jac g(\vz)
     \\ 
-    \nabla^2 (f\circ g) & = \operatorname{diag}(\sigma'(\vz)) \nabla^2 f(g) \operatorname{diag}(\sigma'(\vz)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k 
-    \\ & = \sigma'(\vz)\sigma'(\vz)^\top \odot \nabla^2 f(g(z)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k .
+    \nabla^2 (f\circ g)(\vz) & = \operatorname{diag}(\sigma'(\vz)) \nabla^2 f(g) \operatorname{diag}(\sigma'(\vz)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k 
+    \\ & = \sigma'(\vz)\sigma'(\vz)^\top \odot \nabla^2 f(g(z)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k ? . 
 \end{align}
 
 
 \subsection{Kronecker-factored Approximate Gauß-Newton (KFAGN?)}\label{sec:KFAGN}
 
-
-
-\paragraph{Reduction for the Poisson equation / linear PDEs?}
-
 \paragraph{Higher-order PDEs}
 can occur, e.g., bi-Laplacian
+
+
+\subsection{Explicit form for the Poisson equation / linear PDEs?} 
+
 
 %%% Local Variables:
 %%% mode: latex
