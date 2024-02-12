@@ -2,7 +2,7 @@ The loss function of many PINNs involves the Laplacian.
 Recently, \cite{li2023forward} proposed a new computational framework to evaluate the Laplacian and the NN prediction in one forward traversal through the graph.
 To establish a Kronecker-factorized approximation of the Gramian, which consists of the Laplacian's gradient, we need to know how a weight matrix enters its computation.
 Here, we describe how the weight matrix of a linear layer inside a feed-forward NN enters the Laplacian's computation when using the forward Laplacian framework from \cite{li2023forward}.
-We start by connecting the forward Laplacian framework to Taylor-mode automatic differentiation \cite{griewank2008evaluating,bettencourt2019taylor}, both to make the presentation self-contained and to explicitly point out this connection provides a complementing perspective of the method.
+We start by connecting the forward Laplacian framework to Taylor-mode automatic differentiation \citep{griewank2008evaluating,bettencourt2019taylor}, both to make the presentation self-contained and to explicitly point out this connection provides a complementing perspective of the method.
 
 \subsection{Taylor-Mode Automatic Differentiation}
 The idea of Taylor Mode AD is to propagate Taylor coefficients, which are directional derivatives, through the computation graph. We provide a brief summary based on its description in \cite{bettencourt2019taylor}.
@@ -44,7 +44,7 @@ We can unify the notation of this expression by introducing the $K$-th order dir
 \begin{align}
   \partial^K f(\vx)
   \underbrace{\left[ \vv, \ldots, \vv \right]}_{K\,\text{times}}
-  \coloneq
+  \coloneqq
   \sum_{i_1, \dots, i_K}
   \left(
   \frac{\partial^K f(\vx)}{\partial\vx^K}
@@ -71,18 +71,18 @@ This unifies the Taylor expansion to
       \frac{1}{K!}
       \partial^K f(\vx)[\vv, \ldots, \vv]
     \\
-    &\coloneq
+    &\eqqcolon
       \sum_{k=1}^K
       \frac{1}{k!}
       \partial^k f(\vx)\left[\otimes^k \vv  \right]
-      \coloneq
+      \eqqcolon
       \sum_{k=1}^K
       w^f_k
   \end{split}
 \end{align}
 where we have used the notation $\otimes^k \vv$ to indicate $k$ copies of $\vv$, and introduced the $k$-th order Taylor coefficient $w^f_k \in \sR$ of $f$.
 This generalizes to vector-valued functions.
-If $f$'s output was vector-valued, say $f(\vx) \in \sR^C$, we would have Taylor-expand each component individually and grouped coefficients of same order into vectors $\vw_k^f \in \sR^C$ such that $[\vw_k^f]_i$ is the $k$th-order Taylor coefficient of the $i$th component of $f$.
+If $f$'s output was vector-valued, say $f(\vx) \in \sR^C$, we would have Taylor-expand each component individually and grouped coefficients of same order into vectors $\vw_k^f \in \sR^C$ such that $[\vw_k^f]_i$ is the $k$-th order Taylor coefficient of the $i$th component of $f$.
 
 \paragraph{Composition rule}
 Next, we consider the case where $f = g \circ h$ is a composition of two functions. Starting from the Taylor coefficients $\vw_0^h, \dots \vw_K^h$ of $h(\vx + \vv)$, the Taylor coefficients $\vw_0^f, \dots, \vw_K^f$ of $f(\vx + \vv)$ follow from Fa\`a di Bruno's formula~\cite{griewank2008evaluating,bettencourt2019taylor}:
@@ -176,7 +176,7 @@ Our goal is to compute the Laplacian of $f: \sR^D \to \sR^C$ (in practise, $C=1$
   \coloneq
   2 \sum_{d=1}^D \vw_{2,d}^f \in \sR^C\,,
 \end{align}
-where $\ve_d$ is the $d$th standard basis vector, $[f(\vx)]_i$ is the $i$th component of $f(\vx)$, and we have introduced the second-order Taylor coefficients $\vw_{2,d}^f$ of $f$ along $\ve_d$.
+where $\ve_d$ is the $d$-th standard basis vector, $[f(\vx)]_i$ is the $i$-th component of $f(\vx)$, and we have introduced the second-order Taylor coefficients $\vw_{2,d}^f$ of $f$ along $\ve_d$.
 The Laplacian requires computing, then summing, the second-order Taylor coefficients of $D$ Taylor approximations $\{f(\vx + \ve_d)\}_{d=1,\dots, D}$.
 
 \paragraph{Naive approach} We can use Taylor-mode differentiation to compute all these components in one forward traversal. Adding the extra loop over the Taylor expansions we want to compute in parallel, we obtain the following scheme from \Cref{eq:taylor-mode-second-order},
@@ -341,6 +341,7 @@ We can summarize \Cref{eq:forward-laplacian-linear-layer} in a single equation b
 \end{align}
 \Cref{eq:forward-laplacian-linear-layer-compact} shows that the weight matrix $\tilde{\mW}^{(i)} = (\mW^{(i)} \ \vb^{(i)})$ of a linear layer $f^{(i)}$ inside a neural network $f^{(L)} \circ \ldots \circ f^{(1)}$ is applied to a matrix $\mT^{(i-1)}$ during the computation of the NN's prediction and Laplacian via the forward Laplacian framework and yields another matrix $\mT^{(i)}$.
 This formulation makes it easy to formulate KFAC, because we can simply borrow the ideas from \cite{eschenhagen2023kroneckerfactored} to define the KFAC-expand and -reduce approximations of the Gramian:
+\textcolor{red}{I have not really read~\cite{eschenhagen2023kroneckerfactored}, but my first impression was, that we are in the expand setting as the loss depends on several components of $T^{(L)}$; or it depends a bit on whether we have data fitting terms and what the PDE is; for only a Laplace term we would be in the reduce setting...?}
 \begin{itemize}
 \item KFAC-expand
   \begin{align}
@@ -359,6 +360,27 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
       \left(
       \frac{\partial \ell_n}{\partial \mT_n^{(i)}}
       \right)^{\top}
+      \right]
+  \end{align}
+
+    I came to the following approximation, but also do not fully understand the notation in~\cite{eschenhagen2023kroneckerfactored}: 
+  \begin{align}
+    \mG(\flatten(\tilde{\mW}^{(i)})
+    &\approx
+      \left(
+      \frac{1}{N (D+2)}
+      \sum_{n=1}^N
+      \mT_n^{(i-1)}
+      {\mT_n^{(i-1)}}^{\top}
+      \right)
+      \otimes
+      \left[
+      \sum_{n=1}^N
+      \left(
+      \frac{\partial \mT_n^{(L)}}{\partial \mT_n^{(i)}}
+      \right)^{\top}
+      \nabla^2 \ell_n(\mT_n^{(i)}) 
+      \frac{\partial \mT_n^{(L)}}{\partial \mT_n^{(i)}}
       \right]
   \end{align}
 
@@ -393,6 +415,79 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
     \end{split}
   \end{align}
 \end{itemize}
+
+\subsection{Questions and thoughts:}
+
+\begin{itemize}
+    \item Should we formulate things with Taylor AD for general PDEs? Then we could treat general $k$-th order PDEs of the form     
+    \begin{equation*}
+        \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0. 
+    \end{equation*}
+    Maybe we first present things for second order PDEs since then the chain rules are still quite manageable, see~\eqref{eq:hessianChainRule}? 
+    \item If we do this, should we formulate things for the Gauß-Newton rather than ENG?
+\end{itemize}
+
+Consider the following general PDE
+\begin{equation}
+    \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
+\end{equation}
+where we assume $\Psi\colon \mathbb R^K\to\mathbb R^M$ to be a smooth function.
+%We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
+Let us denote the residual by 
+\begin{equation}
+    r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta). 
+\end{equation}
+Further, we consider the PINN loss
+\begin{equation}
+    %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
+    L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
+\end{equation}
+where we assume $\ell\colon\mathbb R^M\to\mathbb R$ is a convex function with definite Hessian $\nabla^2\ell\succ0$ and unique minimizer at $0$ (can also be relaxed). 
+We consider the Gauß-Newton matrix
+\begin{equation}
+    \mG(\vtheta) \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
+\end{equation}
+where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix, see~\cite{eschenhagen2023kroneckerfactored}. 
+Note however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
+If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
+We do this by a higher-order forward mode automatic differentiation known as Taylor-mode. 
+
+\subsection{Taylor-Mode  / Higher-order Forward Mode Automatic Differentiation} \label{sec:taylor-mode-AD}
+
+Here, we review higher-order forward mode differentiation, which is also known as \emph{Taylor-mode automatic differentiation}~\citep{griewank1996algorithm, griewank2008evaluating, bettencourt2019taylor}. 
+Many PDEs only incorporate first and second partial derivatives and we focus our discussion here on second-order automatic differentiation for the sake of simplicity of the presentation. 
+However, a completely analogous approach can be taken for higher-order PDEs. 
+
+How to compute the function values through a forward pass is well known. 
+Also, the computation of the gradient through forward mode differentiation is well-known and uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$. 
+If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by 
+\begin{align}
+       %\jac (f\circ g) & = \jac f(g) \jac g  \\  
+       \nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k. 
+\end{align}
+In particular, if $f(\vz) = \mW \vz + \vb$ is a linear layer, then the second order forward pass is given by 
+\begin{equation}
+       \nabla^2 (f\circ g) = \mW   \nabla^2 g?, 
+\end{equation}
+where $\nabla^2 g$ was already computed in the previous iteration. 
+If however, $f(\vz) = \sigma(\vz)$ is a nonlinear layer, we obtain $\jac f(\vz) = \operatorname{diag}(\sigma'(\vz))$ and the second order forward pass 
+\begin{align}
+    \jac (f\circ g)(z) & = 
+    \\ 
+    \nabla^2 (f\circ g) & = \operatorname{diag}(\sigma'(\vz)) \nabla^2 f(g) \operatorname{diag}(\sigma'(\vz)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k 
+    \\ & = \sigma'(\vz)\sigma'(\vz)^\top \odot \nabla^2 f(g(z)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k .
+\end{align}
+
+
+\subsection{Kronecker-factored Approximate Gauß-Newton (KFAGN?)}\label{sec:KFAGN}
+
+
+
+\paragraph{Reduction for the Poisson equation / linear PDEs?}
+
+\paragraph{Higher-order PDEs}
+can occur, e.g., bi-Laplacian
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"

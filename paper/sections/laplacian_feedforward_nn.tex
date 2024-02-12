@@ -34,10 +34,10 @@ This yields the gradients of $u$ w.r.t.\,all intermediate representations and pa
 
 \paragraph{Hessian backpropagation}
 Recall the Hessian chain rule
-\begin{equation*}
+\begin{equation}\label{eq:hessianChainRule}
   % D^2(f\circ g)(x) = D^2f(g(x))(\nabla g(x), \nabla g(x)) +
   \nabla^2 (f\circ g) = (J g)^\top\cdot \nabla^2 f(g) \cdot Jg + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k,
-\end{equation*}
+\end{equation}
 where $g_i$ dentotes the individual components of $g$, see~\cite{skorski2019chain}.
 The recursion for computing Hessians of $u$
 w.r.t.\,intermediate representations and parameters starts by initializing the
