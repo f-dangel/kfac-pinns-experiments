@@ -88,7 +88,7 @@ def manual_forward_laplacian_layer(
         new_directional_gradients = einsum(
             old_directional_gradients, jac, "n d0 ..., n ... -> n d0 ..."
         )
-        new_laplacian = 0.5 * einsum(
+        new_laplacian = einsum(
             hess, old_directional_gradients**2, "n ..., n d0 ... -> n ..."
         ) + einsum(jac, old_laplacian, "n ..., n ... -> n ... ")
     else:
@@ -119,9 +119,7 @@ def main():
 
     # forward-Laplacian computation
     coefficients = manual_forward_laplacian(layers, X)
-    # We are pushing forward the sum of second-order Taylor coefficients, which has
-    # a factor of 1/2 from the Taylor expansion. We undo this by multiplying with 2.
-    laplacian_X = 2 * einsum(coefficients[-1]["laplacian"], "n d -> ")
+    laplacian_X = einsum(coefficients[-1]["laplacian"], "n d -> ")
 
     assert allclose(true_laplacian_X, laplacian_X)
 
