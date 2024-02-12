@@ -1,0 +1,399 @@
+The loss function of many PINNs involves the Laplacian.
+Recently, \cite{li2023forward} proposed a new computational framework to evaluate the Laplacian and the NN prediction in one forward traversal through the graph.
+To establish a Kronecker-factorized approximation of the Gramian, which consists of the Laplacian's gradient, we need to know how a weight matrix enters its computation.
+Here, we describe how the weight matrix of a linear layer inside a feed-forward NN enters the Laplacian's computation when using the forward Laplacian framework from \cite{li2023forward}.
+We start by connecting the forward Laplacian framework to Taylor-mode automatic differentiation \cite{griewank2008evaluating,bettencourt2019taylor}, both to make the presentation self-contained and to explicitly point out this connection provides a complementing perspective of the method.
+
+\subsection{Taylor-Mode Automatic Differentiation}
+The idea of Taylor Mode AD is to propagate Taylor coefficients, which are directional derivatives, through the computation graph. We provide a brief summary based on its description in \cite{bettencourt2019taylor}.
+
+\paragraph{Taylor series and directional derivatives} Consider a function $f: \sR^D \to \sR$ and its $K$-th order Taylor expansion at a point $\vx \in \sR^D$ along a direction $\vv \in \sR^D$,
+\begin{align}
+  \begin{split}
+    f(\vx + \vv)
+    &=
+      f(\vx)
+      +
+      \left(
+      \frac{\partial f(\vx)}{\partial \vx}
+      \right)^{\top} \vv
+      +
+      \frac{1}{2!}
+      \vv^\top
+      \left(
+      \frac{\partial^2 f(\vx)}{\partial \vx^2}
+      \right) \vv
+      +
+      \frac{1}{3!}
+      \sum_{i_1, i_2 i_3}
+      \left(
+      \frac{\partial^3 f(\vx)}{\partial\vx^3}
+      \right)_{i_1, i_2, i_3} \vv_{i_1} \vv_{i_2} \vv_{i_3}
+    \\
+    &\phantom{=}+
+      \ldots
+      +
+      \frac{1}{K!}
+      \sum_{i_1, \dots, i_K}
+      \left(
+      \frac{\partial^K f(\vx)}{\partial\vx^K}
+      \right)_{i_1, \dots, i_K} \vv_{i_1} \dots \vv_{i_K}\,.
+  \end{split}
+\end{align}
+We can unify the notation of this expression by introducing the $K$-th order directional derivative of $f$ at $\vx$ along $\vv$,
+\begin{align}
+  \partial^K f(\vx)
+  \underbrace{\left[ \vv, \ldots, \vv \right]}_{K\,\text{times}}
+  \coloneq
+  \sum_{i_1, \dots, i_K}
+  \left(
+  \frac{\partial^K f(\vx)}{\partial\vx^K}
+  \right)_{i_1, \dots, i_K} \vv_{i_1} \dots \vv_{i_K}\,.
+\end{align}
+This unifies the Taylor expansion to
+\begin{align}
+  \begin{split}
+    f(\vx + \vv)
+    &=
+      f(\vx)
+      +
+      \partial f(\vx)[\vv]
+      +
+      \frac{1}{2!}
+      \partial^2 f(\vx)[\vv, \vv]
+      +
+      \frac{1}{3!}
+      \partial^3 f(\vx)[\vv, \vv, \vv]
+    \\
+    &\phantom{=}+
+      \ldots
+      +
+      \frac{1}{K!}
+      \partial^K f(\vx)[\vv, \ldots, \vv]
+    \\
+    &\coloneq
+      \sum_{k=1}^K
+      \frac{1}{k!}
+      \partial^k f(\vx)\left[\otimes^k \vv  \right]
+      \coloneq
+      \sum_{k=1}^K
+      w^f_k
+  \end{split}
+\end{align}
+where we have used the notation $\otimes^k \vv$ to indicate $k$ copies of $\vv$, and introduced the $k$-th order Taylor coefficient $w^f_k \in \sR$ of $f$.
+This generalizes to vector-valued functions.
+If $f$'s output was vector-valued, say $f(\vx) \in \sR^C$, we would have Taylor-expand each component individually and grouped coefficients of same order into vectors $\vw_k^f \in \sR^C$ such that $[\vw_k^f]_i$ is the $k$th-order Taylor coefficient of the $i$th component of $f$.
+
+\paragraph{Composition rule}
+Next, we consider the case where $f = g \circ h$ is a composition of two functions. Starting from the Taylor coefficients $\vw_0^h, \dots \vw_K^h$ of $h(\vx + \vv)$, the Taylor coefficients $\vw_0^f, \dots, \vw_K^f$ of $f(\vx + \vv)$ follow from Fa\`a di Bruno's formula~\cite{griewank2008evaluating,bettencourt2019taylor}:
+\begin{align}\label{eq:taylor-mode-forward}
+  \vw_{k}^f
+  =
+  \sum_{\sigma \in \mathrm{part}(k)}
+  \frac{1}{n_1! \dots n_K!}
+  \partial^{|\sigma|}g(\vw_0^h)
+  \left[
+  \otimes_{s \in \sigma}
+  \vw_s^h
+  \right]
+\end{align}
+In the above, $\mathrm{part}(k)$ is the set of all integer partitionings of $k$; a set of sets. $|\sigma|$ denotes the length of a set $\sigma \in \mathrm{part}(k)$, $n_i$ is the count of integer $i$ in $\sigma$, and $\vw_0^h = h(\vx)$.
+
+Our goal is the computation of second-order derivatives of $f$ w.r.t.\,$\vx$.
+So let's work out \Cref{eq:taylor-mode-forward} up to order $K=2$.
+The zeroth and first order are simply the forward pass and the forward-mode gradient chain rule.
+For the second-order term, we need the integer partitioning of 2, given by $\mathrm{part}(2) = \left\{ \{1, 1\}, \{2\} \right\}$.
+This results in
+\begin{subequations}\label{eq:taylor-mode-second-order}
+  \begin{align}
+    \vw_0^f
+    &=
+      g(\vw_0^h)
+    \\
+    \vw_1^f
+    &=
+      \partial g(\vw_0^h)[\vw_1^h]
+    \\
+    \vw_2^f
+    &=
+      \frac{1}{2}
+      \partial^2 g(\vw_0^h)[\vw_1^h, \vw_1^h]
+      +
+      \partial g(\vw_0^h)[\vw_2^h]\,.
+  \end{align}
+\end{subequations}
+We can also express $\vw_1^f, \vw_2^f$ in terms of Jacobian- and Hessian-vector products of $g$,
+\begin{subequations}\label{eq:taylor-mode-second-order-jac-hess}
+  \begin{align}
+    \vw_1^f
+    &=
+      \left(
+      \jac_{\vw_0^h} g(\vw_0^h)
+      \right) \vw_1^h\,,
+    \\
+    \vw_2^f
+    &=
+      \frac{1}{2}
+      \begin{pmatrix}
+        {\vw_1^h}^{\top}
+        \frac{
+        \partial^2 \left[ g(\vw_0^h) \right]_1
+        }{
+        \partial{\vw_0^h}^2
+        }
+        \vw_1^h
+        \\
+        \vdots
+        \\
+        {\vw_1^h}^{\top}
+        \frac{
+        \partial^2 \left[ g(\vw_0^h) \right]_D
+        }{
+        \partial{\vw_0^h}^2
+        }
+        \vw_1^h
+      \end{pmatrix}
+      +
+      \left(
+      \jac_{\vw_0^h} g(\vw_0^h)
+      \right) \vw_2^h\,,
+  \end{align}
+\end{subequations}
+
+\subsection{Forward Laplacian}
+Our goal is to compute the Laplacian of $f: \sR^D \to \sR^C$ (in practise, $C=1$),
+\begin{align}
+  \Delta f(\vx)
+  =
+  \sum_{d=1}^D
+  \begin{pmatrix}
+    \partial^2[f(\vx)]_1[\ve_d, \ve_d]
+    \\
+    \vdots
+    \\
+    \partial^2[f(\vx)]_C[\ve_d, \ve_d]
+  \end{pmatrix}
+  \coloneq
+  2 \sum_{d=1}^D \vw_{2,d}^f \in \sR^C\,,
+\end{align}
+where $\ve_d$ is the $d$th standard basis vector, $[f(\vx)]_i$ is the $i$th component of $f(\vx)$, and we have introduced the second-order Taylor coefficients $\vw_{2,d}^f$ of $f$ along $\ve_d$.
+The Laplacian requires computing, then summing, the second-order Taylor coefficients of $D$ Taylor approximations $\{f(\vx + \ve_d)\}_{d=1,\dots, D}$.
+
+\paragraph{Naive approach} We can use Taylor-mode differentiation to compute all these components in one forward traversal. Adding the extra loop over the Taylor expansions we want to compute in parallel, we obtain the following scheme from \Cref{eq:taylor-mode-second-order},
+\begin{subequations}\label{eq:taylor-mode-naive-laplacian}
+  \begin{align}
+    \vw_0^f
+    &=
+      g(\vw_0^h)
+    \\
+    \left\{
+    \vw_{1,d}^f
+    \right\}_{d=1, \dots, D}
+    &=
+      \left\{
+      \partial g(\vw_0^h)[\vw_{1,d}^h]
+      \right\}_{d=1, \dots, D}
+    \\ \label{eq:naive-laplacian-second-order-term}
+    \left\{
+    \vw_{2,d}^f
+    \right\}_{d=1, \dots, D}
+    &=
+      \left\{
+      \frac{1}{2}
+      \partial^2 g(\vw_0^h)[\vw_{1,d}^h, \vw_{1,d}^h]
+      +
+      \partial g(\vw_0^h)[\vw_{2,d}^h]
+      \right\}_{d=1, \dots, D}\,.
+  \end{align}
+\end{subequations}
+
+\paragraph{Forward Laplacian framework}
+Computing the Laplacian via \Cref{eq:taylor-mode-naive-laplacian} first computes, then sums, the diagonal second-order derivatives $\{ \vw_{2,d}^f \}_{d=1,\dots, D}$.
+Note that we can pull the sum inside the forward propagation scheme, specifically \Cref{eq:naive-laplacian-second-order-term}, and push-forward the summed second-order coefficients. This simplifies \Cref{eq:taylor-mode-naive-laplacian} to
+\begin{subequations}\label{eq:forward-laplacian}
+  \begin{align}
+    \vw_0^f
+    &=
+      g(\vw_0^h)
+    \\
+    \left\{
+    \vw_{1,d}^f
+    \right\}_{d=1, \dots, D}
+    &=
+      \left\{
+      \partial g(\vw_0^h)[\vw_{1,d}^h]
+      \right\}_{d=1, \dots, D}
+    \\
+    \sum_{d=1}^D
+    \vw_{2,d}^f
+    &=
+      \left(
+      \frac{1}{2}
+      \sum_{d=1}^D
+      \partial^2 g(\vw_0^h)[\vw_{1,d}^h, \vw_{1,d}^h]
+      \right)
+      +
+      \partial g(\vw_0^h)
+      \left[
+      \sum_{d=1}^D \vw_{2,d}^h
+      \right]\,.
+  \end{align}
+\end{subequations}
+\Cref{eq:forward-laplacian} is the forward Laplacian framework from \citet{li2023forward} for computing the Laplacian of a neural network.
+Here, we have derived it from Taylor-mode automatic differentiation.
+Note that \Cref{eq:forward-laplacian} requires less computations and memory than \Cref{eq:taylor-mode-naive-laplacian} because we can pull the summation from the Laplacian into the forward propagation scheme.
+
+\subsubsection{Forward Laplacian for elementwise activation layers}
+We now describe \Cref{eq:forward-laplacian} for the case where $g: \sR^C \to \sR^C$ acts element-wise via $\sigma: \sR \to \sR$.
+We will write $\sigma(\bullet), \sigma'(\bullet), \sigma''(\bullet)$ to indicate element-wise application of $\sigma$, its first derivative $\sigma'$, and second derivative $\sigma''$ to all elements in a $\bullet$.
+Further, let $\odot$ denote element-wise multiplication, and $(\bullet)^{\odot 2}$ element-wise squaring.
+With that, we can write the Jacobian as $\jac_{h(\vx)}g(\vx) = \diag(\sigma(h(\vx))$ where $\diag(\bullet)$ embeds a vector $\bullet$ into the diagonal of a matrix.
+The Hessian of component $i$ is $\nicefrac{\partial^2 [g(h(\vx))]_i}{\partial h(\vx)^2} = [\sigma''(h(\vx))]_i \ve_i \ve_i^{\top}$.
+Inserting \Cref{eq:taylor-mode-second-order-jac-hess} into \Cref{eq:forward-laplacian} and using the Jacobian and Hessian expressions of the element-wise activation function yields the following forward Laplacian forward propagation:
+\begin{subequations}
+  \begin{align}
+    \vw_0^f
+    &=
+      \sigma(\vw_0^h)
+    \\
+    \left\{ \vw_{1,d}^f \right\}
+    &=
+      \left\{ \sigma'(\vw_0^h) \odot \vw_{1,d}^h \right\}_{d=1, \dots, D}
+    \\
+    \sum_{d=1}^D \vw_{2,d}^f
+    &=
+      \frac{1}{2}
+      \sigma''(\vw_0^h) \odot
+      \left(
+      \sum_{d=1}^D
+      \left(\vw_{1,d}^h\right)^{\odot 2}
+      \right)
+      +
+      \sigma'(\vw_0^h)
+      \odot
+      \left(
+      \sum_{d=1}^D \vw_{2,d}^h
+      \right)\,.
+  \end{align}
+\end{subequations}
+
+\subsubsection{Forward Laplacian for linear layers}
+Now, let $g: \sR^{D_{\text{in}}} \to \sR^{D_{\text{out}}}$ be a linear layer with weight matrix $\mW \in \sR^{D_{\text{out}} \times D_{\text{in}}}$ and bias vector $\vb \in \sR^{C_{\text{out}}}$.
+Its Jacobian is $\jac_{h(\vx)}( \mW h(\vx) + \vb) = \mW$ and the second-order derivative is zero.
+Hence, \Cref{eq:forward-laplacian} for linear layers becomes
+\begin{subequations}\label{eq:forward-laplacian-linear-layer}
+  \begin{align}
+    \vw_0^f
+    &=
+      \mW \vw_0^h + \vb
+    \\
+    \left\{ \vw_{1,d}^f \right\}_{d=1, \dots, D}
+    &=
+      \left\{ \mW \vw_{1,d}^h \right\}_{d=1, \dots, D}
+    \\
+    \sum_{d=1}^D \vw_{2,d}^f
+    &=
+      \mW
+      \left( \sum_{d=1}^D \vw_{2,d}^h\right)\,.
+  \end{align}
+\end{subequations}
+We can summarize \Cref{eq:forward-laplacian-linear-layer} in a single equation by grouping all quantities that are being multiplied by $\mW$ into a single matrix, and appending a single row of ones or zeros to account for the bias:
+\begin{align}
+  \nonumber
+  \underbrace{
+  \begin{pmatrix}
+    \vw_0^f
+    &
+      \vw_{1,1}^f
+    &
+      \dots
+    &
+      \vw_{1,D}^f
+    &
+      \sum_{d=1}^D \vw_{2,d}^f
+  \end{pmatrix}
+  }_{\coloneq \mT^f \in \sR^{D_{\text{out}} \times (D+2)}}
+  &=
+    \begin{pmatrix}
+      \mW & \vb
+    \end{pmatrix}
+    \underbrace{
+    \begin{pmatrix}
+      \vw_0^h
+      &
+        \vw_{1,1}^h
+      &
+        \dots
+      &
+        \vw_{1,D}^h
+      &
+        \sum_{d=1}^D \vw_{2,d}^h
+      \\
+      1 & 0 & \dots & 0 & 0
+    \end{pmatrix}
+    }_{\coloneq \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
+    \shortintertext{or, in compact form,}
+    \mT^f
+  &=
+    \tilde{\mW}
+    \mT^h\,.
+    \label{eq:forward-laplacian-linear-layer-compact}
+\end{align}
+\Cref{eq:forward-laplacian-linear-layer-compact} shows that the weight matrix $\tilde{\mW}^{(i)} = (\mW^{(i)} \ \vb^{(i)})$ of a linear layer $f^{(i)}$ inside a neural network $f^{(L)} \circ \ldots \circ f^{(1)}$ is applied to a matrix $\mT^{(i-1)}$ during the computation of the NN's prediction and Laplacian via the forward Laplacian framework and yields another matrix $\mT^{(i)}$.
+This formulation makes it easy to formulate KFAC, because we can simply borrow the ideas from \cite{eschenhagen2023kroneckerfactored} to define the KFAC-expand and -reduce approximations of the Gramian:
+\begin{itemize}
+\item KFAC-expand
+  \begin{align}
+    \mG(\flatten(\tilde{\mW}^{(i)})
+    &\approx
+      \left(
+      \frac{1}{N (D+2)}
+      \sum_{n=1}^N
+      \mT_n^{(i-1)}
+      {\mT_n^{(i-1)}}^{\top}
+      \right)
+      \otimes
+      \left[
+      \sum_{n=1}^N
+      \frac{\partial \ell_n}{\partial \mT_n^{(i)}}
+      \left(
+      \frac{\partial \ell_n}{\partial \mT_n^{(i)}}
+      \right)^{\top}
+      \right]
+  \end{align}
+
+\item KFAC-reduce
+  \begin{align}
+    \begin{split}
+      \mG(\flatten(\tilde{\mW}^{(i)})
+      &\approx
+        \left[
+        \frac{1}{N (D+2)^2}
+        \sum_{n=1}^N
+        \left(
+        \mT_n^{(i-1)} \vone
+        \right)
+        \left(
+        \mT_n^{(i-1)} \vone
+        \right)^{\top}
+        \right]
+      \\
+      &\phantom{\approx\,}\otimes
+        \left[
+        \sum_{n=1}^N
+        \left(
+        \frac{\partial \ell_n}{\partial \mT_n^{(i)}}
+        \vone
+        \right)
+        \left(
+        \frac{\partial \ell_n}{\partial \mT_n^{(i)}}
+        \vone
+        \right)^{\top}
+        \right]
+    \end{split}
+  \end{align}
+\end{itemize}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
