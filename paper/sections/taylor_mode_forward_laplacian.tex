@@ -450,13 +450,13 @@ We consider the Gauß-Newton matrix
     \mG(\vtheta) \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
 \end{equation}
 where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix, see~\cite{eschenhagen2023kroneckerfactored}. 
-Note however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
+Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
 If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
-We do this by a higher-order forward mode automatic differentiation known as Taylor-mode. 
+We do this by a higher-order forward mode automatic differentiation. 
 
 \subsection{Taylor-Mode  / Higher-order Forward Mode Automatic Differentiation} \label{sec:taylor-mode-AD}
 
-Here, we review higher-order forward mode differentiation, which is also known as \emph{Taylor-mode automatic differentiation}~\citep{griewank1996algorithm, griewank2008evaluating, bettencourt2019taylor}. 
+Here, we review higher-order forward mode differentiation, also known as \emph{Taylor-mode automatic differentiation}~\citep{griewank1996algorithm, griewank2008evaluating, bettencourt2019taylor}. 
 Many PDEs only incorporate first and second partial derivatives and we focus our discussion here on second-order automatic differentiation for the sake of simplicity of the presentation. 
 However, a completely analogous approach can be taken for higher-order PDEs. 
 
@@ -464,21 +464,89 @@ How to compute the function values through a forward pass is well known.
 Also, the computation of the gradient through forward mode differentiation is well-known and uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$. 
 If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by 
 \begin{align} 
-       \nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k. 
+       %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\ 
+       \partial_i \partial_j (f \circ g)(\vz) & = \partial_i g(\vz)^\top D^2f(g(\vz))\partial_j g(\vz) + Df(g(\vz)) \partial_i \partial_j g(\vz). 
 \end{align}
 In particular, if $f(\vz) = \mW \vz + \vb$ is a linear layer, then the second order forward pass is given by 
 \begin{align}
-    \jac (f\circ g)(\vz) & = \mW \jac g(\vz)  \\ 
-       \nabla^2 (f\circ g)(\vz) & = \mW   \nabla^2 g?, 
+    %\jac (f\circ g)(\vz) & = \mW \jac g(\vz)  \\ 
+    \partial_i (f\circ g)(\vz) & = \mW \partial_i g(\vz) \\ 
+    %\nabla^2 (f\circ g)(\vz) & = \mW   \nabla^2 g?, 
+    \partial_i\partial_j (f\circ g)(\vz) & = \mW   \partial_i\partial_j g(\vz), 
 \end{align}
 where $\jac g$ and $\nabla^2 g$ were already computed in the previous iteration of the forward pass. 
 If however, $f(\vz) = \sigma(\vz)$ is a nonlinear layer, we obtain $\jac f(\vz) = \operatorname{diag}(\sigma'(\vz))$ and the second order forward pass 
 \begin{align}
-    \jac (f\circ g)(\vz) & =  \operatorname{diag}(\sigma'(g(\vz))) \jac g(\vz)
+    %\jac (f\circ g)(\vz) & =  \sigma'(g(\vz)) \odot? \jac g(\vz)
+    \partial_i (f\circ g)(\vz) & =  \sigma'(g(\vz)) \odot \partial_i g(\vz)
     \\ 
-    \nabla^2 (f\circ g)(\vz) & = \operatorname{diag}(\sigma'(\vz)) \nabla^2 f(g) \operatorname{diag}(\sigma'(\vz)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k 
-    \\ & = \sigma'(\vz)\sigma'(\vz)^\top \odot \nabla^2 f(g(z)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k ? . 
+    %\nabla^2 (f\circ g)(\vz) & = \operatorname{diag}(\sigma'(\vz)) \nabla^2 f(g) \operatorname{diag}(\sigma'(\vz)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k 
+    %\\ & = \sigma'(\vz)\sigma'(\vz)^\top \odot \nabla^2 f(g(z)) + \sum_{k} (\nabla f)_k \cdot \nabla^2 g_k ? . 
+    \partial_i\partial_j (f\circ g)(\vz) & = \partial_i g(\vz) \odot \sigma''(g(\vz)) \odot \partial_j g(\vz) + \sigma'(g(\vz)) \odot \partial_i \partial_j g(\vz). 
 \end{align}
+
+\paragraph{Alternative expression}
+Second-order forward pass through a linear layer: 
+\begin{align}
+    \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} + \vb^{(l)} \\ 
+    \partial_{i} \vz^{(l)} & = \mW^{(l)} \partial_i \vz^{(l-1)} \\ 
+    \partial_i\partial_j \vz^{(l)} & = \mW^{(l)} \partial_i\partial_j \vz^{(l-1)}. 
+\end{align}
+In matrix form: 
+\begin{align}
+  \nonumber
+  \underbrace{
+  \begin{pmatrix}
+    \vz^{(l)}
+    &
+    \partial_{i} \vz^{(l)}
+    &
+    \partial_i\partial_j \vz^{(l)}
+  \end{pmatrix}
+  }_{\coloneq \mT^f \in \sR^{D_{\text{out}} \times (D+2)}}
+  &=
+    \begin{pmatrix}
+      \mW & \vb
+    \end{pmatrix}
+    \underbrace{
+    \begin{pmatrix}
+      \vz^{(l)}
+      &
+      \partial_{i} \vz^{(l)}
+      &
+        \partial_i\partial_j \vz^{(l)}
+      \\
+      1 & 0 & 0
+    \end{pmatrix}
+    }_{\coloneq \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
+    \shortintertext{or, in compact form,}
+    \mT^f
+  &=
+    \tilde{\mW}
+    \mT^h\,.
+    \label{eq:forward-laplacian-linear-layer-compact}
+\end{align}
+Second-order forward pass through a nonlinear layer: 
+\begin{align}
+    \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\ 
+    \partial_{i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_i \vz^{(l-1)} \\ 
+    \partial_i\partial_j \vz^{(l)} & = \partial_i \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_j \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_i \partial_j \vz^{(l-1)}. 
+\end{align}
+
+\begin{comment}
+    \paragraph{Alternating linear and nonlinear layers}
+In particular, if $f$ is a linear and $g$ a nonlinear layer, we obtain 
+\begin{align}
+    \partial_i (f\circ g)(\vz) & = \mW \ve_i\sigma'(\vz_i) \quad \text{or } \jac (f\circ g)(\vz) = \mW \operatorname{diag}(\sigma'(\vz))  \\ 
+    \partial_i\partial_j (f\circ g)(\vz) & = \mW \ve_i\delta_{ij} \sigma''(\vz_i). 
+\end{align}
+On the other hand, if $f$ is a nonlinear and $g$ a layer, we obtain 
+\begin{align}
+    \partial_i (f\circ g)(\vz) & =  \sigma'(\mW\vz + \vb) \odot \mW\ve_i\\ 
+    \partial_i\partial_j (f\circ g)(\vz) & = \mW\ve_i \odot \sigma''(\mW\vz + \vb) \odot \mW\ve_j. 
+\end{align}
+Maybe, this doesn't really make all that much sense 
+\end{comment}
 
 
 \subsection{Kronecker-factored Approximate Gauß-Newton (KFAGN?)}\label{sec:KFAGN}
