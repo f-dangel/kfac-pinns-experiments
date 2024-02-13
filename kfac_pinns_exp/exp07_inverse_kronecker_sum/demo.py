@@ -8,21 +8,22 @@ from torch import allclose, eye, from_numpy, inverse, kron, manual_seed, randn
 def main():
     """Verify the inverse-of-Kronecker-sum equation on a toy problem."""
     manual_seed(0)
-    dim = 10
+    dim1, dim2 = 10, 9
     damping = 1e-4
+    tols = {"atol": 1e-7, "rtol": 1e-5}
 
     # create symmetric positive-definite matrices in double precision
-    A1 = randn(dim, dim).double()
-    A1 = A1 @ A1.T + damping * eye(dim)
+    A1 = randn(dim1, dim1).double()
+    A1 = A1 @ A1.T + damping * eye(dim1)
 
-    A2 = randn(dim, dim).double()
-    A2 = A2 @ A2.T + damping * eye(dim)
+    A2 = randn(dim2, dim2).double()
+    A2 = A2 @ A2.T + damping * eye(dim2)
 
-    B1 = randn(dim, dim).double()
-    B1 = B1 @ B1.T + damping * eye(dim)
+    B1 = randn(dim1, dim1).double()
+    B1 = B1 @ B1.T + damping * eye(dim1)
 
-    B2 = randn(dim, dim).double()
-    B2 = B2 @ B2.T + damping * eye(dim)
+    B2 = randn(dim2, dim2).double()
+    B2 = B2 @ B2.T + damping * eye(dim2)
 
     # explicitly compute and invert the matrix
     K = kron(A1, A2) + kron(B1, B2)
@@ -43,8 +44,7 @@ def main():
     K_inv_manual = (
         kron(V1, V2) @ (1 / diag12).diag() @ kron(V1_inv @ B1_inv, V2_inv @ B2_inv)
     )
-
-    assert allclose(K_inv, K_inv_manual, rtol=1e-5, atol=1e-7)
+    assert allclose(K_inv, K_inv_manual, **tols)
 
 
 if __name__ == "__main__":
