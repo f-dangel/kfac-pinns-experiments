@@ -54,3 +54,23 @@ def combine_tiles(tiles: List[List[Tensor]]) -> Tensor:
     """
     row_tiles = [cat(col_tiles, dim=1) for col_tiles in tiles]
     return cat(row_tiles, dim=0)
+
+
+def exponential_moving_average(dest: Tensor, update: Tensor, factor: float) -> None:
+    """Update the destination tensor with an exponential moving average.
+
+    `dest = factor * dest + (1 - factor) * update`
+
+    Args:
+        dest: The destination tensor that will be updated.
+        update: The update tensor to be incorporated.
+        factor: The exponential moving average factor. Must be in [0, 1).
+
+    Raises:
+        ValueError: If `factor` is not in [0, 1).
+    """
+    if not 0.0 <= factor < 1.0:
+        raise ValueError(
+            f"Exponential moving average factor must be in [0, 1). Got {factor}."
+        )
+    dest.mul_(factor).add_(update, alpha=1 - factor)
