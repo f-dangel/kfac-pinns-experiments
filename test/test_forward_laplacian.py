@@ -1,6 +1,7 @@
 """Test `kfac_pinns_exp.forward_laplacian`."""
 
 from test.test_manual_differentiation import CASE_IDS, CASES, set_up
+from typing import Dict
 
 from einops import einsum
 from pytest import mark
@@ -12,8 +13,12 @@ from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 
 
 @mark.parametrize("case", CASES, ids=CASE_IDS)
-def test_manual_forward_laplacian(case):
-    """Compute the forward Laplacian and compare with functorch."""
+def test_manual_forward_laplacian(case: Dict):
+    """Compute the forward Laplacian and compare with functorch.
+
+    Args:
+        case: A dictionary describing a test case.
+    """
     layers, X = set_up(case)
 
     # automatic computation (via functorch)
