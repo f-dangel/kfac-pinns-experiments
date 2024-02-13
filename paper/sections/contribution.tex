@@ -11,9 +11,105 @@ There are some challenges we need to overcome to define a Kronecker-factored app
   Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance.
 \end{itemize}
 
-\subsection{Taylor-mode AD}
-\subsection{Forward Laplacian}
-\subsection{KFAC}
+Here, we introduce a Kronecker-factored approximation of the Gauß-Newton algorithm for PINNs. 
+To this end we consider a general PDE of the form
+\begin{equation}
+    \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
+\end{equation}
+where we assume $\Psi\colon \mathbb R^K\to\mathbb R^M$ to be a smooth function.
+%We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
+Let us denote the residual by 
+\begin{equation}
+    r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta),
+\end{equation} 
+then for suitable integration points $\vx_n$ we consider the PINN loss
+\begin{equation}
+    %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
+    L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
+\end{equation}
+where we assume $\ell\colon\mathbb R^M\to\mathbb R$ is a convex function with definite Hessian $\nabla^2\ell\succ0$ and unique minimizer at $0$ (can also be relaxed). 
+We consider the Gauß-Newton matrix
+\begin{equation}
+    \mG(\vtheta) \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
+\end{equation}
+where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix, see~\cite{eschenhagen2023kroneckerfactored}. 
+Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = \mI$. 
+Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
+If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
+We do this by a higher-order forward mode automatic differentiation. 
+
+
+
+\subsection{Higher-order forward mode automatic differentiation}
+\label{sec:taylor-mode-AD}
+
+Here, we review higher-order forward mode differentiation, also known as \emph{Taylor-mode automatic differentiation}~\citep{griewank1996algorithm, griewank2008evaluating, bettencourt2019taylor}. 
+Many PDEs only incorporate first and second partial derivatives and we focus our discussion here on second-order automatic differentiation for the sake of simplicity of the presentation. 
+However, a completely analogous approach can be taken for higher-order PDEs. 
+
+How to compute the function values through a forward pass is well known. 
+Also, the computation of the gradient through forward mode differentiation is well-known and uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$. 
+If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by 
+\begin{align} 
+       %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\ 
+       \partial_i \partial_j (f \circ g)(\vz) & = \partial_i g(\vz)^\top D^2f(g(\vz))\partial_j g(\vz) + Df(g(\vz)) \partial_i \partial_j g(\vz). 
+\end{align}
+In particular, if $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz + \vb^{(l)}$ is a linear layer, then the second order forward pass is given by 
+\begin{align}
+    \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} + \vb^{(l)} \\ 
+    \partial_{i} \vz^{(l)} & = \mW^{(l)} \partial_i \vz^{(l-1)} \\ 
+    \partial_i\partial_j \vz^{(l)} & = \mW^{(l)} \partial_i\partial_j \vz^{(l-1)}. 
+\end{align}
+In matrix form: 
+\begin{align}
+  \nonumber
+  \underbrace{
+  \begin{pmatrix}
+    \vz^{(l)}
+    &
+    \partial_{i} \vz^{(l)}
+    &
+    \partial_i\partial_j \vz^{(l)}
+  \end{pmatrix}
+  }_{\coloneq \mT^f \in \sR^{D_{\text{out}} \times (D+2)}}
+  &=
+    \begin{pmatrix}
+      \mW & \vb
+    \end{pmatrix}
+    \underbrace{
+    \begin{pmatrix}
+      \vz^{(l)}
+      &
+      \partial_{i} \vz^{(l)}
+      &
+        \partial_i\partial_j \vz^{(l)}
+      \\
+      1 & 0 & 0
+    \end{pmatrix}
+    }_{\coloneq \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
+    \shortintertext{or, in compact form,}
+    \mT^f
+  &=
+    \tilde{\mW}
+    \mT^h\,.
+    \label{eq:forward-laplacian-linear-layer-compact}
+\end{align}
+The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$ is given by  
+\begin{align}
+    \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\ 
+    \partial_{i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_i \vz^{(l-1)} \\ 
+    \partial_i\partial_j \vz^{(l)} & = \partial_i \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_j \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_i \partial_j \vz^{(l-1)}. 
+\end{align}
+
+
+\paragraph{Forward Laplacian}
+
+
+\subsection{Kronecker-factored approximate Gauß-Newton}
+
+\paragraph{KFAC with weight sharing}
+
+\paragraph{Higher-order PDEs}
 
 \paragraph{Input-based Kronecker approximation:} One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to be able to compute the grad-output-based Kronecker factors.
 Some works find that if setting this factor to $\mI$, the resulting input-based KFAC still yields good performance~\cite{benzing2022gradient,petersen2023isaac}
