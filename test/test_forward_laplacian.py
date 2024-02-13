@@ -1,24 +1,25 @@
-"""Demonstrate how to use the forward Laplacian framework."""
+"""Test `kfac_pinns_exp.forward_laplacian`."""
+
+from test.test_manual_differentiation import CASE_IDS, CASES, set_up
+from typing import Dict
 
 from einops import einsum
-from torch import allclose, manual_seed, rand
-from torch.nn import Linear, Sequential, Sigmoid
+from pytest import mark
+from torch import allclose
+from torch.nn import Sequential
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 
 
-def main():
-    """Compute the forward Laplacian and compare with functorch on a simple example."""
-    manual_seed(0)
-    batch_size = 10
-    X = rand(batch_size, 5)
-    layers = [
-        Linear(5, 3),
-        Sigmoid(),
-        Linear(3, 1),
-        Sigmoid(),
-    ]
+@mark.parametrize("case", CASES, ids=CASE_IDS)
+def test_manual_forward_laplacian(case: Dict):
+    """Compute the forward Laplacian and compare with functorch.
+
+    Args:
+        case: A dictionary describing a test case.
+    """
+    layers, X = set_up(case)
 
     # automatic computation (via functorch)
     true_hessian_X = autograd_input_hessian(Sequential(*layers), X)
@@ -29,7 +30,3 @@ def main():
     laplacian_X = einsum(coefficients[-1]["laplacian"], "n d -> ")
 
     assert allclose(true_laplacian_X, laplacian_X)
-
-
-if __name__ == "__main__":
-    main()
