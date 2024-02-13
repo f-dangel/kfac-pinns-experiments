@@ -141,7 +141,7 @@ def main():
         Tanh(),
         Linear(16, 1),
     ]
-    layers = [l.to(dev) for l in layers]
+    layers = [layer.to(dev) for layer in layers]
     model = Sequential(*layers).to(dev)
     print(f"Model: {model}")
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters())}")
