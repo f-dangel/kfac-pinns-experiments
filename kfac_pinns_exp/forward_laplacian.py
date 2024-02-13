@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from einops import einsum
 from torch import Tensor, eye, gt, zeros_like
-from torch.nn import Linear, Module, ReLU, Sigmoid
+from torch.nn import Linear, Module, ReLU, Sigmoid, Tanh
 
 
 def manual_forward_laplacian(
@@ -97,6 +97,15 @@ def manual_forward_laplacian_layer(
             old_directional_gradients, jac, "n d0 ..., n ... -> n d0 ..."
         )
         new_laplacian = einsum(jac, old_laplacian, "n ..., n ... -> n ... ")
+    elif isinstance(layer, Tanh):
+        jac = 1 - new_forward**2
+        hess = -2 * new_forward * jac
+        new_directional_gradients = einsum(
+            old_directional_gradients, jac, "n d0 ..., n ... -> n d0 ..."
+        )
+        new_laplacian = einsum(
+            hess, old_directional_gradients**2, "n ..., n d0 ... -> n ..."
+        ) + einsum(jac, old_laplacian, "n ..., n ... -> n ... ")
     else:
         raise NotImplementedError(f"Layer type not supported: {layer}.")
 
