@@ -49,7 +49,7 @@ class KFACForPINNs(Optimizer):
             damping: Damping factor. Must be positive.
             T_kfac: Positive integer specifying the update frequency for
                 the boundary and the interior terms' KFACs. Default is `1`.
-            T_inv_kfac: Positive integer specifying the pre-conditioner update
+            T_inv: Positive integer specifying the pre-conditioner update
                 frequency. Default is `1`.
             ema_factor: Exponential moving average factor for the KFAC factors. Must be
                 in `[0, 1)`. Default is `0.95`.
@@ -60,6 +60,9 @@ class KFACForPINNs(Optimizer):
             inv_dtype: Data type to carry out the curvature inversion. Default is
                 `torch.float64`. The pre-conditioner will be converted back to the same
                 data type as the parameters after the inversio.
+
+        Raises:
+            ValueError: If any of the hyper-parameters is invalid.
         """
         # check hyper-parameters
         if kfac_approx not in self.SUPPORTED_KFAC_APPROXIMATIONS:
@@ -69,7 +72,8 @@ class KFACForPINNs(Optimizer):
             )
         if not 0 <= ema_factor < 1:
             raise ValueError(
-                f"Exponential moving average factor must be in [0, 1). Got {ema_factor}."
+                "Exponential moving average factor must be in [0, 1). "
+                + f"Got {ema_factor}."
             )
         if lr <= 0.0:
             raise ValueError(f"Learning rate must be positive. Got {lr}.")
@@ -77,7 +81,8 @@ class KFACForPINNs(Optimizer):
             raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
         if inv_strategy != "invert kronecker sum":
             raise ValueError(
-                f"Unsupported inversion strategy: {inv_strategy}. Supported: 'invert kronecker sum'."
+                f"Unsupported inversion strategy: {inv_strategy}. "
+                + "Supported: 'invert kronecker sum'."
             )
 
         defaults = dict(
@@ -90,7 +95,7 @@ class KFACForPINNs(Optimizer):
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
         )
-        params = sum((list(l.parameters()) for l in layers), [])
+        params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
 
         # initialize KFAC matrices
