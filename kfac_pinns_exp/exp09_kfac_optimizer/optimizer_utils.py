@@ -193,7 +193,7 @@ def hook_add_output_based_kfac_expand(grad_t: Tensor, dest: Tensor) -> None:
             in-place.
     """
     # flatten shared axes into one and use detached tensor for KFAC factor
-    grad_t = rearrange(grad_t, "... d_in -> ... d_in").detach()
+    grad_t = rearrange(grad_t, "... d_in -> (...) d_in").detach()
     dest.add_(einsum(grad_t, grad_t, "n i, n j -> i j"))
 
 

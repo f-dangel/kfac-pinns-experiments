@@ -143,8 +143,7 @@ class KFACForPINNs(Optimizer):
         loss, kfacs = evaluate_interior_loss_and_kfac_expand(self.layers, X, y)
 
         group = self.param_groups[0]
-        T_kfac = group["T_kfac"][0]
-        if T_kfac % self.steps == 0:
+        if self.steps % group["T_kfac"] == 0:
             ema_factor = group["ema_factor"]
             for layer_idx, updates in kfacs.items():
                 for destination, update in zip(self.kfacs_interior[layer_idx], updates):
@@ -165,8 +164,7 @@ class KFACForPINNs(Optimizer):
         loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
 
         group = self.param_groups[0]
-        T_kfac = group["T_kfac"][1]
-        if T_kfac % self.steps == 0:
+        if self.steps % group["T_kfac"] == 0:
             ema_factor = group["ema_factor"]
             for layer_idx, updates in kfacs.items():
                 for destination, update in zip(self.kfacs_boundary[layer_idx], updates):
@@ -179,7 +177,7 @@ class KFACForPINNs(Optimizer):
         group = self.param_groups[0]
         T_inv = group["T_inv"]
 
-        if T_inv % self.steps != 0:
+        if self.steps % T_inv != 0:
             return
 
         inv_dtype = group["inv_dtype"]
@@ -223,6 +221,6 @@ class KFACForPINNs(Optimizer):
         )
         nat_grad_combined = self.inv[layer_idx] @ grad_combined
 
-        d_out, _ = layer.weight.shape
-        nat_grad_weight, nat_grad_bias = nat_grad_combined.split([d_out, 1], dim=1)
+        _, d_in = layer.weight.shape
+        nat_grad_weight, nat_grad_bias = nat_grad_combined.split([d_in, 1], dim=1)
         return nat_grad_weight, nat_grad_bias.squeeze(1)
