@@ -18,7 +18,7 @@ class InverseKroneckerSum:
         All matrices must be symmetric positive-definite.
 
         Uses the relation
-        (A₁ ⊗ A₂ + B₁ ⊗ B₂⁻¹ = (V₁ ⊗ V₂) (Λ₁ ⊗ Λ₂ + I)⁻¹ (V₁⁻¹ B₁⁻¹ ⊗ V₂⁻¹ B₂⁻¹).
+        (A₁ ⊗ A₂ + B₁ ⊗ B₂)⁻¹ = (V₁ ⊗ V₂) (Λ₁ ⊗ Λ₂ + I)⁻¹ (V₁⁻¹ B₁⁻¹ ⊗ V₂⁻¹ B₂⁻¹).
         where Vᵢ, Λᵢ are the solutions of the generalized eigenvalue problem
         Aᵢ Vᵢ = Bᵢ Vᵢ Λᵢ
         and Λᵢ is a diagonal matrix.
@@ -71,10 +71,10 @@ class InverseKroneckerSum:
         self.diagLam1 = from_numpy(diagLam1).to(dt).to(dev)
         self.diagLam2 = from_numpy(diagLam2).to(dt).to(dev)
 
+        # compute required inverses in specified precision, store in original precision
         V1 = from_numpy(V1).to(dev).to(inv_dtype)
         V2 = from_numpy(V2).to(dev).to(inv_dtype)
 
-        # compute required inverses in specified precision
         B1_inv = inverse(B1.to(inv_dtype)).to(dt)
         V1_inv = inverse(V1).to(dt)
         self.V1_inv_B1_inv = V1_inv @ B1_inv
@@ -111,7 +111,6 @@ class InverseKroneckerSum:
             raise ValueError(
                 f"Input must be {self.kronecker_dims} or {total_dim}. Got {x.shape}"
             )
-
         if flattened:
             x = x.reshape(*self.kronecker_dims)
 
