@@ -91,7 +91,7 @@ def f(X: Tensor) -> Tensor:
     """
 
     # infer spatial dimension of x
-    d = Tensor([len(X[0])])
+    d = Tensor([len(X[0])]).to(X.device)
 
     return d * pi**2 * prod(cos(pi * X), dim=1, keepdim=True)
 
@@ -120,6 +120,7 @@ def main():
     print(f"N(∂Ω) = {args.N_dOmega}")
 
     dev = device("cuda" if cuda.is_available() else "cpu")
+    print(f"Running on device {str(dev)}")
 
     manual_seed(args.data_seed)
     # quadrature points = data
