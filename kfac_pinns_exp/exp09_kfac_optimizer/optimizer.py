@@ -6,8 +6,10 @@ from torch import Tensor, cat, dtype, eye, float64
 from torch.nn import Module
 from torch.optim import Optimizer
 
-from kfac_pinns_exp.exp07_inverse_kronecker_sum.demo import InverseKroneckerSum
-from kfac_pinns_exp.exp09_kfac_optimizer import (
+from kfac_pinns_exp.exp07_inverse_kronecker_sum.inverse_kronecker_sum import (
+    InverseKroneckerSum,
+)
+from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
     check_layers_and_initialize_kfac,
     evaluate_boundary_loss_and_kfac_expand,
     evaluate_interior_loss_and_kfac_expand,
@@ -104,6 +106,14 @@ class KFACForPINNs(Optimizer):
         self.layers = layers
 
     def step(self, closure: Optional[Callable[[Tensor], Tensor]] = None) -> None:
+        """Take a step.
+
+        Args:
+            closure: Not supported.
+
+        Raises:
+            ValueError: If `closure` is not `None`.
+        """
         if closure is not None:
             raise ValueError("Closure is not supported.")
 
@@ -165,6 +175,7 @@ class KFACForPINNs(Optimizer):
         return loss
 
     def update_preconditioner(self) -> None:
+        """Update the inverse damped KFAC."""
         group = self.param_groups[0]
         T_inv = group["T_inv"]
 
@@ -198,12 +209,19 @@ class KFACForPINNs(Optimizer):
             )
 
     def compute_natural_gradient(self, layer_idx: int) -> Tuple[Tensor, Tensor]:
+        """Compute the natural gradient for the specified layer.
+
+        Args:
+            layer_idx: Index of the layer for which the natural gradient is computed.
+
+        Returns:
+            Tuple of natural gradients for the weight and bias.
+        """
         layer = self.layers[layer_idx]
         grad_combined = cat(
             [layer.weight.grad.data, layer.bias.data.unsqueeze(-1)], dim=1
         )
-        shape = grad_combined.shape
-        nat_grad_combined = self.inv[layer_idx].multiply(grad_combined, flattened=False)
+        nat_grad_combined = self.inv[layer_idx] @ grad_combined
 
         d_out, _ = layer.weight.shape
         nat_grad_weight, nat_grad_bias = nat_grad_combined.split([d_out, 1], dim=1)
