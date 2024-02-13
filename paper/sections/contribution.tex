@@ -1,0 +1,31 @@
+There are some challenges we need to overcome to define a Kronecker-factored approximation of the Gramian from \Cref{eq:gramian}:
+\begin{itemize}
+\item The Gramian of the interior loss involves the parameter gradient of the Laplacian. To establish a Kronecker approximation, we need to know how the weight matrix of a layer enters the computation of the Laplacian. We will show that, when using the forward Laplacian framework from \cite{li2023forward}, the weight matrix enters the computation by multiplication onto another matrix. This is great, because we know how to define KFAC in such cases, thanks to the KFAC-for-weight-sharing framework developed by \citet{eschenhagen2023kroneckerfactored}.
+
+\item The PINN loss consists of two terms, the interior and boundary loss.
+  We can develop a Kronecker approximation for both individually, which leaves us with the problem how to work with both terms to pre-condition a gradient.
+  One way is to keep the both Kronecker approximations separate, but then we need to invert a sum of two Kronecker products.
+  This can be done, see \Cref{sec:inverse_kronecker_sum}, but adds twice the memory overhead compared to having a single Kronecker approximation.
+  Also, the Kronecker sum's inversion requires solving a generalized eigenvalue problem, for which there is currently no API in PyTorch.
+  Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
+  Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance.
+\end{itemize}
+
+\subsection{Taylor-mode AD}
+\subsection{Forward Laplacian}
+\subsection{KFAC}
+
+\paragraph{Input-based Kronecker approximation:} One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to be able to compute the grad-output-based Kronecker factors.
+Some works find that if setting this factor to $\mI$, the resulting input-based KFAC still yields good performance~\cite{benzing2022gradient,petersen2023isaac}
+
+\paragraph{Possible extensions:} Our KFAC implementation requires matrix (eigen-)decompositions and uses dense pre-conditioner matrices.
+This can cause numerical instabilities and large memory consumption.
+Both issues can be addressed by using an inverse-free KFAC update~\cite{lin2023simplifying} and structured Kronecker factors~\cite{lin2023structured}.
+We leave this additions to future work.
+One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done in \cite{dangel2020backpack}.
+However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:

@@ -50,6 +50,17 @@ Consider the combined residual map
 Then (with the right choice of the inner product) $L(\theta) = \frac12 \lVert r(\theta) \rVert_2^2$ and hence the Gau\ss-Newton matrix is given by
 \[ Dr(\theta)^\top Dr(\theta) = Dr_\Omega(\theta)^T Dr_\Omega(\theta) + Dr_{\partial\Omega}(\theta)^T Dr_{\partial\Omega}(\theta) = F(\theta). \]
 
+\section{Example: Laplacian for a Shallow Network}
+\input{sections/laplacian_shallow_net.tex}
+
+\section{Inverting the Sum of Two Kronecker Matrices}\label{sec:inverse_kronecker_sum}
+\input{sections/inverse_kronecker_sum}
+
+\section{Taylor-Mode Automatic Differentiation \& Forward Laplacian}
+\input{sections/taylor_mode_forward_laplacian.tex}
+
+\section{Backpropagation Perspective of the Laplacian}
+\input{sections/backpropagation_perspective.tex}
 
 
 %%% Local Variables:

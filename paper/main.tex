@@ -6,7 +6,6 @@
 
 \usepackage[preprint]{neurips_2023}
 
-
 % to compile a preprint version, e.g., for submission to arXiv, add add the
 % [preprint] option:
 % \usepackage[preprint]{neurips_2023}
@@ -36,105 +35,27 @@
   Here, we propose a Kronecker-factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
 \end{abstract}
 
-
 \section{Introduction}
-
 \input{sections/introduction.tex}
 
 \section{Background}
-
 \input{sections/background_pinns.tex}
 \input{sections/background_engd.tex}
 \input{sections/background_kfac.tex}
 
 \section{Kronecker-factored Approximate Gramians for PINNs}
-
-We restrict ourselves to feed-forward sequential NNs where only the parameters of the linear layers are trainable.
-To derive a Kronecker-factored approximation of the Gramian, we first describe how a layer's parameter enters the Laplacian's computation in~\Cref{sec:laplacian-computation-graph}.
-This allows for expressing the exact Gramian as a sum over Kronecker-structured terms stemming from the parameter's direct children in the compute graph, see~\Cref{sec:kronecker-structure-gramian}.
-
-\paragraph{Jacobian \& Hessian} The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
-Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
-It collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
-For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ w.r.t.\,a matrix $\mA$, we simply have $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
-Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ w.r.t.\,a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
-For the Hessian $\gradsquared{\mA} b$ of a scalar $b$ w.r.t.\,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
-We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
-
-
-\subsection{Hessian Backpropagation}\label{sec:laplacian-computation-graph}
-\input{sections/laplacian_feedforward_nn.tex}
-
-\subsection{Kronecker Structure of the Gramian}\label{sec:kronecker-structure-gramian}
-
-This subsection describes the Jacobians of the operations with the weight matrix in
-a linear layer during the computation of the Laplacian and ends by providing an
-equation for the Gramian block.
-
-\subsection{Kronecker-factored Approximate Gramian (KFAG)}
-\input{sections/kroneckerfactored_approximate_gramian.tex}
+\input{sections/contribution.tex}
 
 \section{Generalization to other PDEs}
-
 \input{sections/generalization.tex}
 
 \section{Experiments}
-
-\subsection{Setup}
-\begin{itemize}
-    \item damping: try both constant and adaptive damping 
-    \item try without line search with learning rate schedule 
-    \item use weights and biases for large scale experiments 
-    \item next steps: modular code 
-\end{itemize}
-
-\subsection{A two-dimensional Poisson equation}
-
-
-
-\subsection{asdf}
-
-We want to show the following things:
-\begin{itemize}
-\item We can safely discard the Gramian's off-diagonal blocks without harming
-  training performance. This reduces the Gramian's size, but still imposes
-  strong constraints on scalability.
-
-\item Our proposed Kronecker approximation works roughly as well as the
-  full/block diagonal Gramian, while being much cheaper to compute, store, and
-  invert.
-
-\item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitibely expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
-\end{itemize}
-
-Todos:
-\begin{itemize}
-\item concrete example ground truth: 2d Poisson on unit square with sine target
-\end{itemize}
-
-Ideas:
-\begin{itemize}
-\item try out different approximations
-  \begin{itemize}
-  \item Ground truth
-  \item Block diagonal exact
-  \item Diagonal
-  \item Block diagonal with different approximations
-  \end{itemize}
-\end{itemize}
+\input{sections/experiments.tex}
 
 \section{Conclusion}
+\input{sections/conclusion.tex}
 
-\paragraph{Limitations:}
-\begin{itemize}
-\item Only works for sequential networks
-\item Hessian backpropagation requires memory quadratic in the intermediate features size and therefore becomes impractical for large intermediates like in CNNs.
-\item Our implementation is likely manual and relatively hard to automate with the current graph inspection tools offered by ML frameworks.
-\end{itemize}
-
-\begin{ack} % automatically suppressed in anonymized submission
-  The authors thank Runa Eschenhagen for insightful discussions on the relation to KFAC for weight sharing layers.
-\end{ack}
+\input{sections/acknowledgements.tex}
 
 \bibliography{references}
 \bibliographystyle{icml2024.bst}
@@ -143,16 +64,8 @@ Ideas:
 \appendix
 
 \input{sections/appendix.tex}
-\input{sections/laplacian_shallow_net.tex}
-
-\section{Inverting the Sum of Two Kronecker Matrices}
-\input{sections/inverse_kronecker_sum}
-
-\section{Taylor-Mode Automatic Differentiation \& Forward Laplacian}
-\input{sections/taylor_mode_forward_laplacian.tex}
 
 \end{document}
-
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: t

@@ -1,0 +1,19 @@
+We restrict ourselves to feed-forward sequential NNs where only the parameters of the linear layers are trainable.
+To derive a Kronecker-factored approximation of the Gramian, we first describe how a layer's parameter enters the Laplacian's computation in~\Cref{sec:laplacian-computation-graph}.
+This allows for expressing the exact Gramian as a sum over Kronecker-structured terms stemming from the parameter's direct children in the compute graph, see~\Cref{sec:kronecker-structure-gramian}.
+
+\subsection{Hessian Backpropagation}\label{sec:laplacian-computation-graph}
+\input{sections/laplacian_feedforward_nn.tex}
+
+\subsection{Kronecker Structure of the Gramian}\label{sec:kronecker-structure-gramian}
+
+This subsection describes the Jacobians of the operations with the weight matrix in
+a linear layer during the computation of the Laplacian and ends by providing an
+equation for the Gramian block.
+
+\subsection{Kronecker-factored Approximate Gramian (KFAG)}
+\input{sections/kroneckerfactored_approximate_gramian.tex}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
