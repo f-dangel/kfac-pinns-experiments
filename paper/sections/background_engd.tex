@@ -1,6 +1,5 @@
-\subsection{Energy natural gradients (ENGs)}
+\subsection{Gauß-Newton methods for PINNs} 
 
-\textcolor{red}{should we only talk about supervised learning problems here?}
 %\begin{itemize}
 %    \item recently, energy NGs have been proposed
 %    \item one can show that they mimic Newtons method in function space
@@ -31,7 +30,7 @@ To account for the PDE terms in the loss function in PINNs,
 the Gramian matrix
 \begin{equation}\label{eq:gramian}
   \mG(\vtheta) = %\mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta) =
-  \underbrace{\frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\vtheta} \Delta u_\vtheta(\vx_n)^\top \jac_{\vtheta} \Delta u_\vtheta(\vx_n)}_{\eqqcolon \mG_\Omega(\vtheta)} + \underbrace{\frac1{{N_{\partial\Omega}}} \sum_{n=1}^{N_{\partial\Omega}} \jac_{\vtheta} u_\vtheta(\vx_n^b)^\top \jac_{\vtheta} u_\vtheta (\vx_n^b)}_{\eqqcolon \mG_{\partial\Omega}(\vtheta)}
+  \underbrace{\frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)^\top \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)}_{\eqqcolon \mG_\Omega(\vtheta)} + \underbrace{\frac1{{N_{\partial\Omega}}} \sum_{n=1}^{N_{\partial\Omega}} \jac_{\vtheta} u_\vtheta(\vx_n^b)^\top \jac_{\vtheta} u_\vtheta (\vx_n^b)}_{\eqqcolon \mG_{\partial\Omega}(\vtheta)}
   %\frac1{{N_\Omega}} \sum_{k=1}^{N_\Omega} \partial_{\vtheta_i} \Delta u_\vtheta(x_k) \partial_{\vtheta_j} \Delta u_\vtheta(x_k) + \frac1{{N_{\partial\Omega}}} \sum_{k=1}^{N_{\partial\Omega}} \partial_{\vtheta_i} u_\vtheta(x_k^b) \partial_{\vtheta_j} u_\vtheta (x_k^b)
 \end{equation}
 %where

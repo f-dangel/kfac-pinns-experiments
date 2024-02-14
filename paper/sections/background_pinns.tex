@@ -68,11 +68,11 @@ Let us consider a domain $\Omega\subseteq\mathbb R^d$ and the Poisson equation %
 %It can also be used to derive a matrix-free version of the energy natural gradient descent, like done in Hessian-free optimization.
 %$\bullet$ We consider the Poisson equation
 \begin{align*}\tag{PE}\label{eq:PE}
-  -\Delta u & = f \quad \text{in }\Omega \\
+  -\mathcal{L} u & = f \quad \text{in }\Omega \\
   u & = g \quad \text{on }\partial\Omega
 \end{align*}
 where $f\in L^2(\Omega)$ and $g\in H^{3/2}(\partial\Omega)$ are some given right hand side and boundary values.
-Here, $\Delta u = \sum_i \partial_{\vx_i}^2 u$ denotes the \emph{Laplacian} of the function $u$.
+Here, $mathcal{L}$ denotes a differential operator, e.g., the \emph{Laplacian} $\mathcal{L} u = \Delta u = \sum_i \partial_{\vx_i}^2 u$.
 %Let us consider the function space energy
 %  \[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds, \]
 %which is designed such that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$.
@@ -89,9 +89,11 @@ In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a n
     %L_{\partial\Omega}(\vtheta)
   %\\&
   %=
-    \underbrace{\frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\Delta u_\vtheta(\vx_i) + f(\vx_i))^2}_{\eqqcolon L_\Omega(\vtheta)} + \underbrace{\frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^b_i) - g(\vx^b_i))^2}_{\eqqcolon L_{\partial\Omega}(\vtheta)},
+    \underbrace{\frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_i) + f(\vx_i))^2}_{\eqqcolon L_\Omega(\vtheta)} + \underbrace{\frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^b_i) - g(\vx^b_i))^2}_{\eqqcolon L_{\partial\Omega}(\vtheta)},
 \end{align}
 where $(x_n)_{n=1}^{N_\Omega}$ and  $(x^b_n)_{n=1}^{N_{\partial\Omega}}$ are points in the interior and on the boundary of $\Omega$ respectively.
+%Whereas we choose the Poisson equation for the sake of simplicity, this approach can easily be generalized to other PDEs. 
+%The Kronecker-factored approximations derived in~\Cref{?} are formulated for general PDEs. 
 %The number and choice of the points can be controlled by the practitioner, where different sampling strategies have been developed~\cite[text]{keylist}.
 %This approach is simple and intuitive and is usually associated with the possibility to work well for high-dimensional PDEs.
 %However, it is well documented in the literature that first-order optimizers fail to produce satisfactory accuracy even for low-dimensional problems~\cite{}.

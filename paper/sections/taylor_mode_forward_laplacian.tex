@@ -427,9 +427,88 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
     \item If we do this, should we formulate things for the Gauß-Newton rather than ENG?
 \end{itemize}
 
-\section{Kronecker-factored approximate Gauß-Newton (KFAGN)}
+\section{Old KFAC intro}
+Assume we have drawn a data set $\smash{\sD = \left\{ (\vx_n, \vy_n) \right\}_{n=1}^N}$ with $\smash{(\vx_n, \vy_n) \stackrel{\text{i.i.d}}{\sim} p_{\text{data}}(\vx, \vy)}$.
+We want to approximate the data-generating process through $p_{\vtheta}(\vx, \vy)$ by modelling a likelihood $p_{\vtheta}(\vy \mid \vx)$ for the labels with a neural network, that is we use $p_{\vtheta}(\vx, \vy) = p_{\text{data}}(\vx) p_{\vtheta}(\vy | \vx)$ and maximize $KL(p_{\text{data}} || p_{\vtheta})$.
+Since $p_{\text{data}}$ is not accessible, one replaces $p_{\text{data}}(\vx)$ and $p_{\text{data}}(\vy \mid \vx)$ with their empirical distributions implied by $\sD$.
+This yields the objective \cite[see][Section 4]{martens2020new}
+\begin{align*}
+  \frac{1}{N} \sum_{n=1}^N -\log p_{\vtheta}(\vy_n \mid \vx_n)
+\end{align*}
+which corresponds to the empirical risk $\frac{1}{N} \sum_{n=1}^N \ell(\vx_n, \vy_n, \vtheta)$ with a negative log-likelihood loss function, such as square or softmax cross-entropy loss.
+The likelihood modelled by the neural network is of the form $p_{\vtheta}(\vy_n
+\mid \vx_n) = r(\vy_n \mid f_{\vtheta}(\vx))$. The Fisher of our modelled
+probability $p_{\vtheta}(\vx, \vy)$ is
+\begin{align*}
+  \mF(\vtheta)
+  &=
+    \E_{(\vx, \vy) \sim p_{\vtheta}(\vx,\vy)}
+    \left[
+    \grad{\vtheta} \log p_{\vtheta}(\vx, \vy)
+    (\grad{\vtheta} \log p_{\vtheta}(\vx, \vy))^{\top}
+    \right]
+  \\
+  &=
+    \E_{p_{\text{data}}(\vx)}
+    \E_{p_{\vtheta}(\vy \mid \vx)}
+    \underbrace{
+    \left[
+    \grad{\vtheta} \log p_{\vtheta}(\vy \mid \vx)
+    (\grad{\vtheta} \log p_{\vtheta}(\vy \mid \vx))^{\top}
+    \right]
+    }_{\coloneqq \mF_{\vy \mid \vx}(\vtheta)}\,.
+  \\
+  &\approx
+    \frac{1}{N} \sum_{n=1}^N
+    \E_{p_{\vtheta}(\vy \mid \vx_n)}
+    \left[
+    \grad{\vtheta} \log p_{\vtheta}(\vy \mid \vx_n)
+    (\grad{\vtheta} \log p_{\vtheta}(\vy \mid \vx_n))^{\top}
+    \right]
+\end{align*}
 
+\paragraph{One datum, no weight sharing:}
+Let's start with maximum likelihood estimation with a single data point $(\vx, \vy)$.
+Consider a linear layer inside a neural network which maps some vector-valued hidden feature of $\vx$, $\va \in \sR^{D_{\text{in}}}$ to a vector-valued output $\vz \in \sR^{D_{\text{out}}}$ via $\vz = \mW \va$.
+$\vz$ is then further processed and used to compute the negative log-likelihood loss $\ell(\vx, \vy, \mW) = - \log p(\vy \mid \vx, \mW)$.
+For this single-usage layer, the weigh matrix's Fisher is exactly Kroneckerfactored, $\mF(\mW) = \va \va^{\top} \otimes \E_{\hat{\vy} \sim p(\vy \mid \vx, \mW)}\left[ \vg \vg^{\top} \right]$ where $\vg = \grad{\vz} \ell(\vx, \hat{\vy}, \mW)$.
+By applying the chain rule at the layer's output, the Kronecker structure emerges from the output-parameter Jacobian $\jac_{\mW}\vz = \va^{\top} \otimes \mI$.
+In practise, we will use one sample from the model's likelihood to estimate the expectation, $\mF(\mW) \approx \vz \vz^{\top} \otimes \vg \vg^{\top}$.
 
+% explain how batch axes are treated
+\paragraph{Multiple data, no weight sharing}
+In the presence of multiple data points, the sum over per-datum Kronecker products is further approximated as a Kronecker product of sums over data points:
+\begin{align*}
+  \mF(\mW)
+  &=
+    \frac{1}{N}
+    \sum_{n=1}^N
+    \va_n \va_n^{\top} \otimes \E_{\hat{\vy}_n \sim p(\vy_n \mid \vx_n, \mW)}\left[ \vg_n \vg_n^{\top} \right]
+  \\
+  &\approx
+    \left(
+    \frac{1}{N}
+    \sum_{n=1}^N
+    \va_n \va_n^{\top}
+    \right)
+    \otimes
+    \left(
+    \sum_{n=1}^N
+    \E_{\hat{\vy}_n \sim p(\vy_n \mid \vx_n, \mW)}\left[ \vg_n \vg_n^{\top} \right]
+    \right)
+  \\
+  &\approx
+    \left(
+    \frac{1}{N}
+    \sum_{n=1}^N
+    \va_n \va_n^{\top}
+    \right)
+    \otimes
+    \left(
+    \sum_{n=1}^N
+    \vg_n \vg_n^{\top}
+    \right)
+\end{align*}
 
 
 \begin{comment}

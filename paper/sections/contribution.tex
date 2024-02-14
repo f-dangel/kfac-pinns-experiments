@@ -12,33 +12,27 @@ There are some challenges we need to overcome to define a Kronecker-factored app
 \end{itemize}
 
 Here, we introduce a Kronecker-factored approximation of the Gauß-Newton algorithm for PINNs. 
-To this end we consider a general PDE of the form
+To this end we consider a general PDE of the general form 
 \begin{equation}
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
 \end{equation}
 where we assume $\Psi\colon \mathbb R^K\to\mathbb R^M$ to be a smooth function.
 %We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
-Let us denote the residual by 
-\begin{equation}
-    r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta),
-\end{equation} 
-then for suitable integration points $\vx_n$ we consider the PINN loss
+By $r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta)$ we denote the residual and for suitable integration points $\vx_n$ we consider the PINN loss
 \begin{equation}
     %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
     L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
 \end{equation}
-where we assume $\ell\colon\mathbb R^M\to\mathbb R$ is a convex function with definite Hessian $\nabla^2\ell\succ0$ and unique minimizer at $0$ (can also be relaxed). 
+where we assume $\ell\colon\mathbb R^M\to\mathbb R$ is a convex function with definite Hessian $\nabla^2\ell\succ0$ and unique minimizer at $0$. 
 We consider the Gauß-Newton matrix
 \begin{equation}
     \mG(\vtheta) \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
 \end{equation}
 where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix, see~\cite{eschenhagen2023kroneckerfactored}. 
-Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = \mI$. 
+Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = I$. 
 Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
 If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
-We do this by a higher-order forward mode automatic differentiation. 
-
-
+We obtain this via higher-order forward mode automatic differentiation. 
 
 \subsection{Higher-order forward mode automatic differentiation}
 \label{sec:taylor-mode-AD}
@@ -48,18 +42,44 @@ Many PDEs only incorporate first and second partial derivatives and we focus our
 However, a completely analogous approach can be taken for higher-order PDEs. 
 
 How to compute the function values through a forward pass is well known. 
-Also, the computation of the gradient through forward mode differentiation is well-known and uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$. 
+The computation of the gradient through forward mode differentiation uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$. 
 If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by 
 \begin{align} 
        %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\ 
        \partial_i \partial_j (f \circ g)(\vz) & = \partial_i g(\vz)^\top D^2f(g(\vz))\partial_j g(\vz) + Df(g(\vz)) \partial_i \partial_j g(\vz). 
 \end{align}
-In particular, if $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz + \vb^{(l)}$ is a linear layer, then the second order forward pass is given by 
-\begin{align}
+If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz + \vb^{(l)}$ is a linear layer, then the second order forward pass is given by 
+\begin{subequations}
+    \begin{align}
     \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} + \vb^{(l)} \\ 
     \partial_{i} \vz^{(l)} & = \mW^{(l)} \partial_i \vz^{(l-1)} \\ 
-    \partial_i\partial_j \vz^{(l)} & = \mW^{(l)} \partial_i\partial_j \vz^{(l-1)}. 
+    \partial_i\partial_j \vz^{(l)} & = \mW^{(l)} \partial_i\partial_j \vz^{(l-1)} \label{subeq:secondOrderForward-LinearLayer}. 
 \end{align}
+\end{subequations}
+The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$ is given by  
+\begin{subequations}
+    \begin{align}
+    \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\ 
+    \partial_{i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_i \vz^{(l-1)} \\ 
+    \partial_i\partial_j \vz^{(l)} & = \partial_i \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_j \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_i \partial_j \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}. 
+\end{align}
+\end{subequations}
+
+
+\paragraph{Forward Laplacian} 
+To compute not the full Hessian but only the Laplacian, we can simplify the forward pass to only propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}. 
+We obtain the Laplacian forward pass by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ which yields 
+\begin{subequations}
+    \begin{align}
+        \Delta \vz^{(l)} & = \mW^{(l)} \Delta \vz^{(l-1)} \quad \text{and } \\ 
+        \Delta \vz^{(l)} & = \sum_i \sigma''(\vz^{(l-1)}) \odot (\partial_i \vz^{(l-1)})^{\odot 2} + \sigma'(\vz^{(l-1)}) \odot \Delta \vz^{(l-1)}
+    \end{align}
+\end{subequations}
+for linear and nonlinear layers, respectively. 
+This greatly reduces the computational complexity of the forward pass, but can only be used for PDEs that only involve second-order derivatives via the Laplacian, i.e., for PDEs of the form $\Psi(u, \partial u, \Delta u)=0$. 
+
+\subsection{Kronecker-factored approximate Gauß-Newton}
+
 In matrix form: 
 \begin{align}
   \nonumber
@@ -87,27 +107,18 @@ In matrix form:
       1 & 0 & 0
     \end{pmatrix}
     }_{\coloneq \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
-    \shortintertext{or, in compact form,}
-    \mT^f
-  &=
-    \tilde{\mW}
-    \mT^h\,.
+    %\shortintertext{or, in compact form,}
+    %\mT^f
+  %&=
+    %\tilde{\mW}
+    %\mT^h\,.
     \label{eq:forward-laplacian-linear-layer-compact}
 \end{align}
-The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$ is given by  
-\begin{align}
-    \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\ 
-    \partial_{i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_i \vz^{(l-1)} \\ 
-    \partial_i\partial_j \vz^{(l)} & = \partial_i \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_j \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_i \partial_j \vz^{(l-1)}. 
-\end{align}
-
-
-\paragraph{Forward Laplacian}
-
-
-\subsection{Kronecker-factored approximate Gauß-Newton}
+or $\mT^f=\tilde{\mW}\mT^h$. 
 
 \paragraph{KFAC with weight sharing}
+
+\paragraph{Combining PDE and boundary Gramian}
 
 \paragraph{Higher-order PDEs}
 
