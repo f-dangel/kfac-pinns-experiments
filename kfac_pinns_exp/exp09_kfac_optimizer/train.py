@@ -3,20 +3,37 @@
 from argparse import ArgumentParser, Namespace
 from math import pi
 from time import time
+from typing import List, Tuple
 
 from torch import Tensor, cos, cuda, device, manual_seed, prod, rand, randint
-from torch.nn import Linear, Sequential, Tanh
+from torch.nn import Linear, Module, Sequential, Tanh
+from torch.optim import SGD, Optimizer
 
-from kfac_pinns_exp.exp09_kfac_optimizer.optimizer import KFACForPINNs
+from kfac_pinns_exp.exp09_kfac_optimizer.optimizer import (
+    KFACForPINNs,
+    parse_KFACForPINNs_args,
+)
+from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
+    evaluate_boundary_loss,
+    evaluate_interior_loss,
+)
+from kfac_pinns_exp.exp09_kfac_optimizer.utils import parse_SGD_args
+
+SUPPORTED_OPTIMIZERS = ["KFACForPINNs", "SGD"]
 
 
-def parse_args() -> Namespace:
-    """Parse command-line arguments.
+def parse_general_args(verbose: bool = False) -> Namespace:
+    """Parse general command-line arguments.
+
+    Args:
+        verbose: Whether to print the parsed arguments. Default: `False`.
 
     Returns:
         A namespace with the parsed arguments.
     """
-    parser = ArgumentParser()
+    parser = ArgumentParser(
+        description="General training parameters for the Poisson equation"
+    )
 
     parser.add_argument(
         "--dim_Omega",
@@ -48,8 +65,46 @@ def parse_args() -> Namespace:
         default=1,
         help="Random seed set before initializing the model's parameters.",
     )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        choices=SUPPORTED_OPTIMIZERS,
+        help="Which optimizer will be used.",
+        required=True,
+    )
+    args, _ = parser.parse_known_args()
 
-    return parser.parse_args()
+    if verbose:
+        print(f"General arguments for the Poisson equation: {args}")
+
+    return args
+
+
+def set_up_optimizer(
+    layers: List[Module], optimizer: str, verbose: bool = False
+) -> Tuple[Optimizer, Namespace]:
+    """Parse arguments for the specified optimizer and construct it.
+
+    Args:
+        layers: The layers of the model.
+        optimizer: The name of the optimizer to be used.
+        verbose: Whether to print the parsed arguments. Default: `False`.
+
+    Returns:
+        The optimizer and the parsed arguments.
+
+    Raises:
+        NotImplementedError: If the optimizer is not supported.
+    """
+    if optimizer == "KFACForPINNs":
+        args = parse_KFACForPINNs_args(verbose=verbose)
+        return KFACForPINNs(layers, **vars(args)), args
+    elif optimizer == "SGD":
+        params = sum((list(layer.parameters()) for layer in layers), [])
+        args = parse_SGD_args(verbose=verbose)
+        return SGD(params, **vars(args)), args
+
+    raise NotImplementedError
 
 
 # utilities for the Poisson equation
@@ -111,13 +166,7 @@ def u(X: Tensor) -> Tensor:
 
 
 def main():
-    args = parse_args()
-
-    # Spatial dimension and sampling points, i.e., batch dimensions.
-    print("Poisson equation")
-    print(f"dim(Ω) = {args.dim_Omega}")
-    print(f"N(Ω) = {args.N_Omega}")
-    print(f"N(∂Ω) = {args.N_dOmega}")
+    args = parse_general_args(verbose=True)
 
     dev = device("cuda" if cuda.is_available() else "cpu")
     print(f"Running on device {str(dev)}")
@@ -147,16 +196,8 @@ def main():
     print(f"Model: {model}")
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters())}")
 
-    # optimizer hyper-parameters
-    T_kfac = 2
-    T_inv = 6
-    ema_factor = 0.95  # exponentially moving average over KFAC factors
-    damping = 1e-2
-    lr = 1e-1
-
-    optimizer = KFACForPINNs(
-        layers, lr, damping, T_kfac=T_kfac, T_inv=T_inv, ema_factor=ema_factor
-    )
+    # optimizer and its hyper-parameters
+    optimizer, _ = set_up_optimizer(layers, args.optimizer, verbose=True)
 
     num_steps = 50
     print_every = 10
@@ -167,20 +208,26 @@ def main():
     for step in range(num_steps):
         optimizer.zero_grad()
 
-        # depending on step, either updates the KFAC approximation and the loss, or
-        # only computes the loss
-        loss_interior = optimizer.evaluate_interior_loss_and_update_kfac(
-            X_Omega, y_Omega
-        )
+        if isinstance(optimizer, KFACForPINNs):
+            # depending on step, either updates the KFAC approximation and the loss, or
+            # only computes the loss
+            loss_interior = optimizer.evaluate_interior_loss_and_update_kfac(
+                X_Omega, y_Omega
+            )
+        else:
+            loss_interior, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
 
         # compute the interior loss' gradient
         loss_interior.backward()
 
-        # depending on step, either updates the KFAC approximation and the loss, or
-        # only computes the loss
-        loss_boundary = optimizer.evaluate_boundary_loss_and_update_kfac(
-            X_dOmega, y_dOmega
-        )
+        if isinstance(optimizer, KFACForPINNs):
+            # depending on step, either updates the KFAC approximation and the loss, or
+            # only computes the loss
+            loss_boundary = optimizer.evaluate_boundary_loss_and_update_kfac(
+                X_dOmega, y_dOmega
+            )
+        else:
+            loss_boundary, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
 
         # compute the boundary loss' gradient
         loss_boundary.backward()

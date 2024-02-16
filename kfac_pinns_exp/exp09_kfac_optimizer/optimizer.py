@@ -1,5 +1,6 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
+from argparse import ArgumentParser, Namespace
 from typing import Callable, Dict, List, Optional, Tuple
 
 from torch import Tensor, cat, dtype, eye, float64
@@ -17,6 +18,71 @@ from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
     evaluate_interior_loss_and_kfac_expand,
 )
 from kfac_pinns_exp.utils import exponential_moving_average
+
+
+def parse_KFACForPINNs_args(verbose: bool = False) -> Namespace:
+    """Parse command-line arguments for `KFACForPINNs`.
+
+    Args:
+        verbose: Whether to print the parsed arguments. Default: `False`.
+
+    Returns:
+        A namespace with the parsed arguments.
+    """
+    DTYPES = {"float64": float64}
+    parser = ArgumentParser(description="Parse arguments for setting up KFACForPINNs.")
+
+    parser.add_argument(
+        "--lr", type=float, help="Learning rate for the optimizer.", required=True
+    )
+    parser.add_argument(
+        "--damping", type=float, help="Damping factor for the optimizer.", required=True
+    )
+    parser.add_argument(
+        "--T_kfac", type=int, help="Update frequency of KFAC matrices.", default=1
+    )
+    parser.add_argument(
+        "--T_inv",
+        type=int,
+        help="Update frequency of the inverse KFAC matrices.",
+        default=1,
+    )
+    parser.add_argument(
+        "--ema_factor",
+        type=float,
+        help="Exponential moving average factor for the KFAC matrices.",
+        default=0.95,
+    )
+    parser.add_argument(
+        "--kfac_approx",
+        type=str,
+        choices=KFACForPINNs.SUPPORTED_KFAC_APPROXIMATIONS,
+        help="Approximation method for the KFAC matrices.",
+        default="expand",
+    )
+    parser.add_argument(
+        "--inv_strategy",
+        type=str,
+        choices=["invert kronecker sum"],
+        help="Inversion strategy for KFAC.",
+        default="invert kronecker sum",
+    )
+    parser.add_argument(
+        "--inv_dtype",
+        type=str,
+        choices=DTYPES.keys(),
+        help="Data type for the inverse KFAC matrices.",
+        default="float64",
+    )
+
+    args, _ = parser.parse_known_args()
+    # overwrite inv_dtype with value from dictionary
+    args.inv_dtype = DTYPES[args.inv_dtype]
+
+    if verbose:
+        print("Parsed arguments for KFACForPINNs: ", args)
+
+    return args
 
 
 class KFACForPINNs(Optimizer):
