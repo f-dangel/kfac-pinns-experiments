@@ -11,7 +11,9 @@ from kfac_pinns_exp.exp07_inverse_kronecker_sum.inverse_kronecker_sum import (
 )
 from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
     check_layers_and_initialize_kfac,
+    evaluate_boundary_loss,
     evaluate_boundary_loss_and_kfac_expand,
+    evaluate_interior_loss,
     evaluate_interior_loss_and_kfac_expand,
 )
 from kfac_pinns_exp.utils import exponential_moving_average
@@ -145,14 +147,15 @@ class KFACForPINNs(Optimizer):
         Returns:
             Differentiable interior loss.
         """
-        loss, kfacs = evaluate_interior_loss_and_kfac_expand(self.layers, X, y)
-
         group = self.param_groups[0]
         if self.steps % group["T_kfac"] == 0:
+            loss, kfacs = evaluate_interior_loss_and_kfac_expand(self.layers, X, y)
             ema_factor = group["ema_factor"]
             for layer_idx, updates in kfacs.items():
                 for destination, update in zip(self.kfacs_interior[layer_idx], updates):
                     exponential_moving_average(destination, update, ema_factor)
+        else:
+            loss, _ = evaluate_interior_loss(self.layers, X, y)
 
         return loss
 
@@ -166,14 +169,15 @@ class KFACForPINNs(Optimizer):
         Returns:
             Differentiable interior loss.
         """
-        loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
-
         group = self.param_groups[0]
         if self.steps % group["T_kfac"] == 0:
+            loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
             ema_factor = group["ema_factor"]
             for layer_idx, updates in kfacs.items():
                 for destination, update in zip(self.kfacs_boundary[layer_idx], updates):
                     exponential_moving_average(destination, update, ema_factor)
+        else:
+            loss, _ = evaluate_boundary_loss(self.layers, X, y)
 
         return loss
 
