@@ -38,7 +38,7 @@ def evaluate_interior_loss_and_kfac_expand(
     X.requires_grad = True
 
     # Compute the forward Laplacian and all the intermediates
-    intermediates = manual_forward_laplacian(layers, X)
+    loss, intermediates = evaluate_interior_loss(layers, X, y)
 
     ###############################################################################
     #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
@@ -77,8 +77,29 @@ def evaluate_interior_loss_and_kfac_expand(
     for handle in handles:
         handle.remove()
 
-    # compute the interior loss
-    return 0.5 * ((laplacian + y) ** 2).mean(), kfacs
+    return loss, kfacs
+
+
+def evaluate_interior_loss(
+    layers: List[Module], X: Tensor, y: Tensor
+) -> Tuple[Tensor, List[Dict[str, Tensor]]]:
+    """Evaluate the interior loss and intermediates.
+
+    Args:
+        layers: The list of layers in the neural network.
+        X: The input data.
+        y: The target data.
+
+    Returns:
+        The (differentiable) interior loss and a dictionary whose keys are the layer
+        indices and whose values are the two Taylor coefficients from the forward
+        Laplacian framework.
+    """
+    intermediates = manual_forward_laplacian(layers, X)
+    laplacian = intermediates[-1]["laplacian"]
+    loss = 0.5 * ((laplacian + y) ** 2).mean()
+
+    return loss, intermediates
 
 
 def evaluate_boundary_loss_and_kfac_expand(
@@ -103,8 +124,8 @@ def evaluate_boundary_loss_and_kfac_expand(
     X_original_requires_grad = X.requires_grad
     X.requires_grad = True
 
-    # Compute the NN prediction and all intermediates
-    intermediates = manual_forward(layers, X)
+    # Compute the NN prediction, boundary loss, and all intermediates
+    loss, intermediates = evaluate_boundary_loss(layers, X, y)
 
     ###############################################################################
     #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
@@ -138,8 +159,28 @@ def evaluate_boundary_loss_and_kfac_expand(
     for handle in handles:
         handle.remove()
 
-    # compute the interior loss
-    return 0.5 * ((output - y) ** 2).mean(), kfacs
+    return loss, kfacs
+
+
+def evaluate_boundary_loss(
+    layers: List[Module], X: Tensor, y: Tensor
+) -> Tuple[Tensor, List[Tensor]]:
+    """Evaluate the boundary loss and intermediates.
+
+    Args:
+        layers: The list of layers in the neural network.
+        X: The input data.
+        y: The target data.
+
+    Returns:
+        The (differentiable) boundary loss and a list of Tensors representing the
+        intermediates (last item is NN output, first item is X).
+    """
+    intermediates = manual_forward(layers, X)
+    output = intermediates[-1]
+    loss = 0.5 * ((output - y) ** 2).mean()
+
+    return loss, intermediates
 
 
 def check_layers_and_initialize_kfac(
