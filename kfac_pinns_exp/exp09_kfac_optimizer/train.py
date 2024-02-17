@@ -249,9 +249,9 @@ def main():
             config=config,
         )
 
-    logged_steps = set(
-        logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
-    ) | {0}
+    logged_steps = {
+        int(s) for s in logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
+    } | {0}
 
     start = time()
 
@@ -290,9 +290,10 @@ def main():
 
         if step in logged_steps:
             print(
-                f"Step: {step:06g}, Loss: {loss:.3f},"
-                + f" Interior: {loss_interior:.3f},"
-                + f" Boundary: {loss_boundary:.3f},"
+                f"Step: {step:06g}/{args.num_steps:06g},"
+                + f" Loss: {loss:.6f},"
+                + f" Interior: {loss_interior:.6f},"
+                + f" Boundary: {loss_boundary:.6f},"
                 + f" Time: {expired:.1f}s"
             )
             if args.wandb:
