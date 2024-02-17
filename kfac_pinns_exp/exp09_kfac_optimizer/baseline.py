@@ -7,6 +7,12 @@ from torch import Tensor, cat, eye, zeros
 from torch.nn import Module
 from torch.optim import Optimizer
 
+from kfac_pinns_exp.poisson_equation import (
+    evaluate_boundary_gramian,
+    evaluate_boundary_loss,
+    evaluate_interior_gramian,
+    evaluate_interior_loss,
+)
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
@@ -60,7 +66,7 @@ class GramianOptimizer(Optimizer):
 
     def __init__(
         self,
-        layers: List[Module],
+        model: Module,
         lr: float,
         damping: float,
         ema_factor: float = 0.95,
@@ -69,7 +75,7 @@ class GramianOptimizer(Optimizer):
         """Initialize the optimizer.
 
         Args:
-            params: Iterable of parameters to optimize.
+            model: Model to optimize.
             lr: Learning rate.
             damping: Damping of the Gramian before inversion.
             ema_factor: Exponential moving average factor for the Gramian. Default: 0.95.
@@ -96,7 +102,7 @@ class GramianOptimizer(Optimizer):
             ema_factor=ema_factor,
             gramian=gramian,
         )
-        params = sum((list(layer.parameters()) for layer in layers), [])
+        params = list(model.parameters())
         super().__init__(params, defaults)
 
         # initialize Gramian and inverse Gramian
@@ -111,6 +117,7 @@ class GramianOptimizer(Optimizer):
             else zeros(num_params, num_params, **kwargs)
         )
         self.inv_gramian = eye(num_params, **kwargs)
+        self.model = model
 
     def step(
         self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
@@ -127,21 +134,19 @@ class GramianOptimizer(Optimizer):
             Tuple of the interior and boundary loss before taking the step.
         """
         # compute gradients and Gramians on current data
-        interior_loss, gram_interior = self.evaluate_interior_loss_and_gramian(
-            X_Omega, y_Omega
-        )
+        interior_gramian = evaluate_interior_gramian(self.model, X_Omega)
+        interior_loss = evaluate_interior_loss(self.model, X_Omega, y_Omega)
         interior_loss.backward()
 
-        boundary_loss, gram_boundary = self.evaluate_boundary_loss_and_gramian(
-            X_dOmega, y_dOmega
-        )
+        boundary_gramian = evaluate_boundary_gramian(self.model, X_dOmega)
+        boundary_loss = evaluate_boundary_loss(self.model, X_dOmega, y_dOmega)
         boundary_loss.backward()
 
         # update Gramian
         group = self.param_groups[0]
         ema_factor = group["ema_factor"]
         exponential_moving_average(
-            self.gramian, gram_interior + gram_boundary, ema_factor
+            self.gramian, interior_gramian + boundary_gramian, ema_factor
         )
 
         # update the inverse Gramian

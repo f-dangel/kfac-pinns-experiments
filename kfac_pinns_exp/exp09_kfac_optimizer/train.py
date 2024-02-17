@@ -147,7 +147,7 @@ def set_up_optimizer(
 
     elif optimizer == "GramianOptimizer":
         cls, args = GramianOptimizer, parse_GramianOptimizer_args(verbose=verbose)
-        return cls(layers, **vars(args)), args
+        return cls(Sequential(*layers), **vars(args)), args
 
     else:
         if optimizer == "Adam":
@@ -238,11 +238,11 @@ def main():
     # neural net
     manual_seed(args.model_seed)
     layers = [
-        Linear(args.dim_Omega, 256),
+        Linear(args.dim_Omega, 64),
         Tanh(),
-        Linear(256, 64),
+        Linear(64, 32),
         Tanh(),
-        Linear(64, 16),
+        Linear(32, 16),
         Tanh(),
         Linear(16, 1),
     ]
@@ -272,7 +272,7 @@ def main():
     for step in range(args.num_steps):
         optimizer.zero_grad()
 
-        if isinstance(optimizer, KFACForPINNs):
+        if isinstance(optimizer, (KFACForPINNs, GramianOptimizer)):
             loss_interior, loss_boundary = optimizer.step(
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )
