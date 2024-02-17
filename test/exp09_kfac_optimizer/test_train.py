@@ -28,6 +28,7 @@ def test_run_exp09_train_with_KFACForPINNs():
     cmd = [
         "python",
         train.__file__,
+        "--num_steps=50",
         "--optimizer=KFACForPINNs",
         "--T_kfac=2",
         "--T_inv=6",
@@ -43,6 +44,7 @@ def test_run_exp09_train_with_SGD():
     cmd = [
         "python",
         train.__file__,
+        "--num_steps=50",
         "--optimizer=SGD",
         "--lr=0.1",
         "--momentum=0.9",
@@ -50,5 +52,15 @@ def test_run_exp09_train_with_SGD():
     _run(cmd)
 
 
-if __name__ == "__main__":
-    test_run_exp09_train_with_SGD()
+def test_run_exp09_train_with_Adam():
+    """Execute the training script. Train with Adam."""
+    cmd = [
+        "python",
+        train.__file__,
+        "--num_steps=50",
+        "--optimizer=Adam",
+        "--lr=0.01",
+        "--beta1=0.8",
+        "--beta2=0.99",
+    ]
+    _run(cmd)

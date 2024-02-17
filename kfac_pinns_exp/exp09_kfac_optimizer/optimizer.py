@@ -178,17 +178,24 @@ class KFACForPINNs(Optimizer):
         self.inv: Dict[int, InverseKroneckerSum] = {}
         self.layers = layers
 
-    def step(self, closure: Optional[Callable[[Tensor], Tensor]] = None) -> None:
+    def step(
+        self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
+    ) -> Tuple[Tensor, Tensor]:
         """Take a step.
 
         Args:
-            closure: Not supported.
+            X_Omega: Input for the interior loss.
+            y_Omega: Target for the interior loss.
+            X_dOmega: Input for the boundary loss.
+            y_dOmega: Target for the boundary loss.
 
-        Raises:
-            ValueError: If `closure` is not `None`.
+        Returns:
+            Tuple of the interior and boundary loss before taking the step.
         """
-        if closure is not None:
-            raise ValueError("Closure is not supported.")
+        loss_interior = self.evaluate_interior_loss_and_update_kfac(X_Omega, y_Omega)
+        loss_interior.backward()
+        loss_boundary = self.evaluate_boundary_loss_and_update_kfac(X_dOmega, y_dOmega)
+        loss_boundary.backward()
 
         self.update_preconditioner()
 
@@ -202,6 +209,8 @@ class KFACForPINNs(Optimizer):
             layer.bias.data.sub_(nat_grad_bias, alpha=lr)
 
         self.steps += 1
+
+        return loss_interior, loss_boundary
 
     def evaluate_interior_loss_and_update_kfac(self, X: Tensor, y: Tensor) -> Tensor:
         """Evaluate the interior loss, update the KFAC factors, and return the loss.

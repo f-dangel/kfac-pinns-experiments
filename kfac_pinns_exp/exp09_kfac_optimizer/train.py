@@ -264,28 +264,18 @@ def main():
         optimizer.zero_grad()
 
         if isinstance(optimizer, KFACForPINNs):
-            # depending on step, either updates the KFAC approximation and the loss, or
-            # only computes the loss
-            loss_interior = optimizer.evaluate_interior_loss_and_update_kfac(
-                X_Omega, y_Omega
+            loss_interior, loss_boundary = optimizer.step(
+                X_Omega, y_Omega, X_dOmega, y_dOmega
             )
+
         else:
+            # compute the interior loss' gradient
             loss_interior, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
-
-        # compute the interior loss' gradient
-        loss_interior.backward()
-
-        if isinstance(optimizer, KFACForPINNs):
-            # depending on step, either updates the KFAC approximation and the loss, or
-            # only computes the loss
-            loss_boundary = optimizer.evaluate_boundary_loss_and_update_kfac(
-                X_dOmega, y_dOmega
-            )
-        else:
+            loss_interior.backward()
+            # compute the boundary loss' gradient
             loss_boundary, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
-
-        # compute the boundary loss' gradient
-        loss_boundary.backward()
+            loss_boundary.backward()
+            optimizer.step()
 
         now = time()
         expired = now - start
@@ -311,10 +301,6 @@ def main():
                         "time": expired,
                     }
                 )
-
-        # depending on step, maybe update the inverse curvature, compute the
-        # pre-conditioned gradient and update the parameters, increment step internally
-        optimizer.step()
 
 
 if __name__ == "__main__":
