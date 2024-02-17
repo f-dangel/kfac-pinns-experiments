@@ -1,12 +1,24 @@
 """Train with KFAC for the Poisson equation."""
 
 from argparse import ArgumentParser, Namespace
-from math import pi
+from math import log10, pi
 from time import time
 from typing import List, Tuple
 
 import wandb
-from torch import Tensor, cos, cuda, device, manual_seed, prod, rand, randint
+from torch import (
+    Tensor,
+    cos,
+    cuda,
+    device,
+    float32,
+    float64,
+    logspace,
+    manual_seed,
+    prod,
+    rand,
+    randint,
+)
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import SGD, Optimizer
 
@@ -32,6 +44,7 @@ def parse_general_args(verbose: bool = False) -> Namespace:
     Returns:
         A namespace with the parsed arguments.
     """
+    DTYPES = {"float32": float32, "float64": float64}
     parser = ArgumentParser(
         description="General training parameters for the Poisson equation"
     )
@@ -74,11 +87,33 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         required=True,
     )
     parser.add_argument(
+        "--dtype",
+        type=str,
+        choices=DTYPES.keys(),
+        default="float64",
+        help="Data type for the data and model.",
+    )
+    parser.add_argument(
+        "--num_steps",
+        type=int,
+        default=10_000,
+        help="Number of training steps.",
+    )
+    parser.add_argument(
         "--wandb",
         action="store_true",
         help="Whether to use Weights & Biases for logging.",
     )
+    parser.add_argument(
+        "--max_logs",
+        type=int,
+        default=150,
+        help="Maximum number of logs/prints.",
+    )
     args, _ = parser.parse_known_args()
+
+    # overwrite dtype
+    args.dtype = DTYPES[args.dtype]
 
     if verbose:
         print(f"General arguments for the Poisson equation: {args}")
@@ -175,15 +210,16 @@ def main():
     args = parse_general_args(verbose=True)
 
     dev = device("cuda" if cuda.is_available() else "cpu")
+    dt = args.dt
     print(f"Running on device {str(dev)}")
 
     manual_seed(args.data_seed)
     # quadrature points = data
     # interior
-    X_Omega = rand(args.N_Omega, args.dim_Omega).to(dev)
+    X_Omega = rand(args.N_Omega, args.dim_Omega).to(dev, dt)
     y_Omega = -f(X_Omega)
     # boundary
-    X_dOmega = square_boundary(args.N_dOmega, args.dim_Omega).to(dev)
+    X_dOmega = square_boundary(args.N_dOmega, args.dim_Omega).to(dev, dt)
     y_dOmega = u(X_dOmega)
 
     # neural net
@@ -197,7 +233,7 @@ def main():
         Tanh(),
         Linear(16, 1),
     ]
-    layers = [layer.to(dev) for layer in layers]
+    layers = [layer.to(dev, dt) for layer in layers]
     model = Sequential(*layers).to(dev)
     print(f"Model: {model}")
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters())}")
@@ -213,10 +249,11 @@ def main():
             config=config,
         )
 
-    num_steps = 50
-    print_every = 10
+    num_steps = args.num_steps
+
+    logged_steps = set(logspace(0, log10(num_steps - 1), args.max_logs - 1).int()) | {0}
+
     start = time()
-    last = start
 
     # training loop
     for step in range(num_steps):
@@ -251,26 +288,23 @@ def main():
         loss_boundary, loss_interior = loss_boundary.item(), loss_interior.item()
         loss = loss_interior + loss_boundary
 
-        if args.wandb:
-            wandb.log(
-                {
-                    "step": step,
-                    "loss": loss,
-                    "loss_interior": loss_interior,
-                    "loss_boundary": loss_boundary,
-                    "time": expired,
-                }
-            )
-
-        if step % print_every == 0 or step == num_steps - 1:
+        if step in logged_steps:
             print(
                 f"Step: {step:06g}, Loss: {loss:.3f},"
                 + f" Interior: {loss_interior:.3f},"
                 + f" Boundary: {loss_boundary:.3f},"
                 + f" Time: {expired:.1f}s"
-                + f" ({(now - last) / print_every:.2f}s/iter)"
             )
-            last = now
+            if args.wandb:
+                wandb.log(
+                    {
+                        "step": step,
+                        "loss": loss,
+                        "loss_interior": loss_interior,
+                        "loss_boundary": loss_boundary,
+                        "time": expired,
+                    }
+                )
 
         # depending on step, maybe update the inverse curvature, compute the
         # pre-conditioned gradient and update the parameters, increment step internally
