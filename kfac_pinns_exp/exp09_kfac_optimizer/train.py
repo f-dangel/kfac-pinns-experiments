@@ -294,7 +294,8 @@ def main():
                 + f" Loss: {loss:.6f},"
                 + f" Interior: {loss_interior:.6f},"
                 + f" Boundary: {loss_boundary:.6f},"
-                + f" Time: {expired:.1f}s"
+                + f" Time: {expired:.1f}s",
+                flush=True,
             )
             if args.wandb:
                 wandb.log(
