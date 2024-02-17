@@ -49,7 +49,11 @@ def autograd_input_hessian(model: Module, X: Tensor) -> Tensor:
 
 
 def autograd_gram_grads(
-    model: Module, X: Tensor, param_names: List[str], detach: bool = True
+    model: Module,
+    X: Tensor,
+    param_names: List[str],
+    detach: bool = True,
+    loss_type: str = "interior",
 ) -> Tuple[Tensor]:
     """Compute the gradients used in the Gramian.
 
@@ -60,9 +64,13 @@ def autograd_gram_grads(
         param_names: List of unique parameter names forming the block.
         detach: Whether to detach the gradients from the computational graph.
             Default: `True`.
+        loss_type: The type of loss. Either `'interior'` or `'boundary'`.
+            For `'interior'`, the Laplacian's gradients are computed.
+            For `'boundary'`, the model's gradients are computed. Default: `'interior'`.
 
     Returns:
-        The Gramian's gradients `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` w.r.t. the specified
+        The Gramian's gradients `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` (if `loss_type='interior'`)
+        or `gᵢ = ∇_θ {f(xᵢ, θ)}` (if `loss_type='boundary'`) w.r.t. the specified
         parameters in tuple format. For each parameter `p`, the Gram gradient has shape
         `[batch_size, *p.shape]`.
     """
@@ -82,7 +90,7 @@ def autograd_gram_grads(
             Un-batched scalar output.
         """
         variable = dict(zip(param_names, params))
-        return functional_call(model, frozen | variable, x)
+        return functional_call(model, frozen | variable, x).squeeze()
 
     def laplacian(x: Tensor, *params: Parameter) -> Tensor:
         """Compute the Laplacian of the model for an un-batched input.
@@ -96,10 +104,13 @@ def autograd_gram_grads(
             The scalar-valued Laplacian, i.e. Tr[∇ₓ²f(x, θ)].
         """
         hess_f = hessian(f, argnums=0)  # (x, θ) → ∇ₓ²f(x, θ)
-        return einsum(hess_f(x, *params), "batch d d ->")
+        return einsum(hess_f(x, *params), "d d ->")
 
+    # function that will be differentiated w.r.t. the parameters
+    func = {"interior": laplacian, "boundary": f}[loss_type]
     argnums = tuple(range(1, len(param_names) + 1))
-    gram_grads = vmap(grad(laplacian, argnums=argnums))
+
+    gram_grads = vmap(grad(func, argnums=argnums))
 
     # need to replicate the parameters `batch_size` times
     batch_size = X.shape[0]
@@ -116,24 +127,31 @@ def autograd_gram_grads(
     return result
 
 
-def autograd_gramian(model: Module, X: Tensor, param_names: List[str]) -> Tensor:
-    """Compute a block of the model Laplacian's Gramian.
+def autograd_gramian(
+    model: Module, X: Tensor, param_names: List[str], loss_type: str = "interior"
+) -> Tensor:
+    """Compute a block of the model's (or its Laplacian's) Gramian.
 
     Args:
         model: The model whose Gramian will be computed. Must produce
             scalars as output.
         X: The input to the model. First dimension is the batch dimension.
         param_names: List of unique parameter names forming the block.
+        loss_type: The type of loss. Either `'interior'` or `'boundary'`.
+            For `'interior'`, the Laplacian's Gramian is computed.
+            For `'boundary'`, the model's Gramian is computed. Default: `'interior'`.
 
     Returns:
-        The Gramian block of the model Laplacian w.r.t. the flattened and concatenated
-        parameters. If `θ` is the flattened and concatenated parameter, its Gramian has
-        shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}`.
+        The Gramian block of the model (or its Laplacian) w.r.t. the flattened and
+        concatenated parameters. If `θ` is the flattened and concatenated parameter,
+        its Gramian has shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where
+        `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` for `loss_type='interior'` and `gᵢ = ∇_θ f(xᵢ, θ)`
+        for `loss_type='boundary'`.
     """
     gram_grads = cat(
         [
             rearrange(g, "batch ... -> batch (...)")
-            for g in autograd_gram_grads(model, X, param_names)
+            for g in autograd_gram_grads(model, X, param_names, loss_type=loss_type)
         ],
         dim=1,
     )
