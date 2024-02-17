@@ -5,6 +5,7 @@ from math import pi
 from time import time
 from typing import List, Tuple
 
+import wandb
 from torch import Tensor, cos, cuda, device, manual_seed, prod, rand, randint
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import SGD, Optimizer
@@ -71,6 +72,11 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         choices=SUPPORTED_OPTIMIZERS,
         help="Which optimizer will be used.",
         required=True,
+    )
+    parser.add_argument(
+        "--wandb",
+        action="store_true",
+        help="Whether to use Weights & Biases for logging.",
     )
     args, _ = parser.parse_known_args()
 
@@ -197,7 +203,15 @@ def main():
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters())}")
 
     # optimizer and its hyper-parameters
-    optimizer, _ = set_up_optimizer(layers, args.optimizer, verbose=True)
+    optimizer, optimizer_args = set_up_optimizer(layers, args.optimizer, verbose=True)
+
+    if args.wandb:
+        config = vars(args) | vars(optimizer_args)
+        wandb.init(
+            entity="kfac-pinns",
+            project="exp09_kfac_optimizer",
+            config=config,
+        )
 
     num_steps = 50
     print_every = 10
@@ -232,13 +246,28 @@ def main():
         # compute the boundary loss' gradient
         loss_boundary.backward()
 
+        now = time()
+        expired = now - start
+        loss_boundary, loss_interior = loss_boundary.item(), loss_interior.item()
+        loss = loss_interior + loss_boundary
+
+        if args.wandb:
+            wandb.log(
+                {
+                    "step": step,
+                    "loss": loss,
+                    "loss_interior": loss_interior,
+                    "loss_boundary": loss_boundary,
+                    "time": expired,
+                }
+            )
+
         if step % print_every == 0 or step == num_steps - 1:
-            now = time()
             print(
-                f"Step: {step:06g}, Loss: {(loss_interior + loss_boundary).item():.3f},"
-                + f" Interior: {loss_interior.item():.3f},"
-                + f" Boundary: {loss_boundary.item():.3f},"
-                + f" Time: {time() - start:.1f}s"
+                f"Step: {step:06g}, Loss: {loss:.3f},"
+                + f" Interior: {loss_interior:.3f},"
+                + f" Boundary: {loss_boundary:.3f},"
+                + f" Time: {expired:.1f}s"
                 + f" ({(now - last) / print_every:.2f}s/iter)"
             )
             last = now

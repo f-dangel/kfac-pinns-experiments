@@ -1,0 +1,21 @@
+program: train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFACForPINNs"
+    - ${args}
+metric:
+    goal: minimize
+    name: loss
+method: random
+parameters:
+    lr:
+        min: 5e-4
+        max: 5e-1
+        distribution: log_uniform_values
+    damping:
+        min: 1e-6
+        max: 1e-1
+        distribution: log_uniform_values
