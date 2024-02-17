@@ -210,7 +210,7 @@ def main():
     args = parse_general_args(verbose=True)
 
     dev = device("cuda" if cuda.is_available() else "cpu")
-    dt = args.dt
+    dt = args.dtype
     print(f"Running on device {str(dev)}")
 
     manual_seed(args.data_seed)
