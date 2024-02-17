@@ -1,7 +1,7 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from torch import Tensor, cat, dtype, eye, float64
 from torch.nn import Module
