@@ -249,14 +249,14 @@ def main():
             config=config,
         )
 
-    num_steps = args.num_steps
-
-    logged_steps = set(logspace(0, log10(num_steps - 1), args.max_logs - 1).int()) | {0}
+    logged_steps = set(
+        logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
+    ) | {0}
 
     start = time()
 
     # training loop
-    for step in range(num_steps):
+    for step in range(args.num_steps):
         optimizer.zero_grad()
 
         if isinstance(optimizer, KFACForPINNs):

@@ -4,7 +4,7 @@ command:
     - python
     - ${program}
     - "--wandb"
-    - "--optimizer=KFACForPINNs"
+    - "--optimizer=SGD"
     - ${args}
 metric:
     goal: minimize
@@ -12,12 +12,12 @@ metric:
 method: random
 parameters:
     num_steps:
-        value: 1_000
+        value: 10_000
     lr:
         min: 5e-4
         max: 5e-1
         distribution: log_uniform_values
-    damping:
-        min: 1e-7
-        max: 1e-0
-        distribution: log_uniform_values
+    momentum:
+        min: 0.0
+        max: 0.99
+        distribution: uniform
