@@ -4,7 +4,7 @@ command:
     - python
     - ${program}
     - "--wandb"
-    - "--optimizer=SGD"
+    - "--optimizer=Adam"
     - ${args}
 metric:
     goal: minimize
@@ -17,6 +17,3 @@ parameters:
         distribution: log_uniform_values
         min: 5e-4
         max: 5e-1
-    momentum:
-        distribution: categorical
-        values: [0.0, 0.3, 0.6, 0.9]

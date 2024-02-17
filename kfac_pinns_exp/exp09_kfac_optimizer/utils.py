@@ -31,3 +31,50 @@ def parse_SGD_args(verbose: bool = False) -> Namespace:
         print(f"SGD arguments: {args}")
 
     return args
+
+
+def parse_Adam_args(verbose: bool = False) -> Namespace:
+    """Parse command-line arguments for the Adam optimizer.
+
+    Args:
+        verbose: Whether to print the parsed arguments. Default: `False`.
+
+    Returns:
+        A namespace with the parsed arguments.
+    """
+    parser = ArgumentParser(description="Adam optimizer parameters")
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.001,
+        help="Learning rate for the Adam optimizer.",
+    )
+    parser.add_argument(
+        "--beta1",
+        type=float,
+        default=0.9,
+        help="Exponential decay rate for the first moment estimates of Adam.",
+    )
+    parser.add_argument(
+        "--beta2",
+        type=float,
+        default=0.999,
+        help="Exponential decay rate for the second moment estimates of Adam.",
+    )
+    parser.add_argument(
+        "--eps",
+        type=float,
+        default=1e-8,
+        help="Term added to Adam's denominator to improve numerical stability.",
+    )
+    args, _ = parser.parse_known_args()
+
+    # replace beta1 and beta2 with a tuple betas
+    args.betas = (args.beta1, args.beta2)
+    delattr(args, "beta1")
+    delattr(args, "beta2")
+
+    if verbose:
+        print(f"Adam arguments: {args}")
+
+    return args
