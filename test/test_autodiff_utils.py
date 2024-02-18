@@ -1,9 +1,11 @@
 """Test `kfac_pinns_exp.autodiff_utils`."""
 
+from typing import List, Union
+
 from pytest import mark
-from torch import allclose, cat, manual_seed, outer, rand, zeros, zeros_like
+from torch import Tensor, allclose, cat, manual_seed, outer, rand, zeros, zeros_like
 from torch.autograd import grad
-from torch.nn import Linear, Sequential, Tanh
+from torch.nn import Linear, Module, Sequential, Tanh
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 
@@ -90,28 +92,48 @@ def test_autograd_gramian(loss_type: str, approximation: str):
         gram_grad = cat([g.flatten() for g in gram_grad])
         truth.add_(outer(gram_grad, gram_grad))
 
-    # account for approximation
-    if approximation == "full":
-        pass
-    elif approximation == "diagonal":
-        truth = truth.diag()
-    elif approximation == "per-layer":
-        # compute per-layer number of parameters
-        sizes = []
-        for layer in model.modules():
-            if not list(layer.children()) and list(layer.parameters()):
-                sizes.append(sum(p.numel() for p in layer.parameters()))
-        # cut the Gramian into per-layer blocks
-        truth = [
-            row_block.split(sizes, dim=1) for row_block in truth.split(sizes, dim=0)
-        ]
-        truth = [truth[b][b] for b in range(len(sizes))]
+    truth = extract_approximation(truth, model, approximation)
 
-    else:
-        raise ValueError(f"Unknown approximation: {approximation}")
-
-    if approximation == "per-layer":
+    if approximation == "per_layer":
         for b in range(len(truth)):
             assert allclose(gramian[b], truth[b])
     elif approximation in ["diagonal", "full"]:
         assert allclose(gramian, truth)
+
+
+def extract_approximation(
+    gramian: Tensor, model: Module, approximation: str
+) -> Union[Tensor, List[Tensor]]:
+    """Extract the desired approximation from the Gramian.
+
+    Args:
+        gramian: The Gramian matrix.
+        model: The model whose Gramian is computed.
+        approximation: The type of approximation to the Gramian.
+            Can be either `'full'`, `'diagonal'`, or `'per_layer'`.
+
+    Returns:
+        The desired approximation to the Gramian.
+
+    Raises:
+        ValueError: If `approximation` is not one of `'full'`, `'diagonal'`,
+            or `'per_layer'`.
+    """
+    # account for approximation
+    if approximation == "diagonal":
+        return gramian.diag()
+    elif approximation == "full":
+        return gramian
+    elif approximation == "per_layer":
+        sizes = [
+            sum(p.numel() for p in layer.parameters())
+            for layer in model.modules()
+            if not list(layer.children()) and list(layer.parameters())
+        ]
+        # cut the Gramian into per_layer blocks
+        gramian = [
+            row_block.split(sizes, dim=1) for row_block in gramian.split(sizes, dim=0)
+        ]
+        return [gramian[b][b] for b in range(len(sizes))]
+
+    raise ValueError(f"Unknown approximation: {approximation}.")

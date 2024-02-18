@@ -159,7 +159,7 @@ def autograd_gramian(
     Raises:
         NotImplementedError: If the approximation is not implemented.
         ValueError: If parameters of the same layer are not contiguous in
-            `'param_names'`.
+            `param_names`.
     """
     gram_grads = cat(
         [
