@@ -128,7 +128,11 @@ def autograd_gram_grads(
 
 
 def autograd_gramian(
-    model: Module, X: Tensor, param_names: List[str], loss_type: str = "interior"
+    model: Module,
+    X: Tensor,
+    param_names: List[str],
+    loss_type: str = "interior",
+    approximation: str = "full",
 ) -> Tensor:
     """Compute a block of the model's (or its Laplacian's) Gramian.
 
@@ -140,13 +144,19 @@ def autograd_gramian(
         loss_type: The type of loss. Either `'interior'` or `'boundary'`.
             For `'interior'`, the Laplacian's Gramian is computed.
             For `'boundary'`, the model's Gramian is computed. Default: `'interior'`.
+        approximation: The approximation to use for the Gramian. Either `'full'` or
+            `'diagonal'`.
 
     Returns:
         The Gramian block of the model (or its Laplacian) w.r.t. the flattened and
         concatenated parameters. If `θ` is the flattened and concatenated parameter,
         its Gramian has shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where
         `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` for `loss_type='interior'` and `gᵢ = ∇_θ f(xᵢ, θ)`
-        for `loss_type='boundary'`.
+        for `loss_type='boundary'`. If `approximation='diagonal'`, only the diagonal
+        of shape `[*θ.shape]` is returned.
+
+    Raises:
+        NotImplementedError: If the approximation is not implemented.
     """
     gram_grads = cat(
         [
@@ -155,4 +165,9 @@ def autograd_gramian(
         ],
         dim=1,
     )
-    return einsum(gram_grads, gram_grads, "batch i, batch j -> i j")
+    if approximation == "full":
+        return einsum(gram_grads, gram_grads, "batch i, batch j -> i j")
+    elif approximation == "diagonal":
+        return gram_grads.pow_(2).sum(0)
+    else:
+        raise NotImplementedError(f"Approximation {approximation!r} not implemented.")
