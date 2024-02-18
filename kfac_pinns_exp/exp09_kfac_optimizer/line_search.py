@@ -22,7 +22,7 @@ def grid_search(
     Args:
         f: The function to minimize.
         params: The parameters of the function.
-        step: The step direction.
+        params_step: The step direction.
         grid: The grid of step sizes to try.
 
     Returns:
