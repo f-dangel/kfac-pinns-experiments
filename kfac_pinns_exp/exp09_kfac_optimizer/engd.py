@@ -1,9 +1,9 @@
-"""Implement the baseline optimizer that uses the exact Gramian."""
+"""Implement enery-natural gradient descent flavours from Mueller et al. 2023."""
 
 from argparse import ArgumentParser, Namespace
-from typing import Dict, List, Set, Tuple
+from typing import Set, Tuple
 
-from torch import Tensor, cat, eye, zeros
+from torch import Tensor, cat, eye, ones, zeros
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -16,8 +16,8 @@ from kfac_pinns_exp.poisson_equation import (
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
-def parse_GramianOptimizer_args(verbose: bool = False) -> Namespace:
-    """Parse command-line arguments for the Gramian optimizer.
+def parse_ENGD_args(verbose: bool = False) -> Namespace:
+    """Parse command-line arguments for the ENGD optimizer.
 
     Args:
         verbose: Whether to print the parsed arguments. Default: `False`.
@@ -25,7 +25,7 @@ def parse_GramianOptimizer_args(verbose: bool = False) -> Namespace:
     Returns:
         A namespace with the parsed arguments.
     """
-    parser = ArgumentParser(description="Gramian optimizer parameters.")
+    parser = ArgumentParser(description="ENGD optimizer parameters.")
     parser.add_argument(
         "--lr",
         type=float,
@@ -45,10 +45,10 @@ def parse_GramianOptimizer_args(verbose: bool = False) -> Namespace:
         help="Exponential moving average factor for the Gramian.",
     )
     parser.add_argument(
-        "--gramian",
+        "--approximation",
         type=str,
         default="full",
-        choices=GramianOptimizer.SUPPORTED_GRAMIANS,
+        choices=ENGD.SUPPORTED_APPROXIMATIONS,
         help="Type of Gramian matrix to use.",
     )
     args, _ = parser.parse_known_args()
@@ -59,10 +59,10 @@ def parse_GramianOptimizer_args(verbose: bool = False) -> Namespace:
     return args
 
 
-class GramianOptimizer(Optimizer):
-    """Optimizer that uses the exact Gramian matrix."""
+class ENGD(Optimizer):
+    """Energy natural gradient descent with the exact Gramian matrix."""
 
-    SUPPORTED_GRAMIANS: Set[str] = {"full"}  # , "diagonal", "block_diagonal"]
+    SUPPORTED_APPROXIMATIONS: Set[str] = {"full", "diagonal", "per_layer"}
 
     def __init__(
         self,
@@ -70,7 +70,7 @@ class GramianOptimizer(Optimizer):
         lr: float,
         damping: float,
         ema_factor: float = 0.95,
-        gramian: str = "full",
+        approximation: str = "full",
     ):
         """Initialize the optimizer.
 
@@ -81,10 +81,10 @@ class GramianOptimizer(Optimizer):
             ema_factor: Exponential moving average factor for the Gramian. Default: 0.95.
             verbose: Whether to print the parsed arguments. Default: `False`.
         """
-        if gramian not in self.SUPPORTED_GRAMIANS:
+        if approximation not in self.SUPPORTED_APPROXIMATIONS:
             raise ValueError(
-                f"Unsupported Gramian type: {gramian}. "
-                f"Supported types: {self.SUPPORTED_GRAMIANS}."
+                f"Unsupported Gramian type: {approximation}. "
+                f"Supported types: {self.SUPPORTED_APPROXIMATIONS}."
             )
         if not 0 <= ema_factor < 1:
             raise ValueError(
@@ -100,7 +100,7 @@ class GramianOptimizer(Optimizer):
             lr=lr,
             damping=damping,
             ema_factor=ema_factor,
-            gramian=gramian,
+            approximation=approximation,
         )
         params = list(model.parameters())
         super().__init__(params, defaults)
@@ -117,6 +117,24 @@ class GramianOptimizer(Optimizer):
             else zeros(num_params, num_params, **kwargs)
         )
         self.inv_gramian = eye(num_params, **kwargs)
+
+        if approximation == "full":
+            self.gramian = (
+                eye(num_params, **kwargs)
+                if initialize_to_identity
+                else zeros(num_params, num_params, **kwargs)
+            )
+            self.inv_gramian = eye(num_params, **kwargs)
+        elif approximation == "diagonal":
+            self.gramian = (
+                ones(num_params, **kwargs)
+                if initialize_to_identity
+                else zeros(num_params, **kwargs)
+            )
+            self.inv_gramian = ones(num_params, **kwargs)
+        elif approximation == "per_layer":
+            raise NotImplementedError
+
         self.model = model
 
     def step(
@@ -133,8 +151,15 @@ class GramianOptimizer(Optimizer):
         Returns:
             Tuple of the interior and boundary loss before taking the step.
         """
+        group = self.param_groups[0]
+        approximation = group["approximation"]
+        assert approximation == "full"
+
         # compute gradients and Gramians on current data
-        interior_gramian = evaluate_interior_gramian(self.model, X_Omega)
+        interior_gramian = evaluate_interior_gramian(
+            self.model,
+            X_Omega,
+        )
         interior_loss = evaluate_interior_loss(self.model, X_Omega, y_Omega)
         interior_loss.backward()
 
@@ -143,7 +168,6 @@ class GramianOptimizer(Optimizer):
         boundary_loss.backward()
 
         # update Gramian
-        group = self.param_groups[0]
         ema_factor = group["ema_factor"]
         exponential_moving_average(
             self.gramian, interior_gramian + boundary_gramian, ema_factor
@@ -151,14 +175,25 @@ class GramianOptimizer(Optimizer):
 
         # update the inverse Gramian
         damping = group["damping"]
-        self.inv_gramian = (
-            self.gramian + damping * eye(self.gramian.size(0))
-        ).inverse()
+        if approximation == "full":
+            self.inv_gramian = (
+                self.gramian + damping * eye(self.gramian.size(0))
+            ).inverse()
+        elif approximation == "diagonal":
+            self.inv_gramian = 1.0 / (self.gramian + damping)
+        else:
+            raise NotImplementedError
 
         # compute natural gradients
         params = group["params"]
         grad_flat = cat([p.grad.flatten() for p in params])
-        nat_grad = self.inv_gramian @ grad_flat
+        if approximation == "full":
+            nat_grad = self.inv_gramian @ grad_flat
+        elif approximation == "diagonal":
+            nat_grad = self.inv_gramian * grad_flat
+        else:
+            raise NotImplementedError
+
         nat_grad = nat_grad.split([p.numel() for p in params])
         nat_grad = [g.reshape(*p.shape) for g, p in zip(nat_grad, params)]
 

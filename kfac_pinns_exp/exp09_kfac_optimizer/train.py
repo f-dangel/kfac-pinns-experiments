@@ -22,10 +22,7 @@ from torch import (
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import SGD, Adam, Optimizer
 
-from kfac_pinns_exp.exp09_kfac_optimizer.baseline import (
-    GramianOptimizer,
-    parse_GramianOptimizer_args,
-)
+from kfac_pinns_exp.exp09_kfac_optimizer.engd import ENGD, parse_ENGD_args
 from kfac_pinns_exp.exp09_kfac_optimizer.optimizer import (
     KFACForPINNs,
     parse_KFACForPINNs_args,
@@ -36,7 +33,7 @@ from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
 )
 from kfac_pinns_exp.exp09_kfac_optimizer.utils import parse_Adam_args, parse_SGD_args
 
-SUPPORTED_OPTIMIZERS = ["KFACForPINNs", "SGD", "Adam", "GramianOptimizer"]
+SUPPORTED_OPTIMIZERS = ["KFACForPINNs", "SGD", "Adam", "ENGD"]
 
 
 def parse_general_args(verbose: bool = False) -> Namespace:
@@ -145,8 +142,8 @@ def set_up_optimizer(
         cls, args = KFACForPINNs, parse_KFACForPINNs_args(verbose=verbose)
         return cls(layers, **vars(args)), args
 
-    elif optimizer == "GramianOptimizer":
-        cls, args = GramianOptimizer, parse_GramianOptimizer_args(verbose=verbose)
+    elif optimizer == "ENGD":
+        cls, args = ENGD, parse_ENGD_args(verbose=verbose)
         return cls(Sequential(*layers), **vars(args)), args
 
     else:
