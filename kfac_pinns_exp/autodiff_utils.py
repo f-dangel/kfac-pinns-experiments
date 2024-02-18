@@ -1,6 +1,6 @@
 """Utility functions for automatic differentiation."""
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from einops import einsum, rearrange
 from torch import Tensor, cat
@@ -133,7 +133,7 @@ def autograd_gramian(
     param_names: List[str],
     loss_type: str = "interior",
     approximation: str = "full",
-) -> Tensor:
+) -> Union[Tensor, List[Tensor]]:
     """Compute a block of the model's (or its Laplacian's) Gramian.
 
     Args:
@@ -144,8 +144,8 @@ def autograd_gramian(
         loss_type: The type of loss. Either `'interior'` or `'boundary'`.
             For `'interior'`, the Laplacian's Gramian is computed.
             For `'boundary'`, the model's Gramian is computed. Default: `'interior'`.
-        approximation: The approximation to use for the Gramian. Either `'full'` or
-            `'diagonal'`.
+        approximation: The approximation to use for the Gramian. Either `'full'`,
+            `'diagonal'`, or `'per_layer'`.
 
     Returns:
         The Gramian block of the model (or its Laplacian) w.r.t. the flattened and
@@ -153,10 +153,13 @@ def autograd_gramian(
         its Gramian has shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where
         `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` for `loss_type='interior'` and `gᵢ = ∇_θ f(xᵢ, θ)`
         for `loss_type='boundary'`. If `approximation='diagonal'`, only the diagonal
-        of shape `[*θ.shape]` is returned.
+        of shape `[*θ.shape]` is returned. If `approximation='per_layer'`, a list of
+        Gramians is returned, one for each layer of the model.
 
     Raises:
         NotImplementedError: If the approximation is not implemented.
+        ValueError: If parameters of the same layer are not contiguous in
+            `'param_names'`.
     """
     gram_grads = cat(
         [
@@ -169,5 +172,34 @@ def autograd_gramian(
         return einsum(gram_grads, gram_grads, "batch i, batch j -> i j")
     elif approximation == "diagonal":
         return gram_grads.pow_(2).sum(0)
+    elif approximation == "per_layer":
+        # construct blocks in terms of parameter names
+        blocks = []
+
+        current_layer, _ = param_names[0].rsplit(".")
+        blocks.append([param_names[0]])
+
+        for param_name in param_names[1:]:
+            this_layer, _ = param_name.rsplit(".")
+            if this_layer == current_layer:
+                blocks[-1].append(param_name)
+            else:
+                blocks.append([param_name])
+                current_layer = this_layer
+
+        if sum(blocks, []) != param_names:
+            raise ValueError(
+                f"Parameter names must be contiguous by layer. Got {param_names}."
+            )
+
+        block_sizes = []
+        for block in blocks:
+            block_sizes.append(sum(model.get_parameter(name).numel() for name in block))
+
+        gramians = [
+            einsum(gram_grads_block, gram_grads_block, "batch i, batch j -> i j")
+            for gram_grads_block in gram_grads.split(block_sizes, dim=1)
+        ]
+        return gramians
     else:
         raise NotImplementedError(f"Approximation {approximation!r} not implemented.")

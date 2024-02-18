@@ -8,7 +8,7 @@ from torch.nn import Linear, Sequential, Tanh
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 
 LOSS_TYPES = ["boundary", "interior"]
-APPROXIMATIONS = ["full", "diagonal"]
+APPROXIMATIONS = ["full", "diagonal", "per_layer"]
 
 
 @mark.parametrize("approximation", APPROXIMATIONS, ids=APPROXIMATIONS)
@@ -20,7 +20,7 @@ def test_autograd_gramian(loss_type: str, approximation: str):
         loss_type: The type of loss function whose Gramian
             is tested. Can be either `'boundary'` or `'interior`.
         approximation: The type of approximation to the Gramian.
-            Can be either `'full'` or `'diagonal'`.
+            Can be either `'full'`, `'diagonal'`, or `'per_layer'`.
 
     Raises:
         ValueError: If `loss_type` is not one of `'boundary'` or `'interior'`.
@@ -95,7 +95,23 @@ def test_autograd_gramian(loss_type: str, approximation: str):
         pass
     elif approximation == "diagonal":
         truth = truth.diag()
+    elif approximation == "per-layer":
+        # compute per-layer number of parameters
+        sizes = []
+        for layer in model.modules():
+            if not list(layer.children()) and list(layer.parameters()):
+                sizes.append(sum(p.numel() for p in layer.parameters()))
+        # cut the Gramian into per-layer blocks
+        truth = [
+            row_block.split(sizes, dim=1) for row_block in truth.split(sizes, dim=0)
+        ]
+        truth = [truth[b][b] for b in range(len(sizes))]
+
     else:
         raise ValueError(f"Unknown approximation: {approximation}")
 
-    assert allclose(gramian, truth)
+    if approximation == "per-layer":
+        for b in range(len(truth)):
+            assert allclose(gramian[b], truth[b])
+    elif approximation in ["diagonal", "full"]:
+        assert allclose(gramian, truth)
