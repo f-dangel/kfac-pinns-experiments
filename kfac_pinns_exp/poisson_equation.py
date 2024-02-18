@@ -39,16 +39,20 @@ def evaluate_interior_loss(model: Module, X: Tensor, y: Tensor) -> Tensor:
     return 0.5 * ((laplacian + y) ** 2).mean()
 
 
-def evaluate_boundary_gramian(model: Module, X) -> Tensor:
+def evaluate_boundary_gramian(model: Module, X, approximation: str = "full") -> Tensor:
     """Evaluate the boundary loss' Gramian.
 
     Args:
         model: The model.
         X: Input for the boundary loss.
+        approximation: The approximation to use for the Gramian. Default: `'full'`.
+            Also supports `'diagonal'`.
+
 
     Returns:
         The boundary loss Gramian.
     """
+    assert approximation in {"full", "diagonal"}
     batch_size = X.shape[0]
     param_names = [n for n, _ in model.named_parameters()]
     gramian = autograd_gramian(model, X, param_names, loss_type="boundary")

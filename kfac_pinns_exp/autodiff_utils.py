@@ -1,6 +1,6 @@
 """Utility functions for automatic differentiation."""
 
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 from einops import einsum, rearrange
 from torch import Tensor, cat
@@ -154,6 +154,9 @@ def autograd_gramian(
         `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` for `loss_type='interior'` and `gᵢ = ∇_θ f(xᵢ, θ)`
         for `loss_type='boundary'`. If `approximation='diagonal'`, only the diagonal
         of shape `[*θ.shape]` is returned.
+
+    Raises:
+        NotImplementedError: If the approximation is not implemented.
     """
     gram_grads = cat(
         [
@@ -167,4 +170,4 @@ def autograd_gramian(
     elif approximation == "diagonal":
         return gram_grads.pow_(2).sum(0)
     else:
-        raise NotImplementedError(f"Approximation '{approximation}' not implemented.")
+        raise NotImplementedError(f"Approximation {approximation!r} not implemented.")
