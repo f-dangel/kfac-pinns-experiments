@@ -1,7 +1,7 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from torch import Tensor, cat, dtype, eye, float64
 from torch.nn import Module
@@ -10,6 +10,11 @@ from torch.optim import Optimizer
 from kfac_pinns_exp.exp07_inverse_kronecker_sum.inverse_kronecker_sum import (
     InverseKroneckerSum,
 )
+from kfac_pinns_exp.exp09_kfac_optimizer.engd import ENGD_DEFAULT_LR
+from kfac_pinns_exp.exp09_kfac_optimizer.line_search import (
+    grid_line_search,
+    parse_grid_line_search_args,
+)
 from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
     check_layers_and_initialize_kfac,
     evaluate_boundary_loss,
@@ -17,11 +22,14 @@ from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
     evaluate_interior_loss,
     evaluate_interior_loss_and_kfac_expand,
 )
+from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
+    parse_known_args_and_remove_from_argv,
+)
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
-def parse_KFACForPINNs_args(verbose: bool = False) -> Namespace:
-    """Parse command-line arguments for `KFACForPINNs`.
+def parse_KFAC_args(verbose: bool = False) -> Namespace:
+    """Parse command-line arguments for `KFAC`.
 
     Args:
         verbose: Whether to print the parsed arguments. Default: `False`.
@@ -30,62 +38,81 @@ def parse_KFACForPINNs_args(verbose: bool = False) -> Namespace:
         A namespace with the parsed arguments.
     """
     DTYPES = {"float64": float64}
-    parser = ArgumentParser(description="Parse arguments for setting up KFACForPINNs.")
+    parser = ArgumentParser(description="Parse arguments for setting up KFAC.")
 
     parser.add_argument(
-        "--lr", type=float, help="Learning rate for the optimizer.", required=True
+        "--KFAC_lr",
+        help="Learning rate or line search strategy for the optimizer.",
+        default="grid_line_search",
     )
     parser.add_argument(
-        "--damping", type=float, help="Damping factor for the optimizer.", required=True
+        "--KFAC_damping",
+        type=float,
+        help="Damping factor for the optimizer.",
+        required=True,
     )
     parser.add_argument(
-        "--T_kfac", type=int, help="Update frequency of KFAC matrices.", default=1
+        "--KFAC_T_kfac", type=int, help="Update frequency of KFAC matrices.", default=1
     )
     parser.add_argument(
-        "--T_inv",
+        "--KFAC_T_inv",
         type=int,
         help="Update frequency of the inverse KFAC matrices.",
         default=1,
     )
     parser.add_argument(
-        "--ema_factor",
+        "--KFAC_ema_factor",
         type=float,
         help="Exponential moving average factor for the KFAC matrices.",
         default=0.95,
     )
     parser.add_argument(
-        "--kfac_approx",
+        "--KFAC_kfac_approx",
         type=str,
-        choices=KFACForPINNs.SUPPORTED_KFAC_APPROXIMATIONS,
+        choices=KFAC.SUPPORTED_KFAC_APPROXIMATIONS,
         help="Approximation method for the KFAC matrices.",
         default="expand",
     )
     parser.add_argument(
-        "--inv_strategy",
+        "--KFAC_inv_strategy",
         type=str,
         choices=["invert kronecker sum"],
         help="Inversion strategy for KFAC.",
         default="invert kronecker sum",
     )
     parser.add_argument(
-        "--inv_dtype",
+        "--KFAC_inv_dtype",
         type=str,
         choices=DTYPES.keys(),
         help="Data type for the inverse KFAC matrices.",
         default="float64",
     )
-
-    args, _ = parser.parse_known_args()
+    parser.add_argument(
+        "--KFAC_initialize_to_identity",
+        action="store_true",
+        help="Whether to initialize the KFAC matrices to identity.",
+    )
+    args = parse_known_args_and_remove_from_argv(parser)
     # overwrite inv_dtype with value from dictionary
-    args.inv_dtype = DTYPES[args.inv_dtype]
+    args.KFAC_inv_dtype = DTYPES[args.KFAC_inv_dtype]
+
+    # overwrite the lr value
+    if any(char.isdigit() for char in args.KFAC_lr):
+        args.KFAC_lr = float(args.KFAC_lr)
+
+    if args.KFAC_lr == "grid_line_search":
+        # generate the grid from the command line arguments and overwrite the
+        # `KFAC_lr` entry with a tuple containing the grid
+        grid = parse_grid_line_search_args()
+        args.KFAC_lr = (args.KFAC_lr, grid)
 
     if verbose:
-        print("Parsed arguments for KFACForPINNs: ", args)
+        print("Parsed arguments for KFAC: ", args)
 
     return args
 
 
-class KFACForPINNs(Optimizer):
+class KFAC(Optimizer):
     """KFAC optimizer for PINN problems."""
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand"}
@@ -93,14 +120,15 @@ class KFACForPINNs(Optimizer):
     def __init__(
         self,
         layers: List[Module],
-        lr: float,
         damping: float,
+        lr: Union[float, Tuple[str, List[float]]] = ENGD_DEFAULT_LR,
         T_kfac: int = 1,
         T_inv: int = 1,
         ema_factor: float = 0.95,
         kfac_approx: str = "expand",
         inv_strategy: str = "invert kronecker sum",
         inv_dtype: dtype = float64,
+        initialize_to_identity: bool = False,
     ) -> None:
         """Set up the optimizer.
 
@@ -113,8 +141,9 @@ class KFACForPINNs(Optimizer):
 
         Args:
             layers: List of layers of the neural network.
-            lr: Learning rate. Must be positive.
             damping: Damping factor. Must be positive.
+            lr: Positive learning rate or tuple specifying the line search. By default
+                uses the same line search as the ENGD optimizer.
             T_kfac: Positive integer specifying the update frequency for
                 the boundary and the interior terms' KFACs. Default is `1`.
             T_inv: Positive integer specifying the pre-conditioner update
@@ -127,32 +156,24 @@ class KFACForPINNs(Optimizer):
                 `'invert kronecker sum'`.
             inv_dtype: Data type to carry out the curvature inversion. Default is
                 `torch.float64`. The pre-conditioner will be converted back to the same
-                data type as the parameters after the inversio.
+                data type as the parameters after the inversion.
+            initialize_to_identity: Whether to initialize the KFAC factors to the
+                identity matrix. Default is `False` (initialize with zero).
 
         Raises:
             ValueError: If any of the hyper-parameters is invalid.
         """
-        # check hyper-parameters
-        if kfac_approx not in self.SUPPORTED_KFAC_APPROXIMATIONS:
-            raise ValueError(
-                f"Unsupported KFAC approximation: {kfac_approx}. "
-                + f"Supported: {self.SUPPORTED_KFAC_APPROXIMATIONS}."
-            )
-        if not 0 <= ema_factor < 1:
-            raise ValueError(
-                "Exponential moving average factor must be in [0, 1). "
-                + f"Got {ema_factor}."
-            )
-        if lr <= 0.0:
-            raise ValueError(f"Learning rate must be positive. Got {lr}.")
-        if damping < 0.0:
-            raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
-        if inv_strategy != "invert kronecker sum":
-            raise ValueError(
-                f"Unsupported inversion strategy: {inv_strategy}. "
-                + "Supported: 'invert kronecker sum'."
-            )
-
+        self._check_hyperparameters(
+            lr,
+            damping,
+            T_kfac,
+            T_inv,
+            ema_factor,
+            kfac_approx,
+            inv_strategy,
+            inv_dtype,
+            initialize_to_identity,
+        )
         defaults = dict(
             lr=lr,
             damping=damping,
@@ -162,18 +183,18 @@ class KFACForPINNs(Optimizer):
             kfac_approx=kfac_approx,
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
+            initialize_to_identity=initialize_to_identity,
         )
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
 
         # initialize KFAC matrices
         self.kfacs_interior = check_layers_and_initialize_kfac(
-            layers, initialize_to_identity=True
+            layers, initialize_to_identity=initialize_to_identity
         )
         self.kfacs_boundary = check_layers_and_initialize_kfac(
-            layers, initialize_to_identity=True
+            layers, initialize_to_identity=initialize_to_identity
         )
-
         self.steps = 0
         self.inv: Dict[int, InverseKroneckerSum] = {}
         self.layers = layers
@@ -199,14 +220,12 @@ class KFACForPINNs(Optimizer):
 
         self.update_preconditioner()
 
-        group = self.param_groups[0]
-        lr = group["lr"]
-
+        directions = []
         for layer_idx in self.kfacs_interior.keys():
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
-            layer = self.layers[layer_idx]
-            layer.weight.data.sub_(nat_grad_weight, alpha=lr)
-            layer.bias.data.sub_(nat_grad_bias, alpha=lr)
+            directions.extend([-nat_grad_weight, -nat_grad_bias])
+
+        self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
 
         self.steps += 1
 
@@ -308,3 +327,104 @@ class KFACForPINNs(Optimizer):
         _, d_in = layer.weight.shape
         nat_grad_weight, nat_grad_bias = nat_grad_combined.split([d_in, 1], dim=1)
         return nat_grad_weight, nat_grad_bias.squeeze(1)
+
+    @classmethod
+    def _check_hyperparameters(
+        cls,
+        lr: Union[float, Tuple[str, List[float]]],
+        damping: float,
+        T_kfac: int,
+        T_inv: int,
+        ema_factor: float,
+        kfac_approx: str,
+        inv_strategy: str,
+        inv_dtype: dtype,
+        initialize_to_identity,
+    ):
+        """Check the hyperparameters for the KFAC optimizer.
+
+        Args:
+            lr: Learning rate or tuple specifying the line search.
+            damping: Damping factor.
+            T_kfac: Number of steps between KFAC updates.
+            T_inv: Number of steps between inverse KFAC updates.
+            ema_factor: Exponential moving average factor.
+            kfac_approx: KFAC approximation.
+            inv_strategy: Inverse strategy.
+            inv_dtype: Inverse dtype.
+            initialize_to_identity: Flag to initialize the inverse to the identity.
+
+        Raises:
+            ValueError: If any hyperparameter is invalid.
+        """
+        if T_kfac <= 0:
+            raise ValueError(f"T_kfac must be positive. Got {T_kfac}.")
+        if T_inv <= 0:
+            raise ValueError(f"T_inv must be positive. Got {T_inv}.")
+        if kfac_approx not in cls.SUPPORTED_KFAC_APPROXIMATIONS:
+            raise ValueError(
+                f"Unsupported KFAC approximation: {kfac_approx}. "
+                + f"Supported: {cls.SUPPORTED_KFAC_APPROXIMATIONS}."
+            )
+        if not 0 <= ema_factor < 1:
+            raise ValueError(
+                f"Exponential moving average factor must be in [0, 1). Got {ema_factor}."
+            )
+        if isinstance(lr, float) and lr <= 0.0:
+            raise ValueError(f"Learning rate must be positive. Got {lr}.")
+        else:
+            if lr[0] != "grid_line_search":
+                raise ValueError(f"Unsupported line search: {lr[0]}.")
+        if damping < 0.0:
+            raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
+        if inv_strategy != "invert kronecker sum":
+            raise ValueError(f"Unsupported inversion strategy: {inv_strategy}.")
+
+    def _update_parameters(
+        self,
+        directions: List[Tensor],
+        X_Omega: Tensor,
+        y_Omega: Tensor,
+        X_dOmega: Tensor,
+        y_dOmega: Tensor,
+    ):
+        """Update the model parameters with the negative natural gradient.
+
+        Args:
+            directions: Negative natural gradient in parameter list format.
+            X_Omega: Input data on the interior.
+            y_Omega: Target data on the interior.
+            X_dOmega: Input data on the boundary.
+            y_dOmega: Target data on the boundary.
+
+        Raises:
+            NotImplementedError: If the chosen line search is not supported.
+        """
+        lr = self.param_groups[0]["lr"]
+        params = self.param_groups[0]["params"]
+
+        if isinstance(lr, float):
+            for param, direction in zip(params, directions):
+                param.data.add_(direction, alpha=lr)
+        else:
+            if lr[0] == "grid_line_search":
+
+                def f() -> Tensor:
+                    """Closure to evaluate the loss.
+
+                    Returns:
+                        Loss value.
+                    """
+                    interior_loss, _ = evaluate_interior_loss(
+                        self.layers, X_Omega, y_Omega
+                    )
+                    boundary_loss, _ = evaluate_boundary_loss(
+                        self.layers, X_dOmega, y_dOmega
+                    )
+                    return interior_loss + boundary_loss
+
+                grid = lr[1]
+                grid_line_search(f, params, directions, grid)
+
+            else:
+                raise ValueError(f"Unsupported line search: {lr[0]}.")

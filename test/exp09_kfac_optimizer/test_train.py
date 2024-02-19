@@ -23,13 +23,13 @@ def _run(cmd: List[str]):
         raise e
 
 
-def test_run_exp09_train_with_KFACForPINNs():
-    """Execute the training script. Train with KFACForPINNs."""
+def test_run_exp09_train_with_KFAC():
+    """Execute the training script. Train with KFAC."""
     cmd = [
         "python",
         train.__file__,
         "--num_steps=50",
-        "--optimizer=KFACForPINNs",
+        "--optimizer=KFAC",
         "--T_kfac=2",
         "--T_inv=6",
         "--ema_factor=0.95",

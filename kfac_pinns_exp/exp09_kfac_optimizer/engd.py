@@ -12,6 +12,9 @@ from kfac_pinns_exp.exp09_kfac_optimizer.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
 )
+from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
+    parse_known_args_and_remove_from_argv,
+)
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_gramian,
     evaluate_boundary_loss,
@@ -60,7 +63,7 @@ def parse_ENGD_args(verbose: bool = False) -> Namespace:
         action="store_true",
         help="Initialize the Gramian matrix to the identity matrix.",
     )
-    args, _ = parser.parse_known_args()
+    args = parse_known_args_and_remove_from_argv(parser)
 
     if any(char.isdigit() for char in args.ENGD_lr):
         args.ENGD_lr = float(args.ENGD_lr)
@@ -316,10 +319,10 @@ class ENGD(Optimizer):
         X_dOmega: Tensor,
         y_dOmega: Tensor,
     ):
-        """Update the model parameters with the natural gradient.
+        """Update the model parameters with the negative natural gradient.
 
         Args:
-            directions: Natural gradient in parameter list format.
+            directions: Negative natural gradient in parameter list format.
             X_Omega: Input data on the interior.
             y_Omega: Target data on the interior.
             X_dOmega: Input data on the boundary.
@@ -332,7 +335,6 @@ class ENGD(Optimizer):
         params = self.param_groups[0]["params"]
 
         if isinstance(lr, float):
-            params = self.param_groups[0]["params"]
             for param, direction in zip(params, directions):
                 param.data.add_(direction, alpha=lr)
         elif lr[0] == "grid_line_search":
@@ -347,7 +349,6 @@ class ENGD(Optimizer):
                 boundary_loss = evaluate_boundary_loss(self.model, X_dOmega, y_dOmega)
                 return interior_loss + boundary_loss
 
-            params = self.param_groups[0]["params"]
             grid = lr[1]
             grid_line_search(f, params, directions, grid)
 

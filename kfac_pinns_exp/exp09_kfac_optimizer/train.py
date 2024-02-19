@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser, Namespace
 from math import log10, pi
+from sys import argv
 from time import time
 from typing import List, Tuple
 
@@ -25,17 +26,18 @@ from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import SGD, Adam, Optimizer
 
 from kfac_pinns_exp.exp09_kfac_optimizer.engd import ENGD, parse_ENGD_args
-from kfac_pinns_exp.exp09_kfac_optimizer.optimizer import (
-    KFACForPINNs,
-    parse_KFACForPINNs_args,
-)
+from kfac_pinns_exp.exp09_kfac_optimizer.kfac import KFAC, parse_KFAC_args
 from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
 )
-from kfac_pinns_exp.exp09_kfac_optimizer.utils import parse_Adam_args, parse_SGD_args
+from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
+    parse_Adam_args,
+    parse_known_args_and_remove_from_argv,
+    parse_SGD_args,
+)
 
-SUPPORTED_OPTIMIZERS = ["KFACForPINNs", "SGD", "Adam", "ENGD"]
+SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD"]
 
 
 def parse_general_args(verbose: bool = False) -> Namespace:
@@ -113,7 +115,7 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default=150,
         help="Maximum number of logs/prints.",
     )
-    args, _ = parser.parse_known_args()
+    args = parse_known_args_and_remove_from_argv(parser)
 
     # overwrite dtype
     args.dtype = DTYPES[args.dtype]
@@ -122,6 +124,16 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         print(f"General arguments for the Poisson equation: {args}")
 
     return args
+
+
+def check_all_args_parsed():
+    """Make sure all command line arguments were parsed.
+
+    Raises:
+        ValueError: If there are unparsed arguments.
+    """
+    if len(argv) != 1:
+        raise ValueError(f"The following arguments could not be parsed: {argv[1:]}.")
 
 
 def set_up_optimizer(
@@ -140,9 +152,13 @@ def set_up_optimizer(
     Raises:
         NotImplementedError: If the optimizer is not supported.
     """
-    if optimizer == "KFACForPINNs":
-        cls, args = KFACForPINNs, parse_KFACForPINNs_args(verbose=verbose)
-        return cls(layers, **vars(args)), args
+    if optimizer == "KFAC":
+        cls, args = KFAC, parse_KFAC_args(verbose=verbose)
+        args_dict = vars(args)  # each key has 'KFAC_' as prefix
+        args_dict = {
+            key.removeprefix("KFAC_"): value for key, value in args_dict.items()
+        }
+        return cls(layers, **args_dict), args
 
     elif optimizer == "ENGD":
         cls, args = ENGD, parse_ENGD_args(verbose=verbose)
@@ -159,7 +175,6 @@ def set_up_optimizer(
             cls, args = SGD, parse_SGD_args(verbose=verbose)
         else:
             raise NotImplementedError(f"Unsupported optimizer: {optimizer}.")
-
         params = sum((list(layer.parameters()) for layer in layers), [])
         return cls(params, **vars(args)), args
 
@@ -251,6 +266,7 @@ def main():
 
     # optimizer and its hyper-parameters
     optimizer, optimizer_args = set_up_optimizer(layers, args.optimizer, verbose=True)
+    check_all_args_parsed()
 
     if args.wandb:
         config = vars(args) | vars(optimizer_args)
@@ -270,7 +286,7 @@ def main():
     for step in range(args.num_steps):
         optimizer.zero_grad()
 
-        if isinstance(optimizer, (KFACForPINNs, ENGD)):
+        if isinstance(optimizer, (KFAC, ENGD)):
             loss_interior, loss_boundary = optimizer.step(
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )

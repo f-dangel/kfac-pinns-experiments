@@ -2,10 +2,14 @@
 
 from argparse import ArgumentParser
 from typing import Callable, List, Tuple, Union
-from warnings import warn
+from warnings import simplefilter, warn
 
 from torch import Tensor, logspace, no_grad
 from torch.nn import Parameter
+
+from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
+    parse_known_args_and_remove_from_argv,
+)
 
 
 def parse_grid_line_search_args() -> List[float]:
@@ -33,7 +37,7 @@ def parse_grid_line_search_args() -> List[float]:
         help="Resolution of the logarithmic grid between min and max.",
         default=31,
     )
-    args, _ = parser.parse_known_args()
+    args = parse_known_args_and_remove_from_argv(parser)
 
     return logspace(
         args.grid_line_search_log2min,
@@ -78,7 +82,8 @@ def grid_line_search(
     argbest = f_values.index(f_best)
 
     if f_0 < f_best:
-        warn("Line search could not find a decreasing value. Skipping step.")
+        simplefilter("always", UserWarning)
+        warn("Line search could not find a decreasing value.")
         best = 0
     else:
         best = grid[argbest]

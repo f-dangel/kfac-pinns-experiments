@@ -1,6 +1,23 @@
 """Utility functions."""
 
 from argparse import ArgumentParser, Namespace
+from sys import argv
+
+
+def parse_known_args_and_remove_from_argv(parser: ArgumentParser) -> Namespace:
+    """Parse known arguments and remove them from `sys.argv`.
+
+    See https://stackoverflow.com/a/35733750.
+
+    Args:
+        parser: An `ArgumentParser` object.
+
+    Returns:
+        A namespace with the parsed arguments.
+    """
+    args, left = parser.parse_known_args()
+    argv[1:] = left
+    return args
 
 
 def parse_SGD_args(verbose: bool = False) -> Namespace:
@@ -25,7 +42,8 @@ def parse_SGD_args(verbose: bool = False) -> Namespace:
         default=0,
         help="Momentum for the SGD optimizer.",
     )
-    args, _ = parser.parse_known_args()
+
+    args = parse_known_args_and_remove_from_argv(parser)
 
     if verbose:
         print(f"SGD arguments: {args}")
@@ -67,7 +85,7 @@ def parse_Adam_args(verbose: bool = False) -> Namespace:
         default=1e-8,
         help="Term added to Adam's denominator to improve numerical stability.",
     )
-    args, _ = parser.parse_known_args()
+    args = parse_known_args_and_remove_from_argv(parser)
 
     # replace beta1 and beta2 with a tuple betas
     args.betas = (args.beta1, args.beta2)
