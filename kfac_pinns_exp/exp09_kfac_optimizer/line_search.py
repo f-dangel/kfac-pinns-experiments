@@ -1,14 +1,50 @@
 """Line search algorithms."""
 
+from argparse import ArgumentParser
 from typing import Callable, List, Tuple, Union
 from warnings import warn
 
-from torch import Tensor, no_grad
+from torch import Tensor, logspace, no_grad
 from torch.nn import Parameter
 
 
+def parse_grid_line_search_args() -> List[float]:
+    """Parse command-line arguments for the grid line search.
+
+    Returns:
+        The grid values.
+    """
+    parser = ArgumentParser(description="Line grid search parameters.")
+    parser.add_argument(
+        "--grid_line_search_log2min",
+        type=float,
+        help="Log2 of the minimum step size to try.",
+        default=-30,
+    )
+    parser.add_argument(
+        "--grid_line_search_log2max",
+        type=float,
+        help="Log2 of the maximum step size to try.",
+        default=0,
+    )
+    parser.add_argument(
+        "--grid_line_search_num_steps",
+        type=float,
+        help="Resolution of the logarithmic grid between min and max.",
+        default=31,
+    )
+    args, _ = parser.parse_known_args()
+
+    return logspace(
+        args.grid_line_search_log2min,
+        args.grid_line_search_log2max,
+        args.grid_line_search_num_steps,
+        base=2,
+    ).tolist()
+
+
 @no_grad()
-def grid_search(
+def grid_line_search(
     f: Callable[[], Tensor],
     params: List[Union[Tensor, Parameter]],
     params_step: List[Tensor],

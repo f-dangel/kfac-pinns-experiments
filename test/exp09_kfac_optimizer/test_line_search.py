@@ -3,10 +3,10 @@
 from numpy import isclose
 from torch import Tensor
 
-from kfac_pinns_exp.exp09_kfac_optimizer.line_search import grid_search
+from kfac_pinns_exp.exp09_kfac_optimizer.line_search import grid_line_search
 
 
-def test_grid_search():
+def test_grid_line_search():
     """Test the grid search method on a quadratic function."""
     params = [Tensor([0.5])]
 
@@ -21,7 +21,7 @@ def test_grid_search():
     step = [Tensor([-1.0])]
     grid = [0.1, 0.3, 1.0]
 
-    best_lr, best_f = grid_search(f, params, step, grid)
+    best_lr, best_f = grid_line_search(f, params, step, grid)
 
     assert best_lr == 0.3
     assert isclose(best_f, 0.04)

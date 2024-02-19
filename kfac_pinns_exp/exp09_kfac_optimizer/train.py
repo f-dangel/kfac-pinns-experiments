@@ -144,7 +144,11 @@ def set_up_optimizer(
 
     elif optimizer == "ENGD":
         cls, args = ENGD, parse_ENGD_args(verbose=verbose)
-        return cls(Sequential(*layers), **vars(args)), args
+        args_dict = vars(args)  # each key has 'ENGD_' as prefix
+        args_dict = {
+            key.removeprefix("ENGD_"): value for key, value in args_dict.items()
+        }
+        return cls(Sequential(*layers), **args_dict), args
 
     else:
         if optimizer == "Adam":
@@ -269,7 +273,7 @@ def main():
     for step in range(args.num_steps):
         optimizer.zero_grad()
 
-        if isinstance(optimizer, (KFACForPINNs, GramianOptimizer)):
+        if isinstance(optimizer, (KFACForPINNs, ENGD)):
             loss_interior, loss_boundary = optimizer.step(
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )
