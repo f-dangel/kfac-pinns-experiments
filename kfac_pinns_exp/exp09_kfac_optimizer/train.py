@@ -18,6 +18,8 @@ from torch import (
     prod,
     rand,
     randint,
+    sin,
+    zeros_like,
 )
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import SGD, Adam, Optimizer
@@ -59,13 +61,13 @@ def parse_general_args(verbose: bool = False) -> Namespace:
     parser.add_argument(
         "--N_Omega",
         type=int,
-        default=1_000,
+        default=900,
         help="Number of quadrature points in the domain Ω.",
     )
     parser.add_argument(
         "--N_dOmega",
         type=int,
-        default=100,
+        default=120,
         help="Number of quadrature points on the boundary ∂Ω.",
     )
     parser.add_argument(
@@ -199,11 +201,9 @@ def f(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
+    d = X.shape[1:].numel()
 
-    # infer spatial dimension of x
-    d = Tensor([len(X[0])]).to(X.device)
-
-    return d * pi**2 * prod(cos(pi * X), dim=1, keepdim=True)
+    return d * pi**2 * prod(sin(pi * X), dim=1, keepdim=True)
 
 
 # Manufactured solution
@@ -235,17 +235,14 @@ def main():
     # boundary
     X_dOmega = square_boundary(args.N_dOmega, args.dim_Omega).to(dev, dt)
     y_dOmega = u(X_dOmega)
+    y_dOmega = zeros_like(y_dOmega)
 
     # neural net
     manual_seed(args.model_seed)
     layers = [
         Linear(args.dim_Omega, 64),
         Tanh(),
-        Linear(64, 32),
-        Tanh(),
-        Linear(32, 16),
-        Tanh(),
-        Linear(16, 1),
+        Linear(64, 1),
     ]
     layers = [layer.to(dev, dt) for layer in layers]
     model = Sequential(*layers).to(dev)

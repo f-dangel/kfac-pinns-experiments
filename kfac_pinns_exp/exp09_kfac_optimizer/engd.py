@@ -43,11 +43,22 @@ def parse_ENGD_args(verbose: bool = False) -> Namespace:
         help="Exponential moving average factor for the Gramian.",
     )
     parser.add_argument(
+        "--ENGD_damping",
+        type=float,
+        default=0.0,
+        help="Damping of the Gramian.",
+    )
+    parser.add_argument(
         "--ENGD_approximation",
         type=str,
         default="full",
         choices=ENGD.SUPPORTED_APPROXIMATIONS,
         help="Type of Gramian matrix to use.",
+    )
+    parser.add_argument(
+        "--ENGD_initialize_to_identity",
+        action="store_true",
+        help="Initialize the Gramian matrix to the identity matrix.",
     )
     args, _ = parser.parse_known_args()
 
@@ -93,8 +104,10 @@ class ENGD(Optimizer):
         self,
         model: Module,
         lr: Union[float, Tuple[str, List[float]]] = ENGD_DEFAULT_LR,
+        damping: float = 0.0,
         ema_factor: float = 0.0,
         approximation: str = "full",
+        initialize_to_identity: bool = False,
     ):
         """Initialize the ENGD optimizer.
 
@@ -102,18 +115,28 @@ class ENGD(Optimizer):
             model: Model to optimize.
             lr: Learning rate or tuple specifying the line search strategy.
                 Default value is the grid line search used in the paper.
+            damping: Damping of the Gramian. Default: `0.0`.
             ema_factor: Factor for the exponential moving average with which previous
                 Gramians are accumulated. `0.0` means past Gramians are discarded.
                 Default: `0.0`.
             approximation: Type of Gramian matrix to use. Default: `'full'`.
                 Other options are `'diagonal'` and `'per_layer'`.
+            initialize_to_identity: Whether to initialize the Gramian to the identity
+                matrix. Default: `False`. If `True`, the Gramian is initialized to
+                identity.
         """
-        self._check_hyperparameters(model, lr, ema_factor, approximation)
-        defaults = dict(lr=lr, ema_factor=ema_factor, approximation=approximation)
+        self._check_hyperparameters(model, lr, damping, ema_factor, approximation)
+        defaults = dict(
+            lr=lr,
+            damping=damping,
+            ema_factor=ema_factor,
+            approximation=approximation,
+            initialize_to_identity=initialize_to_identity,
+        )
         super().__init__(list(model.parameters()), defaults)
 
         self.model = model
-        self.gramian = self._initialize_curvature(identity=True)
+        self.gramian = self._initialize_curvature()
 
     def step(
         self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
@@ -134,8 +157,8 @@ class ENGD(Optimizer):
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )
         )
-        nat_grad = self._compute_natural_gradients()
-        self._update_parameters(nat_grad, X_Omega, y_Omega, X_dOmega, y_dOmega)
+        directions = self._compute_natural_gradients()
+        self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
 
         return interior_loss, boundary_loss
 
@@ -144,6 +167,7 @@ class ENGD(Optimizer):
         cls,
         model: Module,
         lr: Union[float, Tuple[str, List[float]]],
+        damping: float,
         ema_factor: float,
         approximation: str,
     ):
@@ -152,6 +176,7 @@ class ENGD(Optimizer):
         Args:
             model: Model to optimize.
             lr: Learning rate or tuple specifying the line search strategy.
+            damping: Damping of the Gramian.
             ema_factor: Factor for the exponential moving average with which previous
                 Gramians are accumulated.
             approximation: Type of Gramian matrix to use.
@@ -165,6 +190,8 @@ class ENGD(Optimizer):
                 f"Unsupported Gramian type: {approximation}. "
                 f"Supported types: {cls.SUPPORTED_APPROXIMATIONS}."
             )
+        if damping < 0.0:
+            raise ValueError(f"Damping must be non-negative. Got {damping}.")
         if not 0 <= ema_factor < 1:
             raise ValueError(
                 "Exponential moving average factor must be in [0, 1). "
@@ -178,14 +205,8 @@ class ENGD(Optimizer):
         if not isinstance(model, Module):
             raise ValueError(f"Model must be a torch.nn.Module. Got {type(model)}.")
 
-    def _initialize_curvature(
-        self, identity: bool = True
-    ) -> Union[Tensor, List[Tensor]]:
+    def _initialize_curvature(self) -> Union[Tensor, List[Tensor]]:
         """Initialize the Gramian matrices.
-
-        Args:
-            identity: Whether to initialize the Gramian as the identity matrix.
-                Otherwise, use zero initialization. Default: `True`.
 
         Returns:
             The initialized Gramian matrix or a list of Gramian matrices, depending
@@ -201,6 +222,7 @@ class ENGD(Optimizer):
         kwargs = {"device": dev, "dtype": dt}
 
         approximation = self.param_groups[0]["approximation"]
+        identity = self.param_groups[0]["initialize_to_identity"]
 
         if approximation == "full":
             return (
@@ -213,10 +235,11 @@ class ENGD(Optimizer):
                 ones(num_params, **kwargs) if identity else zeros(num_params, **kwargs)
             )
         else:
-            block_sizes = []
-            for layer in self.model.modules():
-                if list(layer.parameters()) and not list(layer.children()):
-                    block_sizes.append(sum(p.numel() for p in layer.parameters()))
+            block_sizes = [
+                sum(p.numel() for p in layer.parameters())
+                for layer in self.model.modules()
+                if list(layer.parameters()) and not list(layer.children())
+            ]
             return [
                 eye(size, **kwargs) if identity else zeros(size, size, **kwargs)
                 for size in block_sizes
@@ -233,6 +256,7 @@ class ENGD(Optimizer):
         """
         params = self.param_groups[0]["params"]
         approximation = self.param_groups[0]["approximation"]
+        damping = self.param_groups[0]["damping"]
 
         # NOTE lstsq only supports the 'gels' driver on CUDA, which assumes the
         # Gramian is full-rank. This assumption is usually violated, hence we
@@ -243,34 +267,42 @@ class ENGD(Optimizer):
 
         # compute flattened natural gradient
         if approximation == "full":
+            damped_gramian = self.gramian + damping * eye(
+                self.gramian.shape[0], device=original_dev, dtype=self.gramian.dtype
+            )
             # solve the linear system argmin_x ||Gx + g||_2
             linsolve = lstsq(
-                self.gramian.cpu(), -grad_flat.unsqueeze(-1), driver="gelsd"
+                damped_gramian.cpu(), grad_flat.unsqueeze(-1), driver="gelsd"
             )
-            nat_grad = linsolve.solution.to(original_dev).squeeze(-1)
-            assert nat_grad.shape == grad_flat.shape
+            nat_grad = -linsolve.solution.to(original_dev).squeeze(-1)
         elif approximation == "diagonal":
+            damped_gramian = self.gramian + damping
             # solve `D` 1x1 least-squares problems in parallel
             linsolve = lstsq(
-                self.gramian.cpu().unsqueeze(-1).unsqueeze(-1),
-                -grad_flat.unsqueeze(-1).unsqueeze(-1),
+                damped_gramian.cpu().unsqueeze(-1).unsqueeze(-1),
+                grad_flat.unsqueeze(-1).unsqueeze(-1),
                 driver="gelsd",
             )
-            nat_grad = linsolve.solution.squeeze(-1).squeeze(-1).to(original_dev)
-        else:
-            # solve one linear system per layer
-            block_sizes = []
-            for layer in self.model.modules():
-                if list(layer.parameters()) and not list(layer.children()):
-                    block_sizes.append(sum(p.numel() for p in layer.parameters()))
-
+            nat_grad = -linsolve.solution.squeeze(-1).squeeze(-1).to(original_dev)
+        elif approximation == "per_layer":
+            block_sizes = [
+                sum(p.numel() for p in layer.parameters())
+                for layer in self.model.modules()
+                if list(layer.parameters()) and not list(layer.children())
+            ]
             nat_grads = []
             for gram, g_flat in zip(self.gramian, grad_flat.split(block_sizes)):
-                linsolve = lstsq(gram.cpu(), -g_flat.unsqueeze(-1), driver="gelsd")
-                ng = linsolve.solution.to(original_dev).squeeze(-1)
+                damped_gram = gram + damping * eye(
+                    gram.shape[0], device=original_dev, dtype=gram.dtype
+                )
+                linsolve = lstsq(
+                    damped_gram.cpu(), g_flat.unsqueeze(-1), driver="gelsd"
+                )
+                ng = -linsolve.solution.to(original_dev).squeeze(-1)
                 nat_grads.append(ng)
-                assert ng.shape == g_flat.shape
             nat_grad = cat(nat_grads)
+        else:
+            raise NotImplementedError(f"Approximation {approximation} not implemented.")
 
         # un-flatten
         nat_grad = nat_grad.split([p.numel() for p in params])
@@ -302,7 +334,7 @@ class ENGD(Optimizer):
         if isinstance(lr, float):
             params = self.param_groups[0]["params"]
             for param, direction in zip(params, directions):
-                param.data.sub_(direction, alpha=lr)
+                param.data.add_(direction, alpha=lr)
         elif lr[0] == "grid_line_search":
 
             def f() -> Tensor:
