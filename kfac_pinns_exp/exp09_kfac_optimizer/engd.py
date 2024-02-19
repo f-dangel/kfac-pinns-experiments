@@ -4,6 +4,7 @@ from argparse import ArgumentParser, Namespace
 from typing import List, Set, Tuple, Union
 
 from torch import Tensor, cat, eye, logspace, ones, zeros
+from torch.linalg import lstsq
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -34,12 +35,6 @@ def parse_ENGD_args(verbose: bool = False) -> Namespace:
         "--ENGD_lr",
         type=float,
         help="Learning rate for the Gramian optimizer.",
-        required=True,
-    )
-    parser.add_argument(
-        "--ENGD_damping",
-        type=float,
-        help="Damping of the Gramian before inversion.",
         required=True,
     )
     parser.add_argument(
@@ -96,7 +91,6 @@ class ENGD(Optimizer):
         self,
         model: Module,
         lr: Union[float, Tuple[str, List[float]]] = ENGD_DEFAULT_LR,
-        damping: float = 0.0,
         ema_factor: float = 0.0,
         approximation: str = "full",
     ):
@@ -106,21 +100,17 @@ class ENGD(Optimizer):
             model: Model to optimize.
             lr: Learning rate or tuple specifying the line search strategy.
                 Default value is the grid line search used in the paper.
-            damping: Damping term added to the Gramian before inversion.
             ema_factor: Factor for the exponential moving average with which previous
                 Gramians are accumulated. `0.0` means past Gramians are discarded.
                 Default: `0.0`.
             approximation: Type of Gramian matrix to use. Default: `'full'`.
                 Other options are `'diagonal'` and `'per_layer'`.
         """
-        self._check_hyperparameters(model, lr, damping, ema_factor, approximation)
-        defaults = dict(
-            lr=lr, damping=damping, ema_factor=ema_factor, approximation=approximation
-        )
+        self._check_hyperparameters(model, lr, ema_factor, approximation)
+        defaults = dict(lr=lr, ema_factor=ema_factor, approximation=approximation)
         super().__init__(list(model.parameters()), defaults)
 
         self.gramian = self._initialize_curvature(identity=True)
-        self.inv_gramian = self._initialize_preconditioner()
         self.model = model
 
     def step(
@@ -153,7 +143,6 @@ class ENGD(Optimizer):
         cls,
         model: Module,
         lr: Union[float, Tuple[str, List[float]]],
-        damping: float,
         ema_factor: float,
         approximation: str,
     ):
@@ -162,7 +151,6 @@ class ENGD(Optimizer):
         Args:
             model: Model to optimize.
             lr: Learning rate or tuple specifying the line search strategy.
-            damping: Damping term added to the Gramian before inversion.
             ema_factor: Factor for the exponential moving average with which previous
                 Gramians are accumulated.
             approximation: Type of Gramian matrix to use.
@@ -190,8 +178,6 @@ class ENGD(Optimizer):
                 raise ValueError(f"Learning rate must be positive. Got {lr}.")
         elif lr[0] != "grid_line_search":
             raise NotImplementedError(f"Line search {lr[0]} not implemented.")
-        if damping < 0.0:
-            raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
         if not isinstance(model, Module):
             raise ValueError(f"Model must be a torch.nn.Module. Got {type(model)}.")
 
@@ -234,33 +220,6 @@ class ENGD(Optimizer):
                 f"Curvature initialization for {approximation} not implemented."
             )
 
-    def _initialize_preconditioner(self) -> Union[Tensor, List[Tensor]]:
-        """Initialize the inverse Gramian, i.e. the pre-conditioner.
-
-        Returns:
-            The initialized pre-conditioner matrix or a list of pre-conditioner
-            matrices, depending on the chosen approximation.
-
-        Raises:
-            NotImplementedError: If the chosen approximation is not supported.
-        """
-        params = self.param_groups[0]["params"]
-        approximation = self.param_groups[0]["approximation"]
-
-        num_params = sum(p.numel() for p in params)
-        (dev,) = {p.device for p in params}
-        (dt,) = {p.dtype for p in params}
-        kwargs = {"device": dev, "dtype": dt}
-
-        if approximation == "full":
-            return eye(num_params, **kwargs)
-        elif approximation == "diagonal":
-            return ones(num_params, **kwargs)
-        else:
-            raise NotImplementedError(
-                f"Pre-conditioner init for {approximation} not implemented."
-            )
-
     def _compute_natural_gradients(self) -> List[Tensor]:
         """Compute the natural gradients from current pre-conditioner and gradients.
 
@@ -274,6 +233,7 @@ class ENGD(Optimizer):
         approximation = self.param_groups[0]["approximation"]
         grad_flat = cat([p.grad.flatten() for p in params])
 
+        raise NotImplementedError
         # compute flattened natural gradient
         if approximation == "full":
             nat_grad = self.inv_gramian @ grad_flat
@@ -287,28 +247,6 @@ class ENGD(Optimizer):
         # un-flatten
         nat_grad = nat_grad.split([p.numel() for p in params])
         return [g.reshape(*p.shape) for g, p in zip(nat_grad, params)]
-
-    def _update_preconditioner(self):
-        """Update the inverse Gramian.
-
-        Raises:
-            NotImplementedError: If the chosen approximation is not supported.
-        """
-        approximation = self.param_groups[0]["approximation"]
-        damping = self.param_groups[0]["damping"]
-
-        # update the inverse Gramian
-        if approximation == "full":
-            kwargs = {"device": self.gramian.device, "dtype": self.gramian.dtype}
-            self.inv_gramian = (
-                self.gramian + damping * eye(self.gramian.shape[0], **kwargs)
-            ).inverse()
-        elif approximation == "diagonal":
-            self.inv_gramian = 1.0 / (self.gramian + damping)
-        else:
-            raise NotImplementedError(
-                f"Pre-conditioner update not implemented for {approximation}."
-            )
 
     def _update_parameters(
         self,
