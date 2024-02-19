@@ -29,7 +29,7 @@ def parse_grid_line_search_args() -> List[float]:
     )
     parser.add_argument(
         "--grid_line_search_num_steps",
-        type=float,
+        type=int,
         help="Resolution of the logarithmic grid between min and max.",
         default=31,
     )

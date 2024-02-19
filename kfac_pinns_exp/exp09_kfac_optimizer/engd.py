@@ -33,14 +33,13 @@ def parse_ENGD_args(verbose: bool = False) -> Namespace:
     parser = ArgumentParser(description="ENGD optimizer parameters.")
     parser.add_argument(
         "--ENGD_lr",
-        type=float,
-        help="Learning rate for the Gramian optimizer.",
-        required=True,
+        help="Learning rate for the Gramian optimizer (float or string).",
+        default="grid_line_search",
     )
     parser.add_argument(
         "--ENGD_ema_factor",
         type=float,
-        default=0.95,
+        default=0.0,
         help="Exponential moving average factor for the Gramian.",
     )
     parser.add_argument(
@@ -51,6 +50,9 @@ def parse_ENGD_args(verbose: bool = False) -> Namespace:
         help="Type of Gramian matrix to use.",
     )
     args, _ = parser.parse_known_args()
+
+    if any(char.isdigit() for char in args.ENGD_lr):
+        args.ENGD_lr = float(args.ENGD_lr)
 
     if args.ENGD_lr == "grid_line_search":
         # generate the grid from the command line arguments and overwrite the
@@ -110,8 +112,8 @@ class ENGD(Optimizer):
         defaults = dict(lr=lr, ema_factor=ema_factor, approximation=approximation)
         super().__init__(list(model.parameters()), defaults)
 
-        self.gramian = self._initialize_curvature(identity=True)
         self.model = model
+        self.gramian = self._initialize_curvature(identity=True)
 
     def step(
         self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
@@ -128,11 +130,10 @@ class ENGD(Optimizer):
             Tuple of the interior and boundary loss before taking the step.
         """
         interior_loss, boundary_loss = (
-            self._evalute_loss_and_gradient_and_update_curvature(
+            self._evaluate_loss_and_gradient_and_update_curvature(
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )
         )
-        self._update_preconditioner()
         nat_grad = self._compute_natural_gradients()
         self._update_parameters(nat_grad, X_Omega, y_Omega, X_dOmega, y_dOmega)
 
@@ -163,10 +164,6 @@ class ENGD(Optimizer):
             raise ValueError(
                 f"Unsupported Gramian type: {approximation}. "
                 f"Supported types: {cls.SUPPORTED_APPROXIMATIONS}."
-            )
-        elif approximation == "per_layer":
-            raise NotImplementedError(
-                f"Approximation {approximation} not yet supported."
             )
         if not 0 <= ema_factor < 1:
             raise ValueError(
@@ -216,9 +213,14 @@ class ENGD(Optimizer):
                 ones(num_params, **kwargs) if identity else zeros(num_params, **kwargs)
             )
         else:
-            raise NotImplementedError(
-                f"Curvature initialization for {approximation} not implemented."
-            )
+            block_sizes = []
+            for layer in self.model.modules():
+                if list(layer.parameters()) and not list(layer.children()):
+                    block_sizes.append(sum(p.numel() for p in layer.parameters()))
+            return [
+                eye(size, **kwargs) if identity else zeros(size, size, **kwargs)
+                for size in block_sizes
+            ]
 
     def _compute_natural_gradients(self) -> List[Tensor]:
         """Compute the natural gradients from current pre-conditioner and gradients.
@@ -231,18 +233,44 @@ class ENGD(Optimizer):
         """
         params = self.param_groups[0]["params"]
         approximation = self.param_groups[0]["approximation"]
-        grad_flat = cat([p.grad.flatten() for p in params])
 
-        raise NotImplementedError
+        # NOTE lstsq only supports the 'gels' driver on CUDA, which assumes the
+        # Gramian is full-rank. This assumption is usually violated, hence we
+        # off-load the computation to the CPU and use the more stable 'gelsd' driver.
+        (original_dev,) = {p.device for p in params}
+
+        grad_flat = cat([p.grad.flatten().cpu() for p in params])
+
         # compute flattened natural gradient
         if approximation == "full":
-            nat_grad = self.inv_gramian @ grad_flat
-        elif approximation == "diagonal":
-            nat_grad = self.inv_gramian * grad_flat
-        else:
-            raise NotImplementedError(
-                f"Natural gradient computation not implemented for {approximation}."
+            # solve the linear system argmin_x ||Gx + g||_2
+            linsolve = lstsq(
+                self.gramian.cpu(), -grad_flat.unsqueeze(-1), driver="gelsd"
             )
+            nat_grad = linsolve.solution.to(original_dev).squeeze(-1)
+            assert nat_grad.shape == grad_flat.shape
+        elif approximation == "diagonal":
+            # solve `D` 1x1 least-squares problems in parallel
+            linsolve = lstsq(
+                self.gramian.cpu().unsqueeze(-1).unsqueeze(-1),
+                -grad_flat.unsqueeze(-1).unsqueeze(-1),
+                driver="gelsd",
+            )
+            nat_grad = linsolve.solution.squeeze(-1).squeeze(-1).to(original_dev)
+        else:
+            # solve one linear system per layer
+            block_sizes = []
+            for layer in self.model.modules():
+                if list(layer.parameters()) and not list(layer.children()):
+                    block_sizes.append(sum(p.numel() for p in layer.parameters()))
+
+            nat_grads = []
+            for gram, g_flat in zip(self.gramian, grad_flat.split(block_sizes)):
+                linsolve = lstsq(gram.cpu(), -g_flat.unsqueeze(-1), driver="gelsd")
+                ng = linsolve.solution.to(original_dev).squeeze(-1)
+                nat_grads.append(ng)
+                assert ng.shape == g_flat.shape
+            nat_grad = cat(nat_grads)
 
         # un-flatten
         nat_grad = nat_grad.split([p.numel() for p in params])
