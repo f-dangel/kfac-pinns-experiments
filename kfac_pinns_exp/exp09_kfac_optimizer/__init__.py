@@ -1,1 +1,0 @@
-"""Implements the KFAC optimizer."""
