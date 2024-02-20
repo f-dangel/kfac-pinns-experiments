@@ -195,7 +195,11 @@ def main():
             # LBFGS requires a closure
 
             def closure() -> Tensor:
-                """Evaluate the loss on the current data and model parameters."""
+                """Evaluate the loss on the current data and model parameters.
+
+                Returns:
+                    The loss.
+                """
                 optimizer.zero_grad()
                 # compute the interior loss' gradient
                 loss_interior, _, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
@@ -208,8 +212,8 @@ def main():
                 # HOTFIX Append the interior and boundary loss as arguments
                 # so we can extract them for logging and plotting
                 loss = loss_interior + loss_boundary
-                setattr(loss, "_loss_interior", loss_interior)
-                setattr(loss, "_loss_boundary", loss_boundary)
+                loss._loss_interior = loss_interior
+                loss._loss_boundary = loss_boundary
 
                 return loss
 
