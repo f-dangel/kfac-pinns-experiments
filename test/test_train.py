@@ -27,12 +27,16 @@ def _run(cmd: List[str]):
 
 ARGS = [
     # train with ENGD
-    [
-        "--num_steps=20",
-        "--optimizer=ENGD",
-        "--ENGD_ema_factor=0.99",
-        "--ENGD_damping=0.0001",
-        "--ENGD_lr=0.1",
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=ENGD",
+            "--ENGD_ema_factor=0.99",
+            "--ENGD_damping=0.0001",
+            "--ENGD_lr=0.1",
+            f"--ENGD_approximation={approximation}",
+        ]
+        for approximation in ["full", "per_layer", "diagonal"]
     ],
     # train with KFAC
     [
