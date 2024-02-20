@@ -1,4 +1,4 @@
-"""Line search algorithms."""
+"""Implements line search algorithms."""
 
 from argparse import ArgumentParser
 from typing import Callable, List, Tuple, Union
@@ -7,9 +7,7 @@ from warnings import simplefilter, warn
 from torch import Tensor, logspace, no_grad
 from torch.nn import Parameter
 
-from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
-    parse_known_args_and_remove_from_argv,
-)
+from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 
 
 def parse_grid_line_search_args() -> List[float]:
