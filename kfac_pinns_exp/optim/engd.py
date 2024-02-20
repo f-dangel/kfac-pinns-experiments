@@ -24,42 +24,43 @@ from kfac_pinns_exp.poisson_equation import (
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
-def parse_ENGD_args(verbose: bool = False) -> Namespace:
+def parse_ENGD_args(verbose: bool = False, prefix: str = "ENGD_") -> Namespace:
     """Parse command-line arguments for the ENGD optimizer.
 
     Args:
         verbose: Whether to print the parsed arguments. Default: `False`.
+        prefix: Prefix for the arguments. Default: "ENGD_".
 
     Returns:
         A namespace with the parsed arguments.
     """
     parser = ArgumentParser(description="ENGD optimizer parameters.")
     parser.add_argument(
-        "--ENGD_lr",
+        f"--{prefix}_lr",
         help="Learning rate for the Gramian optimizer (float or string).",
         default="grid_line_search",
     )
     parser.add_argument(
-        "--ENGD_ema_factor",
+        f"--{prefix}_ema_factor",
         type=float,
         default=0.0,
         help="Exponential moving average factor for the Gramian.",
     )
     parser.add_argument(
-        "--ENGD_damping",
+        f"--{prefix}_damping",
         type=float,
         default=0.0,
         help="Damping of the Gramian.",
     )
     parser.add_argument(
-        "--ENGD_approximation",
+        f"--{prefix}_approximation",
         type=str,
         default="full",
         choices=ENGD.SUPPORTED_APPROXIMATIONS,
         help="Type of Gramian matrix to use.",
     )
     parser.add_argument(
-        "--ENGD_initialize_to_identity",
+        f"--{prefix}_initialize_to_identity",
         action="store_true",
         help="Initialize the Gramian matrix to the identity matrix.",
     )
