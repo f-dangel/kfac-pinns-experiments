@@ -16,3 +16,4 @@ main.pdf
 *.egg-info
 .eggs
 /.coverage
+**wandb

@@ -1,0 +1,19 @@
+program: train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=Adam"
+    - ${args}
+metric:
+    goal: minimize
+    name: loss
+method: random
+parameters:
+    num_steps:
+        value: 10_000
+    lr:
+        distribution: log_uniform_values
+        min: 5e-4
+        max: 5e-1
