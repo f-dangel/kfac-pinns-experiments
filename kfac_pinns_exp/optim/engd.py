@@ -1,4 +1,4 @@
-"""Implement enery-natural gradient descent flavours from Mueller et al. 2023."""
+"""Implements enery-natural gradient descent flavours from Mueller et al. 2023."""
 
 from argparse import ArgumentParser, Namespace
 from typing import List, Set, Tuple, Union

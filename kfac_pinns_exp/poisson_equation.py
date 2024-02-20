@@ -1,10 +1,11 @@
 """Functionality for solving the Poisson equation."""
 
 from functools import partial
+from math import pi
 from typing import Dict, List, Tuple, Union
 
 from einops import einsum, rearrange
-from torch import Tensor, cat, ones_like
+from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
 from torch.autograd import grad
 from torch.nn import Module
 from torch.utils.hooks import RemovableHandle
@@ -13,6 +14,59 @@ from kfac_pinns_exp.autodiff_utils import autograd_gramian, autograd_input_hessi
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.manual_differentiation import manual_forward
+
+
+# TODO Use code from exp02 once it is merged
+def square_boundary(N: int, dim: int) -> Tensor:
+    """Returns quadrature points on the boundary of a square.
+
+    Args:
+        N: Number of quadrature points.
+        dim: Dimension of the Square.
+
+    Returns:
+        A tensor of shape (N, dim) that consists of uniformly drawn
+        quadrature points.
+    """
+    X = rand(N, dim)
+
+    dimensions = randint(0, dim, (N,))
+    sides = randint(0, 2, (N,))
+
+    for i in range(N):
+        X[i, dimensions[i]] = sides[i].float()
+
+    return X
+
+
+# Right-hand side of the Poisson equation
+# TODO Use code from exp02 once it is merged
+def f(X: Tensor) -> Tensor:
+    """The right-hand side of the Poisson equation we aim to solve.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    d = X.shape[1:].numel()
+
+    return d * pi**2 * prod(sin(pi * X), dim=1, keepdim=True)
+
+
+# Manufactured solution
+# TODO Use code from exp02 once it is merged
+def u(X: Tensor) -> Tensor:
+    """The solution of the Poisson equation we aim to solve.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    return prod(cos(pi * X), dim=1, keepdim=True)
 
 
 def evaluate_interior_gramian(
