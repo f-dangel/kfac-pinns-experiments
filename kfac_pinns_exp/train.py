@@ -12,6 +12,7 @@ from time import time
 
 import wandb
 from torch import (
+    Tensor,
     cuda,
     device,
     float32,
@@ -22,6 +23,7 @@ from torch import (
     zeros_like,
 )
 from torch.nn import Linear, Sequential, Tanh
+from torch.optim import LBFGS
 
 from kfac_pinns_exp import poisson_equation
 from kfac_pinns_exp.optim import set_up_optimizer
@@ -36,7 +38,7 @@ from kfac_pinns_exp.poisson_equation import (
     evaluate_interior_loss,
 )
 
-SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD"]
+SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS"]
 SUPPORTED_EQUATIONS = ["poisson"]
 
 
@@ -189,6 +191,31 @@ def main():
             loss_interior, loss_boundary = optimizer.step(
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )
+        elif isinstance(optimizer, LBFGS):
+            # LBFGS requires a closure
+
+            def closure() -> Tensor:
+                """Evaluate the loss on the current data and model parameters."""
+                optimizer.zero_grad()
+                # compute the interior loss' gradient
+                loss_interior, _, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
+                loss_interior.backward()
+
+                # compute the boundary loss' gradient
+                loss_boundary, _, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
+                loss_boundary.backward()
+
+                # HOTFIX Append the interior and boundary loss as arguments
+                # so we can extract them for logging and plotting
+                loss = loss_interior + loss_boundary
+                setattr(loss, "_loss_interior", loss_interior)
+                setattr(loss, "_loss_boundary", loss_boundary)
+
+                return loss
+
+            loss_original = optimizer.step(closure=closure)
+            loss_interior = loss_original._loss_interior
+            loss_boundary = loss_original._loss_boundary
 
         else:
             # compute the interior loss' gradient

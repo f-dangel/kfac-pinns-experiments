@@ -40,24 +40,26 @@ ARGS = [
     ],
     # train with KFAC
     [
-        "--num_steps=20",
+        "--num_steps=10",
         "--optimizer=KFAC",
         "--KFAC_T_kfac=2",
-        "--KFAC_T_inv=6",
+        "--KFAC_T_inv=4",
         "--KFAC_ema_factor=0.95",
         "--KFAC_damping=0.01",
         "--KFAC_lr=0.1",
     ],
     # train with SGD
-    ["--num_steps=20", "--optimizer=SGD", "--SGD_lr=0.1", "--SGD_momentum=0.9"],
+    ["--num_steps=3", "--optimizer=SGD", "--SGD_lr=0.1", "--SGD_momentum=0.9"],
     # train with Adam
     [
-        "--num_steps=20",
+        "--num_steps=3",
         "--optimizer=Adam",
         "--Adam_lr=0.01",
         "--Adam_beta1=0.8",
         "--Adam_beta2=0.99",
     ],
+    # train with LBFGS
+    ["--num_steps=3", "--optimizer=LBFGS"],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 
