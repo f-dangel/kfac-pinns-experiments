@@ -28,7 +28,7 @@ We consider the Gauß-Newton matrix
 \begin{equation}
     \mG(\vtheta) \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
 \end{equation}
-where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix~\citep{eschenhagen2023kroneckerfactored}. 
+where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix~\citep{eschenhagen2023kroneckerfrwtactored}. 
 Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = I$. 
 Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
 If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
