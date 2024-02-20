@@ -15,15 +15,15 @@ from kfac_pinns_exp.exp09_kfac_optimizer.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
 )
-from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
-    check_layers_and_initialize_kfac,
+from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
+    parse_known_args_and_remove_from_argv,
+)
+from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
+from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_loss,
     evaluate_boundary_loss_and_kfac_expand,
     evaluate_interior_loss,
     evaluate_interior_loss_and_kfac_expand,
-)
-from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
-    parse_known_args_and_remove_from_argv,
 )
 from kfac_pinns_exp.utils import exponential_moving_average
 
@@ -249,7 +249,7 @@ class KFAC(Optimizer):
                 for destination, update in zip(self.kfacs_interior[layer_idx], updates):
                     exponential_moving_average(destination, update, ema_factor)
         else:
-            loss, _ = evaluate_interior_loss(self.layers, X, y)
+            loss, _, _ = evaluate_interior_loss(self.layers, X, y)
 
         return loss
 
@@ -415,10 +415,10 @@ class KFAC(Optimizer):
                     Returns:
                         Loss value.
                     """
-                    interior_loss, _ = evaluate_interior_loss(
+                    interior_loss, _, _ = evaluate_interior_loss(
                         self.layers, X_Omega, y_Omega
                     )
-                    boundary_loss, _ = evaluate_boundary_loss(
+                    boundary_loss, _, _ = evaluate_boundary_loss(
                         self.layers, X_dOmega, y_dOmega
                     )
                     return interior_loss + boundary_loss

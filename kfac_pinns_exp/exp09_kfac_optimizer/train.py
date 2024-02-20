@@ -27,14 +27,14 @@ from torch.optim import SGD, Adam, Optimizer
 
 from kfac_pinns_exp.exp09_kfac_optimizer.engd import ENGD, parse_ENGD_args
 from kfac_pinns_exp.exp09_kfac_optimizer.kfac import KFAC, parse_KFAC_args
-from kfac_pinns_exp.exp09_kfac_optimizer.optimizer_utils import (
-    evaluate_boundary_loss,
-    evaluate_interior_loss,
-)
 from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
     parse_Adam_args,
     parse_known_args_and_remove_from_argv,
     parse_SGD_args,
+)
+from kfac_pinns_exp.poisson_equation import (
+    evaluate_boundary_loss,
+    evaluate_interior_loss,
 )
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD"]
@@ -293,10 +293,10 @@ def main():
 
         else:
             # compute the interior loss' gradient
-            loss_interior, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
+            loss_interior, _, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
             loss_interior.backward()
             # compute the boundary loss' gradient
-            loss_boundary, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
+            loss_boundary, _, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
             loss_boundary.backward()
             optimizer.step()
 
@@ -308,9 +308,9 @@ def main():
         if step in logged_steps:
             print(
                 f"Step: {step:06g}/{args.num_steps:06g},"
-                + f" Loss: {loss:.6f},"
-                + f" Interior: {loss_interior:.6f},"
-                + f" Boundary: {loss_boundary:.6f},"
+                + f" Loss: {loss:.8f},"
+                + f" Interior: {loss_interior:.8f},"
+                + f" Boundary: {loss_boundary:.8f},"
                 + f" Time: {expired:.1f}s",
                 flush=True,
             )
