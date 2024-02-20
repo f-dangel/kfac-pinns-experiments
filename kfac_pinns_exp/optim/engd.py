@@ -237,7 +237,7 @@ class ENGD(Optimizer):
             return (
                 ones(num_params, **kwargs) if identity else zeros(num_params, **kwargs)
             )
-        else:
+        elif approximation == "per_layer":
             block_sizes = [
                 sum(p.numel() for p in layer.parameters())
                 for layer in self.model.modules()
@@ -247,6 +247,8 @@ class ENGD(Optimizer):
                 eye(size, **kwargs) if identity else zeros(size, size, **kwargs)
                 for size in block_sizes
             ]
+        else:
+            raise NotImplementedError(f"Approximation {approximation} not implemented.")
 
     def _compute_natural_gradients(self) -> List[Tensor]:
         """Compute the natural gradients from current pre-conditioner and gradients.

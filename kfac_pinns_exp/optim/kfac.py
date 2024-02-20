@@ -368,7 +368,8 @@ class KFAC(Optimizer):
             )
         if not 0 <= ema_factor < 1:
             raise ValueError(
-                f"Exponential moving average factor must be in [0, 1). Got {ema_factor}."
+                "Exponential moving average factor must be in [0, 1). "
+                f"Got {ema_factor}."
             )
         if isinstance(lr, float) and lr <= 0.0:
             raise ValueError(f"Learning rate must be positive. Got {lr}.")
@@ -398,7 +399,7 @@ class KFAC(Optimizer):
             y_dOmega: Target data on the boundary.
 
         Raises:
-            NotImplementedError: If the chosen line search is not supported.
+            ValueError: If the chosen line search is not supported.
         """
         lr = self.param_groups[0]["lr"]
         params = self.param_groups[0]["params"]

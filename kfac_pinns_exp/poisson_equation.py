@@ -98,7 +98,7 @@ def evaluate_interior_gramian(
         return gramian.div_(batch_size)
     else:
         raise ValueError(
-            f"Unknown approximation '{approximation}'. "
+            f"Unknown approximation {approximation!r}. "
             "Must be one of 'full', 'diagonal', or 'per_layer'."
         )
 
@@ -170,7 +170,7 @@ def evaluate_boundary_gramian(
         return gramian.div_(batch_size)
     else:
         raise ValueError(
-            f"Unknown approximation '{approximation}'. "
+            f"Unknown approximation {approximation!r}. "
             "Must be one of 'full', 'diagonal', or 'per_layer'."
         )
 
@@ -189,6 +189,9 @@ def evaluate_boundary_loss(
         The differentiable boundary loss, the differentiable residual, and a list of
         intermediates of the computation graph that can be used to compute (approximate)
         curvature.
+
+    Raises:
+        ValueError: If the model is not a Module or a list of Modules.
     """
     if isinstance(model, Module):
         output = model(X)
