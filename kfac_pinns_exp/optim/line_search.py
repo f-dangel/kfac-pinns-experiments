@@ -10,39 +10,47 @@ from torch.nn import Parameter
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 
 
-def parse_grid_line_search_args() -> List[float]:
+def parse_grid_line_search_args(
+    verbose: bool = False, prefix: str = "grid_line_search_"
+) -> List[float]:
     """Parse command-line arguments for the grid line search.
+
+    Args:
+        verbose: Whether to print the parsed arguments. Default: `False`.
+        prefix: Prefix for the arguments. Default: `'grid_line_search_'`.
 
     Returns:
         The grid values.
     """
     parser = ArgumentParser(description="Line grid search parameters.")
     parser.add_argument(
-        "--grid_line_search_log2min",
+        f"--{prefix}log2min",
         type=float,
         help="Log2 of the minimum step size to try.",
         default=-30,
     )
     parser.add_argument(
-        "--grid_line_search_log2max",
+        f"--{prefix}log2max",
         type=float,
         help="Log2 of the maximum step size to try.",
         default=0,
     )
     parser.add_argument(
-        "--grid_line_search_num_steps",
+        f"--{prefix}num_steps",
         type=int,
         help="Resolution of the logarithmic grid between min and max.",
         default=31,
     )
     args = parse_known_args_and_remove_from_argv(parser)
 
-    return logspace(
-        args.grid_line_search_log2min,
-        args.grid_line_search_log2max,
-        args.grid_line_search_num_steps,
-        base=2,
-    ).tolist()
+    if verbose:
+        print("Parsed arguments for grid_line_search: ", args)
+
+    log2min = getattr(args, f"{prefix}log2min")
+    log2max = getattr(args, f"{prefix}log2max")
+    num_steps = getattr(args, f"{prefix}num_steps")
+
+    return logspace(log2min, log2max, num_steps, base=2).tolist()
 
 
 @no_grad()

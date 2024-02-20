@@ -3,7 +3,7 @@
 from numpy import isclose
 from torch import Tensor
 
-from kfac_pinns_exp.exp09_kfac_optimizer.line_search import grid_line_search
+from kfac_pinns_exp.optim.line_search import grid_line_search
 
 
 def test_grid_line_search():

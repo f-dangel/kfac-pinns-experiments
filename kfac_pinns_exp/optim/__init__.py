@@ -6,7 +6,7 @@ Also implements argument parsing helpers for the optimizers and other built-in o
 from argparse import Namespace
 from typing import List, Tuple
 
-from torch.nn import Module
+from torch.nn import Module, Sequential
 from torch.optim import SGD, Adam, Optimizer
 
 from kfac_pinns_exp.optim.adam import parse_Adam_args
@@ -35,8 +35,10 @@ def set_up_optimizer(
         "ENGD": (ENGD, parse_ENGD_args),
     }[optimizer]
 
-    if optimizer in {"KFAC", "ENGD"}:
+    if optimizer == "KFAC":
         param_representation = layers
+    elif optimizer == "ENGD":
+        param_representation = Sequential(*layers)
     else:
         param_representation = sum((list(layer.parameters()) for layer in layers), [])
 

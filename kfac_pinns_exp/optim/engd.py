@@ -8,13 +8,11 @@ from torch.linalg import lstsq
 from torch.nn import Module
 from torch.optim import Optimizer
 
-from kfac_pinns_exp.exp09_kfac_optimizer.line_search import (
+from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
 )
-from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
-    parse_known_args_and_remove_from_argv,
-)
+from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_gramian,
     evaluate_boundary_loss,
@@ -36,44 +34,45 @@ def parse_ENGD_args(verbose: bool = False, prefix: str = "ENGD_") -> Namespace:
     """
     parser = ArgumentParser(description="ENGD optimizer parameters.")
     parser.add_argument(
-        f"--{prefix}_lr",
+        f"--{prefix}lr",
         help="Learning rate for the Gramian optimizer (float or string).",
         default="grid_line_search",
     )
     parser.add_argument(
-        f"--{prefix}_ema_factor",
+        f"--{prefix}ema_factor",
         type=float,
         default=0.0,
         help="Exponential moving average factor for the Gramian.",
     )
     parser.add_argument(
-        f"--{prefix}_damping",
+        f"--{prefix}damping",
         type=float,
         default=0.0,
         help="Damping of the Gramian.",
     )
     parser.add_argument(
-        f"--{prefix}_approximation",
+        f"--{prefix}approximation",
         type=str,
         default="full",
         choices=ENGD.SUPPORTED_APPROXIMATIONS,
         help="Type of Gramian matrix to use.",
     )
     parser.add_argument(
-        f"--{prefix}_initialize_to_identity",
+        f"--{prefix}initialize_to_identity",
         action="store_true",
         help="Initialize the Gramian matrix to the identity matrix.",
     )
     args = parse_known_args_and_remove_from_argv(parser)
 
-    if any(char.isdigit() for char in args.ENGD_lr):
-        args.ENGD_lr = float(args.ENGD_lr)
+    lr = f"{prefix}lr"
+    if any(char.isdigit() for char in getattr(args, lr)):
+        setattr(args, lr, float(getattr(args, lr)))
 
-    if args.ENGD_lr == "grid_line_search":
+    if getattr(args, lr) == "grid_line_search":
         # generate the grid from the command line arguments and overwrite the
         # `ENGD_lr` entry with a tuple containing the grid
-        grid = parse_grid_line_search_args()
-        args.ENGD_lr = (args.ENGD_lr, grid)
+        grid = parse_grid_line_search_args(verbose=verbose)
+        setattr(args, lr, (getattr(args, lr), grid))
 
     if verbose:
         print(f"ENGD optimizer arguments: {args}")

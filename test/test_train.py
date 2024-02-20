@@ -1,0 +1,68 @@
+"""Test the training script (integration test)."""
+
+from subprocess import CalledProcessError, run
+from typing import List
+
+from pytest import mark
+
+from kfac_pinns_exp import train
+
+
+def _run(cmd: List[str]):
+    """Run the command and print the output/stderr if it fails.
+
+    Args:
+        cmd: The command to run.
+
+    Raises:
+        CalledProcessError: If the command fails.
+    """
+    try:
+        run(cmd, capture_output=True, text=True, check=True)
+    except CalledProcessError as e:
+        print(f"STDOUT:\n{e.stdout}")
+        print(f"STDERR:\n{e.stderr}")
+        raise e
+
+
+ARGS = [
+    # train with ENGD
+    [
+        "--num_steps=20",
+        "--optimizer=ENGD",
+        "--ENGD_ema_factor=0.99",
+        "--ENGD_damping=0.0001",
+        "--ENGD_lr=0.1",
+    ],
+    # train with KFAC
+    [
+        "--num_steps=20",
+        "--optimizer=KFAC",
+        "--KFAC_T_kfac=2",
+        "--KFAC_T_inv=6",
+        "--KFAC_ema_factor=0.95",
+        "--KFAC_damping=0.01",
+        "--KFAC_lr=0.1",
+    ],
+    # train with SGD
+    ["--num_steps=20", "--optimizer=SGD", "--SGD_lr=0.1", "--SGD_momentum=0.9"],
+    # train with Adam
+    [
+        "--num_steps=20",
+        "--optimizer=Adam",
+        "--Adam_lr=0.01",
+        "--Adam_beta1=0.8",
+        "--Adam_beta2=0.99",
+    ],
+]
+ARG_IDS = ["_".join(cmd) for cmd in ARGS]
+
+
+@mark.parametrize("arg", ARGS, ids=ARG_IDS)
+def test_train(arg: List[str]):
+    """Execute the training script.
+
+    Args:
+        arg: The command-line arguments to pass to the script.
+    """
+    _run(["python", train.__file__] + arg)

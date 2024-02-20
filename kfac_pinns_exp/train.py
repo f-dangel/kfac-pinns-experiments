@@ -1,4 +1,10 @@
-"""Train with KFAC for the Poisson equation."""
+"""Universal training script for training PINNs.
+
+To see the available command line options of this script, run
+```
+python train.py --help
+```
+"""
 
 from argparse import ArgumentParser, Namespace
 from math import log10
@@ -18,13 +24,13 @@ from torch import (
 from torch.nn import Linear, Sequential, Tanh
 
 from kfac_pinns_exp import poisson_equation
-from kfac_pinns_exp.exp09_kfac_optimizer.utils import (
-    check_all_args_parsed,
-    parse_known_args_and_remove_from_argv,
-    set_up_optimizer,
-)
+from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
 from kfac_pinns_exp.optim.kfac import KFAC
+from kfac_pinns_exp.parse_utils import (
+    check_all_args_parsed,
+    parse_known_args_and_remove_from_argv,
+)
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
@@ -51,7 +57,7 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         "--equation",
         type=str,
         default="poisson",
-        CHOICES=SUPPORTED_EQUATIONS,
+        choices=SUPPORTED_EQUATIONS,
         help="Which equation will be solved.",
     )
     parser.add_argument(

@@ -43,9 +43,11 @@ def parse_Adam_args(verbose: bool = False, prefix: str = "Adam_") -> Namespace:
     args = parse_known_args_and_remove_from_argv(parser)
 
     # replace beta1 and beta2 with a tuple betas
-    args.betas = (args.beta1, args.beta2)
-    delattr(args, "beta1")
-    delattr(args, "beta2")
+    beta1, beta2 = f"{prefix}beta1", f"{prefix}beta2"
+    beta = f"{prefix}betas"
+    setattr(args, beta, (getattr(args, beta1), getattr(args, beta2)))
+    delattr(args, beta1)
+    delattr(args, beta2)
 
     if verbose:
         print(f"Adam arguments: {args}")

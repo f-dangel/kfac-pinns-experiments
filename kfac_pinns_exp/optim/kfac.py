@@ -10,12 +10,12 @@ from torch.optim import Optimizer
 from kfac_pinns_exp.exp07_inverse_kronecker_sum.inverse_kronecker_sum import (
     InverseKroneckerSum,
 )
-from kfac_pinns_exp.exp09_kfac_optimizer.line_search import (
+from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
+from kfac_pinns_exp.optim.engd import ENGD_DEFAULT_LR
+from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
 )
-from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
-from kfac_pinns_exp.optim.engd import ENGD_DEFAULT_LR
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_loss,
@@ -40,57 +40,57 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
     parser = ArgumentParser(description="Parse arguments for setting up KFAC.")
 
     parser.add_argument(
-        f"{prefix}lr",
+        f"--{prefix}lr",
         help="Learning rate or line search strategy for the optimizer.",
         default="grid_line_search",
     )
     parser.add_argument(
-        f"{prefix}damping",
+        f"--{prefix}damping",
         type=float,
         help="Damping factor for the optimizer.",
         required=True,
     )
     parser.add_argument(
-        f"{prefix}T_kfac",
+        f"--{prefix}T_kfac",
         type=int,
         help="Update frequency of KFAC matrices.",
         default=1,
     )
     parser.add_argument(
-        f"{prefix}T_inv",
+        f"--{prefix}T_inv",
         type=int,
         help="Update frequency of the inverse KFAC matrices.",
         default=1,
     )
     parser.add_argument(
-        f"{prefix}ema_factor",
+        f"--{prefix}ema_factor",
         type=float,
         help="Exponential moving average factor for the KFAC matrices.",
         default=0.95,
     )
     parser.add_argument(
-        f"{prefix}kfac_approx",
+        f"--{prefix}kfac_approx",
         type=str,
         choices=KFAC.SUPPORTED_KFAC_APPROXIMATIONS,
         help="Approximation method for the KFAC matrices.",
         default="expand",
     )
     parser.add_argument(
-        f"{prefix}inv_strategy",
+        f"--{prefix}inv_strategy",
         type=str,
         choices=["invert kronecker sum"],
         help="Inversion strategy for KFAC.",
         default="invert kronecker sum",
     )
     parser.add_argument(
-        f"{prefix}inv_dtype",
+        f"--{prefix}inv_dtype",
         type=str,
         choices=DTYPES.keys(),
         help="Data type for the inverse KFAC matrices.",
         default="float64",
     )
     parser.add_argument(
-        f"{prefix}initialize_to_identity",
+        f"--{prefix}initialize_to_identity",
         action="store_true",
         help="Whether to initialize the KFAC matrices to identity.",
     )
@@ -106,8 +106,8 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
 
     if getattr(args, lr) == "grid_line_search":
         # generate the grid from the command line arguments and overwrite the
-        # `KFAC_lr` entry with a tuple containing the grid
-        grid = parse_grid_line_search_args()
+        # `lr` entry with a tuple containing the grid
+        grid = parse_grid_line_search_args(verbose=verbose)
         setattr(args, lr, (getattr(args, lr), grid))
 
     if verbose:
@@ -163,9 +163,6 @@ class KFAC(Optimizer):
                 data type as the parameters after the inversion.
             initialize_to_identity: Whether to initialize the KFAC factors to the
                 identity matrix. Default is `False` (initialize with zero).
-
-        Raises:
-            ValueError: If any of the hyper-parameters is invalid.
         """
         self._check_hyperparameters(
             lr,
@@ -275,7 +272,7 @@ class KFAC(Optimizer):
                 for destination, update in zip(self.kfacs_boundary[layer_idx], updates):
                     exponential_moving_average(destination, update, ema_factor)
         else:
-            loss, _ = evaluate_boundary_loss(self.layers, X, y)
+            loss, _, _ = evaluate_boundary_loss(self.layers, X, y)
 
         return loss
 
@@ -375,8 +372,9 @@ class KFAC(Optimizer):
                 "Exponential moving average factor must be in [0, 1). "
                 f"Got {ema_factor}."
             )
-        if isinstance(lr, float) and lr <= 0.0:
-            raise ValueError(f"Learning rate must be positive. Got {lr}.")
+        if isinstance(lr, float):
+            if lr <= 0.0:
+                raise ValueError(f"Learning rate must be positive. Got {lr}.")
         else:
             if lr[0] != "grid_line_search":
                 raise ValueError(f"Unsupported line search: {lr[0]}.")
