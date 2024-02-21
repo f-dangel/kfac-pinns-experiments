@@ -7,12 +7,16 @@ python train.py --help
 """
 
 from argparse import ArgumentParser, Namespace
+from functools import partial
 from math import log10
 from time import time
+from typing import List, Tuple
 
 import wandb
+from hessianfree.optimizer import HessianFree
 from torch import (
     Tensor,
+    cat,
     cuda,
     device,
     float32,
@@ -38,7 +42,7 @@ from kfac_pinns_exp.poisson_equation import (
     evaluate_interior_loss,
 )
 
-SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS"]
+SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson"]
 
 
@@ -221,6 +225,47 @@ def main():
             loss_interior = loss_original._loss_interior
             loss_boundary = loss_original._loss_boundary
 
+        elif isinstance(optimizer, HessianFree):
+            # HessianFree requires a closure that produces the linearization
+            # point and the loss
+
+            # store the loss values of the closure because we want to log them
+            # at the current position.
+            loss_storage = []
+
+            def forward(
+                loss_storage: List[Tuple[Tensor, Tensor]]
+            ) -> Tuple[Tensor, Tensor]:
+                """Compute the linearization point for the GGN and the loss.
+
+                Args:
+                    loss_storage: A list to append the the interior and boundary loss.
+
+                Returns:
+                    The linearization point and the loss.
+                """
+                loss_interior, residual_interior, _ = evaluate_interior_loss(
+                    layers, X_Omega, y_Omega
+                )
+                loss_boundary, residual_boundary, _ = evaluate_boundary_loss(
+                    layers, X_dOmega, y_dOmega
+                )
+                # we want to linearize residual w.r.t. the parameters to obtain
+                # the GGN. This established the connection between the loss and
+                # the concatenated boundary and interior residuals.
+                residual = cat([residual_interior, residual_boundary])
+                loss = 0.5 * (residual**2).mean()
+
+                # HOTFIX Append the interior and boundary loss to loss_storage
+                # so we can extract them for logging and plotting
+                loss_storage.append((loss_interior.detach(), loss_boundary.detach()))
+
+                return loss, residual
+
+            forward = partial(forward, loss_storage=loss_storage)
+            optimizer.step(forward)
+            loss_interior, loss_boundary = loss_storage[0]
+
         else:
             # compute the interior loss' gradient
             loss_interior, _, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
@@ -238,9 +283,9 @@ def main():
         if step in logged_steps:
             print(
                 f"Step: {step:06g}/{args.num_steps:06g},"
-                + f" Loss: {loss:.8f},"
-                + f" Interior: {loss_interior:.8f},"
-                + f" Boundary: {loss_boundary:.8f},"
+                + f" Loss: {loss:.10f},"
+                + f" Interior: {loss_interior:.10f},"
+                + f" Boundary: {loss_boundary:.10f},"
                 + f" Time: {expired:.1f}s",
                 flush=True,
             )

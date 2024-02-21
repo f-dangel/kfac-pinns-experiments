@@ -6,11 +6,13 @@ Also implements argument parsing helpers for the optimizers and other built-in o
 from argparse import Namespace
 from typing import List, Tuple
 
+from hessianfree.optimizer import HessianFree
 from torch.nn import Module, Sequential
 from torch.optim import LBFGS, SGD, Adam, Optimizer
 
 from kfac_pinns_exp.optim.adam import parse_Adam_args
 from kfac_pinns_exp.optim.engd import ENGD, parse_ENGD_args
+from kfac_pinns_exp.optim.hessianfree import parse_HessianFree_args
 from kfac_pinns_exp.optim.kfac import KFAC, parse_KFAC_args
 from kfac_pinns_exp.optim.lbfgs import parse_LBFGS_args
 from kfac_pinns_exp.optim.sgd import parse_SGD_args
@@ -35,6 +37,7 @@ def set_up_optimizer(
         "Adam": (Adam, parse_Adam_args),
         "ENGD": (ENGD, parse_ENGD_args),
         "LBFGS": (LBFGS, parse_LBFGS_args),
+        "HessianFree": (HessianFree, parse_HessianFree_args),
     }[optimizer]
 
     if optimizer == "KFAC":
