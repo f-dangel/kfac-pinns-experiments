@@ -138,7 +138,7 @@ def evaluate_interior_loss(
             f"Got: {model}."
         )
     residual = laplacian + y
-    return 0.5 * ((residual) ** 2).mean(), residual, intermediates
+    return 0.5 * (residual**2).mean(), residual, intermediates
 
 
 def evaluate_boundary_gramian(
@@ -205,7 +205,7 @@ def evaluate_boundary_loss(
             f"Got: {model}."
         )
     residual = output - y
-    return 0.5 * ((residual) ** 2).mean(), residual, intermediates
+    return 0.5 * (residual**2).mean(), residual, intermediates
 
 
 def evaluate_interior_loss_and_kfac_expand(

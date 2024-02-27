@@ -60,6 +60,8 @@ ARGS = [
     ],
     # train with LBFGS
     ["--num_steps=3", "--optimizer=LBFGS"],
+    # train with HessianFree
+    ["--num_steps=3", "--optimizer=HessianFree"],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 
