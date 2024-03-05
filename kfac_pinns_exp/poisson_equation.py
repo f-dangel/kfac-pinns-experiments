@@ -66,7 +66,7 @@ def u(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
-    return prod(cos(pi * X), dim=1, keepdim=True)
+    return prod(sin(pi * X), dim=1, keepdim=True)
 
 
 def evaluate_interior_gramian(
@@ -127,7 +127,7 @@ def evaluate_interior_loss(
     if isinstance(model, Module):
         intermediates = None
         input_hessian = autograd_input_hessian(model, X)
-        laplacian = einsum(input_hessian, "batch i i -> batch i")
+        laplacian = einsum(input_hessian, "batch i i -> batch").unsqueeze(-1)
     # use the forward Laplacian framework
     elif isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
         intermediates = manual_forward_laplacian(model, X)
