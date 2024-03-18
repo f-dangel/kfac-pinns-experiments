@@ -49,7 +49,7 @@ if __name__ == "__main__":
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-    """
+"""
         + line
     )
 
