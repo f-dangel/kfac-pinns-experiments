@@ -530,7 +530,17 @@ We can just do that in the same way as the original KFAC paper, which gives us
   \right)
 \end{align}
 \Cref{eq:gram-kronecker-approximations-unbatched,eq:gram-kronecker-approximations-batched} are our proposed approximation for the Gramian.
+
+\section{Variational Monte-Carlo}
+
+In VMC, people consider $p_\theta\propto \phi_\theta^2$. 
+The corresponding Fisher-information matrix is given by 
+\begin{align*}
+    F(\theta)_{ij} = \mathbb E_{p_\theta}[]
+\end{align*}
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
 %%% End:
+
