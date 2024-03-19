@@ -33,7 +33,7 @@ if __name__ == "__main__":
     lines = job.stderr.split("\n")
     (line,) = [line for line in lines if line.startswith(trigger)]
     line = line.replace(trigger, "")
-    line = f"wandb agent --count 10 {line}"
+    line = f"wandb agent --count 5 {line}"
 
     # create the .sh file
     TEMPLATE = (

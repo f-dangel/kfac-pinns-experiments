@@ -1,3 +1,6 @@
+entity: kfac-pinns
+project: poisson2d
+name: SGD
 program: ../train.py
 command:
     - ${env}
@@ -10,6 +13,7 @@ metric:
     goal: minimize
     name: loss
 method: random
+run_cap: 50
 parameters:
     num_steps:
         value: 10_000
