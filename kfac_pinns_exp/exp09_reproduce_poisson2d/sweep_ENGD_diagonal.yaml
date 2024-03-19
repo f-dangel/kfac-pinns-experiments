@@ -1,6 +1,6 @@
 entity: kfac-pinns
 project: poisson2d
-name: ENGD_full
+name: ENGD_diagonal
 program: ../train.py
 command:
     - ${env}
@@ -15,9 +15,9 @@ metric:
 method: grid
 parameters:
     num_steps:
-        value: 500
+        value: 10_000
     ENGD_approximation:
-        value: full
+        value: diagonal
     ENGD_damping:
         distribution: categorical
         values: [0.0, 1e-2, 1e-4, 1e-6, 1e-8]
