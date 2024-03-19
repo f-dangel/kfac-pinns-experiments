@@ -1,7 +1,7 @@
 entity: kfac-pinns
 project: poisson2d
 name: ENGD_full
-program: train.py
+program: ../train.py
 command:
     - ${env}
     - python
@@ -15,7 +15,7 @@ metric:
 method: grid
 parameters:
     num_steps:
-        value: 1_000
+        value: 500
     ENGD_damping:
         distribution: categorical
         values: [0.0, 1e-2, 1e-4, 1e-6, 1e-8]
