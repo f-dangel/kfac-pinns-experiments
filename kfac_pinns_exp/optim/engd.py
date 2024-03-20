@@ -155,10 +155,11 @@ class ENGD(Optimizer):
         Returns:
             Tuple of the interior and boundary loss before taking the step.
         """
-        interior_loss, boundary_loss = (
-            self._evaluate_loss_and_gradient_and_update_curvature(
-                X_Omega, y_Omega, X_dOmega, y_dOmega
-            )
+        (
+            interior_loss,
+            boundary_loss,
+        ) = self._evaluate_loss_and_gradient_and_update_curvature(
+            X_Omega, y_Omega, X_dOmega, y_dOmega
         )
         directions = self._compute_natural_gradients()
         self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)

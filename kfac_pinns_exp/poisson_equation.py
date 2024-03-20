@@ -69,6 +69,20 @@ def u(X: Tensor) -> Tensor:
     return prod(sin(pi * X), dim=1, keepdim=True)
 
 
+def l2_error(model: Module, X: Tensor) -> Tensor:
+    """Computes the L2 norm of the error = model - u on the domain Omega.
+
+    Args:
+        model: The model.
+        X: randomly drawn points in Omega.
+
+    Returns:
+        The L2 norm of the error.
+    """
+    y = (model(X) + u(X)) ** 2
+    return y.mean() ** (1 / 2)
+
+
 def evaluate_interior_gramian(
     model: Module, X: Tensor, approximation: str
 ) -> Union[Tensor, List[Tensor]]:
