@@ -1,0 +1,2 @@
+config,name
+"{'dtype': 'torch.float64', 'wandb': True, 'N_Omega': 3000, 'LBFGS_lr': 1, 'N_dOmega': 500, 'equation': 'poisson', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 5, 'num_steps': 20000, 'optimizer': 'LBFGS', 'model_seed': 1, 'LBFGS_max_iter': 20, 'LBFGS_history_size': 10}",exalted-sweep-3

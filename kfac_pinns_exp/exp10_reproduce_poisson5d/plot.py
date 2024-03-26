@@ -15,10 +15,11 @@ project = "poisson5d"  # name from the 'Projects' tab on wandb
 sweep_ids = {  # ids from the wandb agent
     "tu585kr5": "SGD",
     "5klsh2cl": "Adam",
-    # "": "ENGD (full)",
+    "g454u46j": "Hessian-free",
+    "d6iqcrdx": "LBFGS",
+    # "90br0xj3": "ENGD (full)",
     # "": "ENGD (layer-wise)",
-    # "": "ENGD (diagonal)",
-    # "": "Hessian-free",
+    # "t182dkhq": "ENGD (diagonal)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -29,6 +30,7 @@ colors = {
     "ENGD (layer-wise)": sequential.Blues_5.mpl_colors[-2],
     "ENGD (diagonal)": sequential.Blues_5.mpl_colors[-1],
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
+    "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
 }
 
@@ -36,10 +38,11 @@ linestyles = {
     "SGD": "-",
     "Adam": "-",
     "ENGD (full)": "-",
-    "ENGD (layer-wise)": "dashed",
-    "ENGD (diagonal)": "dotted",
+    "ENGD (layer-wise)": "-",
+    "ENGD (diagonal)": "-",
     "Hessian-free": "-",
     "KFAC": "-",
+    "LBFGS": "-",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
@@ -71,7 +74,7 @@ if __name__ == "__main__":
         ax.set_xscale("log")
         ax.set_ylabel("Loss")
         ax.set_yscale("log")
-        ax.set_title("Poisson 5d")
+        ax.set_title("5d Poisson")
 
         for sweep_id, label in sweep_ids.items():
             df_history, _ = load_best_run(
