@@ -6,3 +6,4 @@ python ../exp09_reproduce_poisson2d/yaml_to_sh.py sweeps/LBFGS.yaml sweeps/LBFGS
 python ../exp09_reproduce_poisson2d/yaml_to_sh.py sweeps/ENGD_diagonal.yaml sweeps/ENGD_diagonal.sh
 python ../exp09_reproduce_poisson2d/yaml_to_sh.py sweeps/ENGD_full.yaml sweeps/ENGD_full.sh
 python ../exp09_reproduce_poisson2d/yaml_to_sh.py sweeps/ENGD_per_layer.yaml sweeps/ENGD_per_layer.sh
+python ../exp09_reproduce_poisson2d/yaml_to_sh.py sweeps/HessianFree.yaml sweeps/HessianFree.sh
