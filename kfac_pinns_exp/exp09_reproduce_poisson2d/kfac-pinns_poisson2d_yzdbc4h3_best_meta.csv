@@ -1,2 +1,0 @@
-config,name
-"{'dtype': 'torch.float64', 'wandb': True, 'Adam_lr': 0.011421198477798575, 'N_Omega': 900, 'Adam_eps': 1e-08, 'N_dOmega': 120, 'equation': 'poisson', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 2, 'num_steps': 10000, 'optimizer': 'Adam', 'Adam_betas': [0.9, 0.999], 'model_seed': 1}",blooming-sweep-44
