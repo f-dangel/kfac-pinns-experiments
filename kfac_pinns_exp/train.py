@@ -40,6 +40,7 @@ from kfac_pinns_exp.parse_utils import (
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
+    l2_error,
 )
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
@@ -149,6 +150,7 @@ def main():
     manual_seed(args.data_seed)
     # interior
     X_Omega = rand(args.N_Omega, args.dim_Omega).to(dev, dt)
+    X_Omega_eval = rand(10 * args.N_Omega, args.dim_Omega).to(dev, dt)
     y_Omega = -poisson_equation.f(X_Omega)
     # boundary
     X_dOmega = poisson_equation.square_boundary(args.N_dOmega, args.dim_Omega).to(
@@ -277,9 +279,11 @@ def main():
         loss = loss_interior + loss_boundary
 
         if step in logged_steps:
+            l2 = l2_error(model, X_Omega_eval)
             print(
                 f"Step: {step:06g}/{args.num_steps:06g},"
-                + f" Loss: {loss:.10f},"
+                + f" Loss: {loss},"
+                + f" L2 Error: {l2},"
                 + f" Interior: {loss_interior:.10f},"
                 + f" Boundary: {loss_boundary:.10f},"
                 + f" Time: {expired:.1f}s",
@@ -292,6 +296,7 @@ def main():
                         "loss": loss,
                         "loss_interior": loss_interior,
                         "loss_boundary": loss_boundary,
+                        "l2_error": l2,
                         "time": expired,
                     }
                 )

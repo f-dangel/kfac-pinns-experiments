@@ -1,0 +1,2 @@
+config,name
+"{'dtype': 'torch.float64', 'wandb': True, 'SGD_lr': 0.003029750187270735, 'N_Omega': 900, 'N_dOmega': 120, 'equation': 'poisson', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 2, 'num_steps': 10000, 'optimizer': 'SGD', 'model_seed': 1, 'SGD_momentum': 0.9}",stellar-sweep-19

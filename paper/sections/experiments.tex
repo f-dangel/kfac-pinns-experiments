@@ -1,7 +1,13 @@
 \subsection{Setup}
+
+Small-scale example (2D Poisson?)
 \begin{itemize}
+    \item Tested optimizers: Adam, GD with LS?, Newton's method / (L-)BFGS, Full ENGD, (Block)-Diagonal approximation for ENGD?, KFAG, other KFACs: for the l2-GN, empirical Fisher, Quantum KFAC
     \item damping: try both constant and adaptive damping
     \item try without line search with learning rate schedule
+\end{itemize}
+
+\begin{itemize}
     \item use weights and biases for large scale experiments
     \item next steps: modular code
 \end{itemize}
@@ -20,7 +26,7 @@ We want to show the following things:
   full/block diagonal Gramian, while being much cheaper to compute, store, and
   invert.
 
-\item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitibely expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
+\item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitively expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
 \end{itemize}
 
 Todos:

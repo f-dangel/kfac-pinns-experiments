@@ -25,6 +25,9 @@ def load_best_run(
         savedir: The directory to save the csv files. Default is the current directory.
         update: Whether to request the best run from wandb. If `False`, tries loading
             from an existing local file. Default is `True`.
+
+    Returns:
+        The history and meta-data data frames of the best run.
     """
     prefix = path.abspath(path.join(savedir, f"{entity}_{project}_{sweep_id}_best"))
     history_path = f"{prefix}_history.csv"
