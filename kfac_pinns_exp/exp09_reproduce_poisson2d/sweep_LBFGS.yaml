@@ -1,26 +1,24 @@
 entity: kfac-pinns
 project: poisson2d
-name: SGD
+name: LBFGS
 program: ../train.py
 command:
     - ${env}
     - python
     - ${program}
     - "--wandb"
-    - "--optimizer=SGD"
+    - "--optimizer=LBFGS"
     - ${args}
 metric:
     goal: minimize
     name: loss
-method: random
-run_cap: 50
+method: grid
 parameters:
     num_steps:
         value: 10_000
-    SGD_lr:
-        distribution: log_uniform_values
-        min: 5e-4
-        max: 5e-1
-    SGD_momentum:
+    LBFGS_lr:
         distribution: categorical
-        values: [0.0, 0.3, 0.6, 0.9]
+        values: [10.0, 5.0, 1.0, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001]
+    LBFGS_history_size:
+        distribution: categorical
+        values: [10, 25, 50, 75, 100, 150]

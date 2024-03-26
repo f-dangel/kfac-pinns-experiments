@@ -177,11 +177,7 @@ def main():
 
     if args.wandb:
         config = vars(args) | vars(optimizer_args)
-        wandb.init(
-            entity="kfac-pinns",
-            project="exp09_kfac_optimizer",
-            config=config,
-        )
+        wandb.init(config=config)
 
     logged_steps = {
         int(s) for s in logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
