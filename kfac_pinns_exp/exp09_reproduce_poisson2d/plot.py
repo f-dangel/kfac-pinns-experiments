@@ -1,5 +1,7 @@
 """Plot the best runs from each tuned optimizer"""
 
+from argparse import ArgumentParser
+
 from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
@@ -44,7 +46,25 @@ linestyles = {
 }
 
 if __name__ == "__main__":
-    with plt.rc_context(bundles.neurips2023(rel_width=1.0)):
+    parser = ArgumentParser(description="Plot the best runs from each tuned optimizer.")
+    parser.add_argument(
+        "--local_files",
+        action="store_false",
+        dest="update",
+        help="Use local files if possible.",
+        default=True,
+    )
+    parser.add_argument(
+        "--disable_tex",
+        action="store_true",
+        default=False,
+        help="Disable TeX rendering in matplotlib.",
+    )
+    args = parser.parse_args()
+
+    with plt.rc_context(
+        bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+    ):
         fig, ax = plt.subplots(1, 1)
         ax.set_xlabel("Iteration")
         ax.set_xscale("log")
@@ -54,7 +74,7 @@ if __name__ == "__main__":
 
         for sweep_id, label in sweep_ids.items():
             df_history, _ = load_best_run(
-                entity, project, sweep_id, save=True, update=True
+                entity, project, sweep_id, save=True, update=args.update
             )
             ax.plot(
                 df_history["step"] + 1,
