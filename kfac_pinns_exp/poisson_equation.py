@@ -5,7 +5,7 @@ from math import pi
 from typing import Dict, List, Tuple, Union
 
 from einops import einsum, rearrange
-from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
+from torch import Tensor, cat, ones_like, prod, rand, randint, sin
 from torch.autograd import grad
 from torch.nn import Module
 from torch.utils.hooks import RemovableHandle

@@ -3,7 +3,7 @@
 from os import path
 from typing import Tuple
 
-from pandas import DataFrame, concat, read_csv
+from pandas import DataFrame, read_csv
 from wandb import Api
 
 
