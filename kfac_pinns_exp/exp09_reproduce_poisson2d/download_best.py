@@ -50,11 +50,3 @@ def load_best_run(
         df_meta.to_csv(meta_path, index=False)
 
     return df_history, df_meta
-
-
-if __name__ == "__main__":
-    sweep_id = "gt86q21q"  # from the wandb agent
-    entity = "kfac-pinns"  # team name on wandb
-    project = "kfac-pinns-kfac_pinns_exp"  # name from the 'Projects' tab on wandb
-
-    load_best_run(entity, project, sweep_id, save=True, update=True)

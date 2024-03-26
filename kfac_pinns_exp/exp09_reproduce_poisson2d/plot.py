@@ -62,5 +62,4 @@ if __name__ == "__main__":
             )
 
         ax.legend()
-
         plt.savefig("poisson2d.pdf", bbox_inches="tight")
