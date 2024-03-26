@@ -12,10 +12,11 @@ project = "poisson2d"  # name from the 'Projects' tab on wandb
 sweep_ids = {  # ids from the wandb agent
     "tg2odbah": "SGD",
     "yzdbc4h3": "Adam",
+    "lmzgj39h": "Hessian-free",
+    "e711w3by": "LBFGS",
     "as97g04v": "ENGD (full)",
     "svlfa1az": "ENGD (layer-wise)",
     "vk7egia5": "ENGD (diagonal)",
-    "lmzgj39h": "Hessian-free",
     # TODO KFAC
 }
 
@@ -27,6 +28,7 @@ colors = {
     "ENGD (layer-wise)": sequential.Blues_5.mpl_colors[-2],
     "ENGD (diagonal)": sequential.Blues_5.mpl_colors[-1],
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
+    "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
 }
 
@@ -34,9 +36,10 @@ linestyles = {
     "SGD": "-",
     "Adam": "-",
     "ENGD (full)": "-",
-    "ENGD (layer-wise)": "dashed",
-    "ENGD (diagonal)": "dotted",
+    "ENGD (layer-wise)": "-",
+    "ENGD (diagonal)": "-",
     "Hessian-free": "-",
+    "LBFGS": "-",
     "KFAC": "-",
 }
 
@@ -47,7 +50,7 @@ if __name__ == "__main__":
         ax.set_xscale("log")
         ax.set_ylabel("Loss")
         ax.set_yscale("log")
-        ax.set_title("Poisson 2d")
+        ax.set_title("2d Poisson")
 
         for sweep_id, label in sweep_ids.items():
             df_history, _ = load_best_run(
