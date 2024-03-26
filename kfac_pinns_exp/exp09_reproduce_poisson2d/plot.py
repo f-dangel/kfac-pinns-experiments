@@ -7,15 +7,16 @@ from tueplots import bundles
 from kfac_pinns_exp.exp09_reproduce_poisson2d.download_best import load_best_run
 
 entity = "kfac-pinns"  # team name on wandb
-project = "poisson5d"  # name from the 'Projects' tab on wandb
+project = "poisson2d"  # name from the 'Projects' tab on wandb
 
 sweep_ids = {  # ids from the wandb agent
-    "tu585kr5": "SGD",
-    # "5klsh2cl": "Adam",
-    # "": "ENGD (full)",
-    # "": "ENGD (layer-wise)",
-    # "": "ENGD (diagonal)",
-    # "": "Hessian-free",
+    "tg2odbah": "SGD",
+    "yzdbc4h3": "Adam",
+    "as97g04v": "ENGD (full)",
+    "svlfa1az": "ENGD (layer-wise)",
+    "vk7egia5": "ENGD (diagonal)",
+    "lmzgj39h": "Hessian-free",
+    # TODO KFAC
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -46,7 +47,7 @@ if __name__ == "__main__":
         ax.set_xscale("log")
         ax.set_ylabel("Loss")
         ax.set_yscale("log")
-        ax.set_title("Poisson 5d")
+        ax.set_title("Poisson 2d")
 
         for sweep_id, label in sweep_ids.items():
             df_history, _ = load_best_run(
@@ -62,4 +63,4 @@ if __name__ == "__main__":
 
         ax.legend()
 
-        plt.savefig("poisson5d.pdf", bbox_inches="tight")
+        plt.savefig("poisson2d.pdf", bbox_inches="tight")
