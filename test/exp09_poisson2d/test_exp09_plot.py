@@ -6,7 +6,11 @@ from kfac_pinns_exp.exp09_reproduce_poisson2d import plot
 
 
 def test_execute_plot():
-    """Execute the plotting script."""
+    """Execute the plotting script.
+
+    Raises:
+        CalledProcessError: If the script fails.
+    """
     cmd = ["python", plot.__file__, "--local_files", "--disable_tex"]
 
     try:
