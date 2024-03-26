@@ -1,6 +1,7 @@
 """Plot the best runs from each tuned optimizer"""
 
 from argparse import ArgumentParser
+from os import makedirs, path
 
 from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
@@ -45,6 +46,10 @@ linestyles = {
     "KFAC": "-",
 }
 
+HEREDIR = path.dirname(path.abspath(__file__))
+DATADIR = path.join(HEREDIR, "best_runs")
+makedirs(DATADIR, exist_ok=True)
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="Plot the best runs from each tuned optimizer.")
     parser.add_argument(
@@ -74,7 +79,12 @@ if __name__ == "__main__":
 
         for sweep_id, label in sweep_ids.items():
             df_history, _ = load_best_run(
-                entity, project, sweep_id, save=True, update=args.update
+                entity,
+                project,
+                sweep_id,
+                save=True,
+                update=args.update,
+                savedir=DATADIR,
             )
             ax.plot(
                 df_history["step"] + 1,
@@ -85,4 +95,4 @@ if __name__ == "__main__":
             )
 
         ax.legend()
-        plt.savefig("poisson2d.pdf", bbox_inches="tight")
+        plt.savefig(path.join(HEREDIR, "poisson2d.pdf"), bbox_inches="tight")
