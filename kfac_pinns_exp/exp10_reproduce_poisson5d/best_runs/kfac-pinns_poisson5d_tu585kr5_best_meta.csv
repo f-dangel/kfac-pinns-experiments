@@ -1,0 +1,2 @@
+config,name
+"{'dtype': 'torch.float64', 'wandb': True, 'SGD_lr': 0.003713815390381008, 'N_Omega': 3000, 'N_dOmega': 500, 'equation': 'poisson', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 5, 'num_steps': 200000, 'optimizer': 'SGD', 'model_seed': 1, 'SGD_momentum': 0.9}",hearty-sweep-1
