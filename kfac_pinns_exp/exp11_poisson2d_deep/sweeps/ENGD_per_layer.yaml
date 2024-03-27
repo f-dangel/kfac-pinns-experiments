@@ -14,6 +14,8 @@ metric:
     name: loss
 method: grid
 parameters:
+    model:
+        value: mlp-tanh-64-48-32-16
     num_steps:
         value: 10_000
     ENGD_approximation:
