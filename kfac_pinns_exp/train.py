@@ -176,7 +176,7 @@ def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
             Tanh(),
             Linear(32, 16),
             Tanh(),
-            Linear(64, 1),
+            Linear(16, 1),
         ]
     else:
         raise ValueError(
