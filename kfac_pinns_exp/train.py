@@ -208,7 +208,7 @@ def main():
 
     # neural net
     manual_seed(args.model_seed)
-    layers = set_up_layers(args.modell, args.dim_Omega)
+    layers = set_up_layers(args.model, args.dim_Omega)
     layers = [layer.to(dev, dt) for layer in layers]
     model = Sequential(*layers).to(dev)
     print(f"Model: {model}")
