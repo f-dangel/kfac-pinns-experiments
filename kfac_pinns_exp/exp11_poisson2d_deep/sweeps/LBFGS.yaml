@@ -1,0 +1,26 @@
+entity: kfac-pinns
+project: poisson2d_deep
+name: LBFGS
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=LBFGS"
+    - ${args}
+metric:
+    goal: minimize
+    name: loss
+method: grid
+parameters:
+    model:
+        value: mlp-tanh-64-48-32-16
+    num_steps:
+        value: 10_000
+    LBFGS_lr:
+        distribution: categorical
+        values: [10.0, 5.0, 1.0, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001]
+    LBFGS_history_size:
+        distribution: categorical
+        values: [10, 25, 50, 75, 100, 150]

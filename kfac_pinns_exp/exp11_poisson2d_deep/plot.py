@@ -10,7 +10,7 @@ from tueplots import bundles
 from kfac_pinns_exp.wandb_utils import load_best_run, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
-project = "poisson2d"  # name from the 'Projects' tab on wandb
+project = "poisson2d_deep"  # name from the 'Projects' tab on wandb
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
@@ -18,13 +18,13 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "tg2odbah": "SGD",
-    "yzdbc4h3": "Adam",
-    "lmzgj39h": "Hessian-free",
-    "e711w3by": "LBFGS",
-    "as97g04v": "ENGD (full)",
-    "svlfa1az": "ENGD (layer-wise)",
-    "vk7egia5": "ENGD (diagonal)",
+    "4q2zlbn3": "SGD",
+    "ihl9n1wm": "Adam",
+    "0qnuiejv": "Hessian-free",
+    "zgt6lkkg": "LBFGS",
+    "d3o5edzz": "ENGD (full)",
+    "2i5w8cj4": "ENGD (layer-wise)",
+    "rxqbgcfk": "ENGD (diagonal)",
     # TODO KFAC
 }
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         ax.set_xscale("log")
         ax.set_ylabel("Loss")
         ax.set_yscale("log")
-        ax.set_title("2d Poisson")
+        ax.set_title("2d Poisson (deep net)")
 
         for sweep_id, label in sweep_ids.items():
             df_history, _ = load_best_run(
@@ -100,4 +100,4 @@ if __name__ == "__main__":
             )
 
         ax.legend()
-        plt.savefig(path.join(HEREDIR, "poisson2d.pdf"), bbox_inches="tight")
+        plt.savefig(path.join(HEREDIR, "poisson2d_deep.pdf"), bbox_inches="tight")
