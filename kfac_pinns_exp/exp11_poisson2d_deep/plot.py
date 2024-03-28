@@ -13,13 +13,13 @@ entity = "kfac-pinns"  # team name on wandb
 project = "poisson2d_deep"  # name from the 'Projects' tab on wandb
 
 sweep_ids = {  # ids from the wandb agent
-    # "ngsijsyx": "SGD",
-    # "0gpmbeyq": "Adam",
-    # "2ebla0al": "Hessian-free",
-    # "1fqerdbm": "LBFGS",
-    # "7bm3zrlb": "ENGD (full)",
-    # "kat3vl07": "ENGD (layer-wise)",
-    # "hjdrac4f": "ENGD (diagonal)",
+    "4q2zlbn3": "SGD",
+    "ihl9n1wm": "Adam",
+    "0qnuiejv": "Hessian-free",
+    "zgt6lkkg": "LBFGS",
+    "d3o5edzz": "ENGD (full)",
+    "2i5w8cj4": "ENGD (layer-wise)",
+    "rxqbgcfk": "ENGD (diagonal)",
     # TODO KFAC
 }
 
