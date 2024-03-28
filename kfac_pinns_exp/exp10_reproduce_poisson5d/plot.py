@@ -7,10 +7,15 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
-from kfac_pinns_exp.exp09_reproduce_poisson2d.download_best import load_best_run
+from kfac_pinns_exp.wandb_utils import load_best_run, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
 project = "poisson5d"  # name from the 'Projects' tab on wandb
+
+# Useful to map sweep ids to human-readable names
+print_sweeps = False
+if print_sweeps:
+    show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
     "tu585kr5": "SGD",
@@ -18,7 +23,7 @@ sweep_ids = {  # ids from the wandb agent
     "g454u46j": "Hessian-free",
     "d6iqcrdx": "LBFGS",
     "90br0xj3": "ENGD (full)",
-    # "": "ENGD (layer-wise)",
+    "ig3b2jd5": "ENGD (layer-wise)",
     "t182dkhq": "ENGD (diagonal)",
 }
 
