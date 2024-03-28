@@ -1,10 +1,26 @@
-"""Download best runs of the random search from wandb."""
+"""Utility functions for Weights & Biases."""
 
 from os import path
 from typing import Tuple
 
 from pandas import DataFrame, read_csv
 from wandb import Api
+
+
+def show_sweeps(entity: str, project: str):
+    """Print ids and names of sweeps in a project.
+
+    This is useful to map sweep ids to human-readable names.
+
+    Args:
+        entity: The team name on wandb.
+        project: The name from the 'Projects' tab on wandb.
+    """
+    api = Api()
+    sweeps = api.project(project, entity=entity).sweeps()
+    print(f"Found the following sweeps in {entity}/{project}:")
+    for sweep in sweeps:
+        print(f"\tid: {sweep.id}, ({sweep.config['name']})")
 
 
 def load_best_run(
