@@ -26,7 +26,7 @@ from torch import (
     rand,
     zeros_like,
 )
-from torch.nn import Linear, Sequential, Tanh
+from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
 
 from kfac_pinns_exp import poisson_equation
@@ -45,6 +45,7 @@ from kfac_pinns_exp.poisson_equation import (
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson"]
+SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
 
 
 def parse_general_args(verbose: bool = False) -> Namespace:
@@ -59,6 +60,13 @@ def parse_general_args(verbose: bool = False) -> Namespace:
     DTYPES = {"float32": float32, "float64": float64}
     parser = ArgumentParser(
         description="General training parameters for the Poisson equation"
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="mlp-tanh-64",
+        choices=SUPPORTED_MODELS,
+        help="Which neural network will be used.",
     )
     parser.add_argument(
         "--equation",
@@ -139,6 +147,45 @@ def parse_general_args(verbose: bool = False) -> Namespace:
     return args
 
 
+def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
+    """Set up the layers of the neural network.
+
+    Args:
+        model: The name of the model. Must be in `SUPPORTED_MODELS`.
+        dim_Omega: The spatial dimension of the domain Ω.
+
+    Returns:
+        A list of PyTorch modules representing the layers of the model.
+
+    Raises:
+        ValueError: If the model is not supported.
+    """
+    if model == "mlp-tanh-64":
+        layers = [
+            Linear(dim_Omega, 64),
+            Tanh(),
+            Linear(64, 1),
+        ]
+    elif model == "mlp-tanh-64-48-32-16":
+        layers = [
+            Linear(dim_Omega, 64),
+            Tanh(),
+            Linear(64, 48),
+            Tanh(),
+            Linear(48, 32),
+            Tanh(),
+            Linear(32, 16),
+            Tanh(),
+            Linear(16, 1),
+        ]
+    else:
+        raise ValueError(
+            f"Unsupported model: {model}. Supported models: {SUPPORTED_MODELS}"
+        )
+
+    return layers
+
+
 def main():
     """Execute training with the specified command line arguments."""
     args = parse_general_args(verbose=True)
@@ -161,11 +208,7 @@ def main():
 
     # neural net
     manual_seed(args.model_seed)
-    layers = [
-        Linear(args.dim_Omega, 64),
-        Tanh(),
-        Linear(64, 1),
-    ]
+    layers = set_up_layers(args.model, args.dim_Omega)
     layers = [layer.to(dev, dt) for layer in layers]
     model = Sequential(*layers).to(dev)
     print(f"Model: {model}")

@@ -1,0 +1,2 @@
+config,name
+"{'dtype': 'torch.float64', 'model': 'mlp-tanh-64-48-32-16', 'wandb': True, 'SGD_lr': 0.003977670153406325, 'N_Omega': 900, 'N_dOmega': 120, 'equation': 'poisson', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 2, 'num_steps': 10000, 'optimizer': 'SGD', 'model_seed': 1, 'SGD_momentum': 0.9}",fast-sweep-18
