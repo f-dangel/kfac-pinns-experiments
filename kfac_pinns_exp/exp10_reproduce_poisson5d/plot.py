@@ -23,7 +23,7 @@ sweep_ids = {  # ids from the wandb agent
     "g454u46j": "Hessian-free",
     "d6iqcrdx": "LBFGS",
     "90br0xj3": "ENGD (full)",
-    "ig3b2jd5": "ENGD (layer-wise)",
+    "is65mq85": "ENGD (layer-wise)",
     "t182dkhq": "ENGD (diagonal)",
 }
 
