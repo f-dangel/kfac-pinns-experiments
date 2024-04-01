@@ -1,14 +1,14 @@
 entity: kfac-pinns
 project: poisson2d
-name: ENGD_per_layer
-program: ../train.py
+name: ENGD_diagonal
+program: ../../train.py
 command:
     - ${env}
     - python
     - ${program}
     - "--wandb"
     - "--optimizer=ENGD"
-    - ${args}
+    - ${args_no_boolean_flags}
 metric:
     goal: minimize
     name: loss
@@ -17,10 +17,13 @@ parameters:
     num_steps:
         value: 10_000
     ENGD_approximation:
-        value: per_layer
+        value: diagonal
     ENGD_damping:
         distribution: categorical
         values: [0.0, 1e-2, 1e-4, 1e-6, 1e-8]
     ENGD_ema_factor:
         distribution: categorical
         values: [0.0, 0.3, 0.6, 0.9, 0.99]
+    ENGD_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]
