@@ -1,7 +1,7 @@
 entity: kfac-pinns
 project: poisson5d
 name: LBFGS
-program: ../train.py
+program: ../../train.py
 command:
     - ${env}
     - python
