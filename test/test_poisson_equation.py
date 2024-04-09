@@ -38,7 +38,7 @@ def test_boundary_kfac_batch_size_1():
     for idx, (A, B) in enumerate(kfacs.values()):
         D_in, D_out = A.shape[0] - 1, B.shape[0]
         # create a 1d array which maps current positions to new positions via slicing,
-        # i.e. # its i-th entry contains the position of the element in the old basis
+        # i.e. its i-th entry contains the position of the element in the old basis
         # which should be the i-th vector in the new basis
         rearrange = cat(
             [
