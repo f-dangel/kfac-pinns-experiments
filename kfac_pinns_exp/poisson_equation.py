@@ -2,10 +2,11 @@
 
 from functools import partial
 from math import pi
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 from einops import einsum, rearrange
-from torch import Tensor, cat, ones_like, prod, rand, randint, sin
+from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
+from torch import sum as torch_sum
 from torch.autograd import grad
 from torch.nn import Module
 from torch.utils.hooks import RemovableHandle
@@ -42,7 +43,7 @@ def square_boundary(N: int, dim: int) -> Tensor:
 # Right-hand side of the Poisson equation
 # TODO Use code from exp02 once it is merged
 def f(X: Tensor) -> Tensor:
-    """The right-hand side of the Poisson equation we aim to solve.
+    """The right-hand side of the Prod sine Poisson equation we aim to solve.
 
     Args:
         X: Batched quadrature points of shape (N, d_Omega).
@@ -58,7 +59,7 @@ def f(X: Tensor) -> Tensor:
 # Manufactured solution
 # TODO Use code from exp02 once it is merged
 def u(X: Tensor) -> Tensor:
-    """The solution of the Poisson equation we aim to solve.
+    """Prod sine solution of the Poisson equation we aim to solve.
 
     Args:
         X: Batched quadrature points of shape (N, d_Omega).
@@ -69,7 +70,31 @@ def u(X: Tensor) -> Tensor:
     return prod(sin(pi * X), dim=1, keepdim=True)
 
 
-def l2_error(model: Module, X: Tensor) -> Tensor:
+def u_cos_sum(X: Tensor) -> Tensor:
+    """Sum cosine solution of the Poisson equation we aim to solve.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    return torch_sum(cos(pi * X), dim=1, keepdim=True)
+
+
+def f_cos_sum(X: Tensor) -> Tensor:
+    """Sum cosine solution of the Poisson equation we aim to solve.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    return (pi**2) * torch_sum(cos(pi * X), dim=1, keepdim=True)
+
+
+def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:
     """Computes the L2 norm of the error = model - u on the domain Omega.
 
     Args:
@@ -79,7 +104,7 @@ def l2_error(model: Module, X: Tensor) -> Tensor:
     Returns:
         The L2 norm of the error.
     """
-    y = (model(X) + u(X)) ** 2
+    y = (model(X) - u(X)) ** 2
     return y.mean() ** (1 / 2)
 
 

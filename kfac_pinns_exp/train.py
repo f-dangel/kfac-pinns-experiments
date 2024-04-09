@@ -24,7 +24,6 @@ from torch import (
     logspace,
     manual_seed,
     rand,
-    zeros_like,
 )
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
@@ -44,7 +43,7 @@ from kfac_pinns_exp.poisson_equation import (
 )
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
-SUPPORTED_EQUATIONS = ["poisson"]
+SUPPORTED_EQUATIONS = ["poisson", "poisson_cos_sum"]
 SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
 
 
@@ -73,7 +72,7 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         type=str,
         default="poisson",
         choices=SUPPORTED_EQUATIONS,
-        help="Which equation will be solved.",
+        help="Which equation and solution will be solved.",
     )
     parser.add_argument(
         "--dim_Omega",
@@ -195,16 +194,23 @@ def main():
     print(f"Running on device {str(dev)}")
 
     manual_seed(args.data_seed)
-    # interior
+
     X_Omega = rand(args.N_Omega, args.dim_Omega).to(dev, dt)
     X_Omega_eval = rand(10 * args.N_Omega, args.dim_Omega).to(dev, dt)
-    y_Omega = -poisson_equation.f(X_Omega)
-    # boundary
     X_dOmega = poisson_equation.square_boundary(args.N_dOmega, args.dim_Omega).to(
         dev, dt
     )
-    y_dOmega = poisson_equation.u(X_dOmega)
-    y_dOmega = zeros_like(y_dOmega)
+
+    if args.equation == "poisson":
+        f = poisson_equation.f
+        u = poisson_equation.u
+
+    elif args.equation == "poisson_cos_sum":
+        f = poisson_equation.f_cos_sum
+        u = poisson_equation.u_cos_sum
+
+    y_Omega = f(X_Omega)
+    y_dOmega = u(X_dOmega)
 
     # neural net
     manual_seed(args.model_seed)
@@ -322,7 +328,7 @@ def main():
         loss = loss_interior + loss_boundary
 
         if step in logged_steps:
-            l2 = l2_error(model, X_Omega_eval)
+            l2 = l2_error(model, X_Omega_eval, u)
             print(
                 f"Step: {step:06g}/{args.num_steps:06g},"
                 + f" Loss: {loss},"
