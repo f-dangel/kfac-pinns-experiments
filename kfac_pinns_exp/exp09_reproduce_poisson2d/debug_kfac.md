@@ -2,10 +2,12 @@
 
 This is a log containing debugging notes about our KFAC implementation.
 
-I have added the following option to our implementation:
+I have added the following options to our implementation:
 
 - Adding `--KFAC_USE_EXACT_INTERIOR_GRAMIAN` will use the exact Gramian of the interior loss.
-  The KFAC approximation of the boundary loss will be expanded into its matrix representation, then added to the interior Gramian before adding damping and inverting.
+- Adding `--KFAC_USE_EXACT_BOUNDARY_GRAMIAN` will use the exact Gramian of the boundary loss.
+
+If at least one Gramian is exact, the pre-conditioner will be expanded as matrix, then damped and inverted.
 
 ## Ground truth with ENGD
 
@@ -37,34 +39,42 @@ Step: 000098/000100, Loss: 4.698426408125667e-09, L2 Error: 10.64832072286645, I
 ```
 The loss reduces quite dramatically within 100 steps.
 
-## KFAC, exact Gramian of interior loss
+## KFAC, exact Gramian of interior loss and boundary loss
 
-Next, we will look at KFAC and only approximate the boundary Gramian with KFAC.
-Because we set `N_dOmega=1`, KFAC should equal the boundary Gramian.
-Therefore, we expect this algorithm to perform as well as `ENGD` (the only difference is that `KFAC` uses `torch.linalg.inverse` for applying the pre-conditioner).
+This is a sanity check to make sure the internal numerics used by `KFAC` versus `ENGD` to apply the pre-conditioner are not causing issues.
+`ENGD` solves a least-squares problem, while `KFAC` relies on matrix inversion, which is known to be more unstable, even though we use `float64`.
 
-Let's run this scenario with
+Let's run this with
 ```bash
-python ../train.py \
+python train.py \
        --optimizer=KFAC \
        --num_steps=100 \
        --N_dOmega=1 \
        --max_logs=10 \
        --KFAC_ema_factor=0.0 \
        --KFAC_damping=1e-8 \
-       --KFAC_USE_EXACT_INTERIOR_GRAMIAN
+       --KFAC_USE_EXACT_INTERIOR_GRAMIAN \
+       --KFAC_USE_EXACT_BOUNDARY_GRAMIAN
 ```
-which produces
+whose output is
 ```bash
-Step: 000000/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 0.2s
-Step: 000001/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 0.2s
-Step: 000003/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 0.4s
-Step: 000005/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 0.5s
-Step: 000009/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 0.7s
-Step: 000017/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 1.2s
-Step: 000031/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 2.1s
-Step: 000055/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 3.6s
-Step: 000098/000100, Loss: 48.674902441834504, L2 Error: 0.40062723331221134, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 6.1s
+Step: 000000/000100, Loss: 48.674902441834504, L2 Error: 0.9229613855862834, Interior: 48.6736741716, Boundary: 0.0012282702, Time: 0.2s
+Step: 000001/000100, Loss: 46.48477464583893, L2 Error: 2.4444005179425146, Interior: 46.3539288848, Boundary: 0.1308457610, Time: 0.2s
+Step: 000003/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 0.4s
+Step: 000005/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 0.5s
+Step: 000009/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 0.7s
+Step: 000017/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 1.1s
+Step: 000031/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 1.8s
+Step: 000055/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 3.1s
+Step: 000098/000100, Loss: 44.699882785333514, L2 Error: 2.4444005179425146, Interior: 42.6094125700, Boundary: 2.0904702154, Time: 5.3s
 ```
-This indicates that the line search gets stuck at the very first step.
-Maybe we have a sign problem with the gradient.
+The line search seems to get stuck.
+There are three possible explanations for this: (i) matrix inversion versus linear system solve matters, (ii) there is still a bug in my
+implementation of the debugging flags, (iii) the line search gets stuck for other reasons that are unknown so far.
+
+Re (i):
+- Switching to `lstsq` did not help.
+
+Re (ii):
+- I verified that the Gramians used in KFAC and ENGD match at step 0.
+- I verified that the gradients used in KFAC and ENGD match at step 0.

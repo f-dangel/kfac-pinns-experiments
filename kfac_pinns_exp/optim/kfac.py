@@ -4,6 +4,7 @@ from argparse import ArgumentParser, Namespace
 from typing import Dict, List, Tuple, Union
 
 from torch import Tensor, cat, dtype, eye, float64, kron, zeros
+from torch.linalg import lstsq
 from torch.nn import Module, Sequential
 from torch.optim import Optimizer
 
@@ -21,6 +22,7 @@ from kfac_pinns_exp.optim.line_search import (
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.poisson_equation import (
+    evaluate_boundary_gramian,
     evaluate_boundary_loss,
     evaluate_boundary_loss_and_kfac_expand,
     evaluate_interior_gramian,
@@ -28,6 +30,28 @@ from kfac_pinns_exp.poisson_equation import (
     evaluate_interior_loss_and_kfac_expand,
 )
 from kfac_pinns_exp.utils import exponential_moving_average
+
+
+class LstsqSolver:
+    """Implements A^-1 @ of a matrix A by solving a least-squares problem."""
+
+    def __init__(self, A: Tensor):
+        """Store the matrix for inversion.
+
+        Args:
+            A: The matrix to invert.
+        """
+        self.A = A
+
+    def __matmul__(self, x: Tensor) -> Tensor:
+        """Multiply a vector with the inverse of A."""
+        assert x.ndim == 1 and x.shape[0] == self.A.shape[1]
+        # NOTE lstsq only supports the 'gels' driver on CUDA, which assumes the
+        # Gramian is full-rank. This assumption is usually violated, hence we
+        # off-load the computation to the CPU and use the more stable 'gelsd' driver.
+        original_dev = x.device
+        linsolve = lstsq(self.A.cpu(), x.cpu().unsqueeze(-1), driver="gelsd")
+        return linsolve.solution.to(original_dev).squeeze(-1)
 
 
 def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
@@ -237,7 +261,22 @@ class KFAC(Optimizer):
 
         # initialize KFAC matrices or Gramians for the boundary term
         if self.USE_EXACT_BOUNDARY_GRAMIAN:
-            raise NotImplementedError
+            (dev,) = {p.device for p in params}
+            (dt,) = {p.dtype for p in params}
+            kwargs = {"device": dev, "dtype": dt}
+            block_sizes = {
+                idx: sum(p.numel() for p in layer.parameters())
+                for idx, layer in enumerate(layers)
+                if list(layer.parameters())
+            }
+            self.gramians_boundary = {
+                idx: (
+                    eye(size, **kwargs)
+                    if initialize_to_identity
+                    else zeros(size, size, **kwargs)
+                )
+                for idx, size in block_sizes.items()
+            }
         else:
             self.kfacs_boundary = check_layers_and_initialize_kfac(
                 layers, initialize_to_identity=initialize_to_identity
@@ -272,13 +311,12 @@ class KFAC(Optimizer):
         self.update_preconditioner()
 
         directions = []
-        if not self.USE_EXACT_BOUNDARY_GRAMIAN:
-            layer_idxs = self.kfacs_boundary.keys()
-        elif not self.USE_EXACT_INTERIOR_GRAMIAN:
-            layer_idxs = self.kfacs_interior.keys()
-        else:
-            raise NotImplementedError
+        layer_idxs = [
+            idx for idx, layer in enumerate(self.layers) if list(layer.parameters())
+        ]
 
+        print([p.grad for p in self.param_groups[0]["params"]])
+        raise Exception
         for layer_idx in layer_idxs:
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
@@ -333,13 +371,22 @@ class KFAC(Optimizer):
         """
         group = self.param_groups[0]
         if self.steps % group["T_kfac"] == 0:
-            if self.USE_EXACT_BOUNDARY_GRAMIAN:
-                raise NotImplementedError
-            loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
             ema_factor = group["ema_factor"]
-            for layer_idx, updates in kfacs.items():
-                for destination, update in zip(self.kfacs_boundary[layer_idx], updates):
+
+            if self.USE_EXACT_BOUNDARY_GRAMIAN:
+                gramian = evaluate_boundary_gramian(self.model, X, "per_layer")
+                loss, _, _ = evaluate_boundary_loss(self.model, X, y)
+                for destination, update in zip(
+                    self.gramians_boundary.values(), gramian
+                ):
                     exponential_moving_average(destination, update, ema_factor)
+            else:
+                loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
+                for layer_idx, updates in kfacs.items():
+                    for destination, update in zip(
+                        self.kfacs_boundary[layer_idx], updates
+                    ):
+                        exponential_moving_average(destination, update, ema_factor)
         else:
             loss, _, _ = evaluate_boundary_loss(self.layers, X, y)
 
@@ -358,20 +405,33 @@ class KFAC(Optimizer):
 
         # compute matrix representation and invert
         if self.USE_EXACT_BOUNDARY_GRAMIAN or self.USE_EXACT_INTERIOR_GRAMIAN:
+            layer_idxs = [
+                idx for idx, layer in enumerate(self.layers) if list(layer.parameters())
+            ]
+            dims = [
+                (self.layers[idx].weight.shape[1], self.layers[idx].weight.shape[0])
+                for idx in layer_idxs
+            ]
+
             if self.USE_EXACT_BOUNDARY_GRAMIAN:
-                raise NotImplementedError
+                # The basis of KFAC is `(W, b).flatten()` but the Gramian's basis
+                # is `(flatten(W).T, b.T).T`. We need to re-arrange the Gramian to
+                # match the basis of KFAC.
+                gramians_boundary = {
+                    idx: gramian_basis_to_kfac_basis(g, dim_A, dim_B)
+                    for (idx, g), (dim_A, dim_B) in zip(
+                        self.gramians_boundary.items(), dims
+                    )
+                }
             else:
                 gramians_boundary = {
                     idx: kron(B, A) for idx, (A, B) in self.kfacs_boundary.items()
                 }
+
             if self.USE_EXACT_INTERIOR_GRAMIAN:
                 # The basis of KFAC is `(W, b).flatten()` but the Gramian's basis
                 # is `(flatten(W).T, b.T).T`. We need to re-arrange the Gramian to
                 # match the basis of KFAC.
-                dims = [
-                    (self.layers[idx].weight.shape[1], self.layers[idx].weight.shape[0])
-                    for idx in self.gramians_interior
-                ]
                 assert len(dims) == len(self.gramians_interior)
                 gramians_interior = {
                     idx: gramian_basis_to_kfac_basis(g, dim_A, dim_B)
@@ -380,7 +440,9 @@ class KFAC(Optimizer):
                     )
                 }
             else:
-                raise NotImplementedError
+                gramians_interior = {
+                    idx: kron(B, A) for idx, (A, B) in self.kfacs_interior.items()
+                }
 
             gramians = {
                 idx: gramians_interior[idx] + gramians_boundary[idx]
@@ -392,7 +454,7 @@ class KFAC(Optimizer):
                 for idx, g in gramians.items()
             }
             for idx, g in gramians.items():
-                self.inv[idx] = g.inverse()
+                self.inv[idx] = LstsqSolver(g)  # g.inverse()
             return
 
         # compute the KFAC inverse
@@ -400,29 +462,23 @@ class KFAC(Optimizer):
             weight_dtype = self.layers[layer_idx].weight.dtype
             weight_device = self.layers[layer_idx].weight.device
 
-            if (
-                not self.USE_EXACT_BOUNDARY_GRAMIAN
-                and not self.USE_EXACT_INTERIOR_GRAMIAN
-            ):
-                # NOTE that in the literature (column-stacking), KFAC w.r.t. the flattened
-                # weights is A₁ ⊗ A₂ + B₁ ⊗ B₂. However, in code we use row-stacking
-                # flattening. Effectively, we have to swap the Kronecker factors to obtain
-                # KFAC w.r.t. the flattened (row-stacking) weights.
-                A2, A1 = self.kfacs_interior[layer_idx]
-                B2, B1 = self.kfacs_boundary[layer_idx]
+            # NOTE that in the literature (column-stacking), KFAC w.r.t. the flattened
+            # weights is A₁ ⊗ A₂ + B₁ ⊗ B₂. However, in code we use row-stacking
+            # flattening. Effectively, we have to swap the Kronecker factors to obtain
+            # KFAC w.r.t. the flattened (row-stacking) weights.
+            A2, A1 = self.kfacs_interior[layer_idx]
+            B2, B1 = self.kfacs_boundary[layer_idx]
 
-                # add the damping
-                kwargs = {"dtype": weight_dtype, "device": weight_device}
-                A1 = A1 + damping * eye(*A1.shape, **kwargs)
-                A2 = A2 + damping * eye(*A2.shape, **kwargs)
-                B1 = B1 + damping * eye(*B1.shape, **kwargs)
-                B2 = B2 + damping * eye(*B2.shape, **kwargs)
+            # add the damping
+            kwargs = {"dtype": weight_dtype, "device": weight_device}
+            A1 = A1 + damping * eye(*A1.shape, **kwargs)
+            A2 = A2 + damping * eye(*A2.shape, **kwargs)
+            B1 = B1 + damping * eye(*B1.shape, **kwargs)
+            B2 = B2 + damping * eye(*B2.shape, **kwargs)
 
-                self.inv[layer_idx] = InverseKroneckerSum(
-                    A1, A2, B1, B2, inv_dtype=inv_dtype
-                )
-            else:
-                raise NotImplementedError
+            self.inv[layer_idx] = InverseKroneckerSum(
+                A1, A2, B1, B2, inv_dtype=inv_dtype
+            )
 
     def compute_natural_gradient(self, layer_idx: int) -> Tuple[Tensor, Tensor]:
         """Compute the natural gradient for the specified layer.
