@@ -383,7 +383,7 @@ class KFAC(Optimizer):
                 raise NotImplementedError
 
             gramians = {
-                idx: gramians_interior[idx] + 0 * gramians_boundary[idx]
+                idx: gramians_interior[idx] + gramians_boundary[idx]
                 for idx in gramians_interior
             }
             # add damping
