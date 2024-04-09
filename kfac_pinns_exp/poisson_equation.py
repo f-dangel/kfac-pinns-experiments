@@ -100,6 +100,7 @@ def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:
     Args:
         model: The model.
         X: randomly drawn points in Omega.
+        u: Function to evaluate the manufactured solution.
 
     Returns:
         The L2 norm of the error.
