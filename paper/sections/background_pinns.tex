@@ -32,31 +32,6 @@ Here, the weights of the linear layers are trainable and we denote them by $\vth
 The nonlinear layers are given by $\vz\mapsto \sigma(\vz)$ componentwise for a (typically smooth) activation function $\sigma\colon\mathbb R\to\mathbb R$.
 %We denote the parameters of a linear layer by $\vtheta^{(l)} = \mW^{(l)}$ where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
 
-\paragraph{Flattening, Jacobians, and Hessians}
-%Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
-%In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
-%We consider the following vectorization of the matrices appearing as the trainable parameters of the network.
-To vectorize the weight matrices of the linear layers we follow the % index convention to vectorize will be
-\emph{first-varies-fastest} convention, which means column-stacking (row index varies first, column index varies second).
-We denote the corresponding flattening operation by $\flatten(\cdot)$.
-Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$
-%\begin{equation}\label{eq:vecTrick}
-%  \flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}
-%\end{equation}
-for matrices $\mA, \mX, \mB$.
-In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
-The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
-Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
-It collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
-For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ w.r.t.\,a matrix $\mA$, we simply have $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
-Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ w.r.t.\,a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
-For the Hessian $\gradsquared{\mA} b$ of a scalar $b$ w.r.t.\,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
-We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
-
-
-
-
-
 \subsection{Physics-informed neural networks (PINNs)}
 %\begin{itemize}
 %    \item PINNs are one of the most promising approaches to neural network based PDE solvers
