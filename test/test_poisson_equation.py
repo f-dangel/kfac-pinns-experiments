@@ -1,8 +1,9 @@
 """Test helper functions to solve the Poisson equation."""
 
-from torch import allclose, arange, cat, kron, zeros_like
+from torch import allclose, kron, zeros_like
 from torch.nn import Linear, Sequential, Tanh
 
+from kfac_pinns_exp.kfac_utils import gramian_basis_to_kfac_basis
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_gramian,
     evaluate_boundary_loss_and_kfac_expand,
@@ -37,17 +38,7 @@ def test_boundary_kfac_batch_size_1():
     # the basis of KFAC.
     for idx, (A, B) in enumerate(kfacs.values()):
         D_in, D_out = A.shape[0] - 1, B.shape[0]
-        # create a 1d array which maps current positions to new positions via slicing,
-        # i.e. its i-th entry contains the position of the element in the old basis
-        # which should be the i-th vector in the new basis
-        rearrange = cat(
-            [
-                arange(D_out * D_in).reshape(D_out, D_in),
-                arange(D_out * D_in, D_out * (D_in + 1)).unsqueeze(1),
-            ],
-            dim=1,
-        ).flatten()
-        gramians[idx] = (gramians[idx])[rearrange, :][:, rearrange]
+        gramians[idx] = gramian_basis_to_kfac_basis(gramians[idx], D_in, D_out)
 
     # Compare Gramian and KFAC
     for gramian, (A, B) in zip(gramians, kfacs.values()):
