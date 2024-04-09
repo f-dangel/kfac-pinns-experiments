@@ -388,7 +388,7 @@ class KFAC(Optimizer):
             }
             # add damping
             gramians = {
-                idx: g + damping * eye(g.shape[0], dtype=g.dtupe, device=g.device)
+                idx: g + damping * eye(g.shape[0], dtype=g.dtype, device=g.device)
                 for idx, g in gramians.items()
             }
             for idx, g in gramians.items():
