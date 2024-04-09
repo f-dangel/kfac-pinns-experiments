@@ -185,7 +185,7 @@ def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
     return layers
 
 
-def main():
+def main():  # noqa: C901
     """Execute training with the specified command line arguments."""
     args = parse_general_args(verbose=True)
 
