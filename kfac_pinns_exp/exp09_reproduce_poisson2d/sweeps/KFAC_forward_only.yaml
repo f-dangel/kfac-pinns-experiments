@@ -16,7 +16,7 @@ metric:
 method: grid
 parameters:
     num_steps:
-        value: 5_000
+        value: 10_000
     KFAC_ema_factor:
         distribution: categorical
         values: [0., 0.5, 0.95, 0.99]
