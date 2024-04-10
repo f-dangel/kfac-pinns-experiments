@@ -124,7 +124,15 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
 
 
 class KFAC(Optimizer):
-    """KFAC optimizer for PINN problems."""
+    """KFAC optimizer for PINN problems.
+
+    Attributes:
+        SUPPORTED_KFAC_APPROXIMATIONS: Available KFAC approximations. Currently only
+            supports KFAC-expand.
+        SUPPORTED_GGN_TYPES: Available approximations of the GGN used to approximate
+            KFAC. Currently supports `'type-2'`, `'empirical'`, and `'forward-only'`
+            (ordered in descending computational cost and approximation quality).
+    """
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
