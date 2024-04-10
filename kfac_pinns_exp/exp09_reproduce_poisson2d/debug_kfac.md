@@ -112,7 +112,7 @@ python train.py \
        --num_steps=100 \
        --max_logs=10 \
        --KFAC_ema_factor=0.0 \
-       --KFAC_damping=1e-8 \
+       --KFAC_damping=1e-8
 ```
 which yields
 ```bash
@@ -130,3 +130,13 @@ Step: 000098/000100, Loss: 4.674758653102768e-09, L2 Error: 10.649351063742465, 
 NOTE: I played around with adding a `sqrt(batch_size)` in the backpropagated error for the boundary KFAC.
 This did not change the performance at all.
 This is weird because I would expect it to change at least some trailing digits, but they remained identical.
+
+```bash
+python train.py \
+       --optimizer=KFAC \
+       --num_steps=100 \
+       --max_logs=10 \
+       --KFAC_ema_factor=0.95 \
+       --KFAC_damping=1e-8 \
+       --KFAC_ggn_type=empirical
+```

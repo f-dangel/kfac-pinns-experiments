@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
-from kfac_pinns_exp.wandb_utils import load_best_run, show_sweeps
+from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
 project = "poisson2d"  # name from the 'Projects' tab on wandb
@@ -18,14 +18,16 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "tg2odbah": "SGD",
-    "yzdbc4h3": "Adam",
-    "lmzgj39h": "Hessian-free",
-    "e711w3by": "LBFGS",
-    "as97g04v": "ENGD (full)",
-    "svlfa1az": "ENGD (layer-wise)",
-    "vk7egia5": "ENGD (diagonal)",
-    "og8hbwk7": "KFAC",
+    "qazssgpv": "SGD",
+    "fnybn816": "Adam",
+    "o2i8i1ly": "Hessian-free",
+    "765f4ehv": "LBFGS",
+    "2dyhpat8": "ENGD (full)",
+    "s99lpfkr": "ENGD (layer-wise)",
+    "lifmrlda": "ENGD (diagonal)",
+    "l3sfjjqq": "KFAC",
+    "frw6jqtf": "KFAC (empirical)",
+    "njv6tx5a": "KFAC (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -38,6 +40,8 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
+    "KFAC (empirical)": "gray",
+    "KFAC (forward-only)": "lightgray",
 }
 
 linestyles = {
@@ -49,11 +53,18 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
+    "KFAC (empirical)": "-",
+    "KFAC (forward-only)": "-",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
 DATADIR = path.join(HEREDIR, "best_runs")
 makedirs(DATADIR, exist_ok=True)
+
+# enable this to remove all saved files from sweeps that are not plotted
+clean_up = True
+if clean_up:
+    remove_unused_runs(keep=list(sweep_ids.keys()), best_run_dir=DATADIR)
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="Plot the best runs from each tuned optimizer.")
@@ -72,32 +83,38 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    with plt.rc_context(
-        bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
-    ):
-        fig, ax = plt.subplots(1, 1)
-        ax.set_xlabel("Iteration")
-        ax.set_xscale("log")
-        ax.set_ylabel("Loss")
-        ax.set_yscale("log")
-        ax.set_title("2d Poisson")
+    metric_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
 
-        for sweep_id, label in sweep_ids.items():
-            df_history, _ = load_best_run(
-                entity,
-                project,
-                sweep_id,
-                save=True,
-                update=args.update,
-                savedir=DATADIR,
-            )
-            ax.plot(
-                df_history["step"] + 1,
-                df_history["loss"],
-                label=label,
-                color=colors[label],
-                linestyle=linestyles[label],
-            )
+    for metric, ylabel in metric_to_ylabel.items():
+        with plt.rc_context(
+            bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+        ):
+            fig, ax = plt.subplots(1, 1)
+            ax.set_xlabel("Iteration")
+            ax.set_xscale("log")
+            ax.set_ylabel(ylabel)
+            ax.set_yscale("log")
+            ax.set_title("2d Poisson")
+            ax.grid(True, alpha=0.5)
 
-        ax.legend()
-        plt.savefig(path.join(HEREDIR, "poisson2d.pdf"), bbox_inches="tight")
+            for sweep_id, label in sweep_ids.items():
+                df_history, _ = load_best_run(
+                    entity,
+                    project,
+                    sweep_id,
+                    save=True,
+                    update=args.update,
+                    savedir=DATADIR,
+                )
+                ax.plot(
+                    df_history["step"] + 1,
+                    df_history[metric],
+                    label=label,
+                    color=colors[label],
+                    linestyle=linestyles[label],
+                )
+
+            ax.legend()
+            plt.savefig(
+                path.join(HEREDIR, f"poisson2d_{metric}.pdf"), bbox_inches="tight"
+            )
