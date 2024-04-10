@@ -249,7 +249,7 @@ def evaluate_boundary_loss(
 
 
 def evaluate_interior_loss_and_kfac_expand(
-    layers: List[Module], X: Tensor, y: Tensor
+    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str = "type-2"
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
     """Evaluate the interior loss and compute its KFAC-expand approximation.
 
@@ -302,12 +302,13 @@ def evaluate_interior_loss_and_kfac_expand(
     # We used the residual in the loss and don't want its graph to be free
     # Therefore, set `retain_graph=True`.
     # trigger the backward hooks
-    grad(
-        residual,
-        X,
-        grad_outputs=ones_like(residual) / sqrt(batch_size),
-        retain_graph=True,
-    )
+    if ggn_type == "type-2":
+        error = ones_like(residual) / sqrt(batch_size)
+    elif ggn_type == "empirical":
+        error = residual.clone().detach() / sqrt(batch_size)
+    else:
+        raise NotImplementedError
+    grad(residual, X, grad_outputs=error, retain_graph=True)
 
     # remove the hooks & reset original differentiability
     X.requires_grad = X_original_requires_grad
@@ -318,7 +319,7 @@ def evaluate_interior_loss_and_kfac_expand(
 
 
 def evaluate_boundary_loss_and_kfac_expand(
-    layers: List[Module], X: Tensor, y: Tensor
+    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str = "type-2"
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
     """Evaluate the boundary loss and compute its KFAC-expand approximation.
 
@@ -366,12 +367,13 @@ def evaluate_boundary_loss_and_kfac_expand(
     # We used the residual in the loss and don't want its graph to be freed.
     # Therefore, set `retain_graph=True`
     # trigger the backward hooks
-    grad(
-        residual,
-        X,
-        grad_outputs=ones_like(residual) / sqrt(batch_size),
-        retain_graph=True,
-    )
+    if ggn_type == "type-2":
+        error = ones_like(residual) / sqrt(batch_size)
+    elif ggn_type == "empirical":
+        error = residual.clone().detach() / sqrt(batch_size)
+    else:
+        raise NotImplementedError
+    grad(residual, X, grad_outputs=error, retain_graph=True)
 
     # remove the hooks & reset original differentiability
     X.requires_grad = X_original_requires_grad

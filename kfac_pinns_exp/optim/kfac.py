@@ -97,6 +97,13 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         default=0.95,
     )
     parser.add_argument(
+        f"--{prefix}ggn_type",
+        type=str,
+        choices=KFAC.SUPPORTED_GGN_TYPES,
+        help="Determines type of backpropagated error used to compute KFAC.",
+        default="type-2",
+    )
+    parser.add_argument(
         f"--{prefix}kfac_approx",
         type=str,
         choices=KFAC.SUPPORTED_KFAC_APPROXIMATIONS,
@@ -160,6 +167,7 @@ class KFAC(Optimizer):
     """KFAC optimizer for PINN problems."""
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand"}
+    SUPPORTED_GGN_TYPES = {"type-2", "empirical"}
 
     def __init__(
         self,
@@ -171,6 +179,7 @@ class KFAC(Optimizer):
         ema_factor: float = 0.95,
         kfac_approx: str = "expand",
         inv_strategy: str = "invert kronecker sum",
+        ggn_type: str = "type-2",
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
         # debugging flags
@@ -199,6 +208,9 @@ class KFAC(Optimizer):
                 in `[0, 1)`. Default is `0.95`.
             kfac_approx: KFAC approximation method. Must be either `'expand'`, or
                 `'reduce'`. Defaults to `'expand'`.
+            ggn_type: Type of the GGN to use. This influences the backpropagted error
+                used to compute the KFAC matrices. Can be either `'type-2'` or
+                `'empirical'`. Default: `'type-2'`.
             inv_strategy: Inversion strategy. Must `'invert kronecker sum'`. Default is
                 `'invert kronecker sum'`.
             inv_dtype: Data type to carry out the curvature inversion. Default is
@@ -214,6 +226,7 @@ class KFAC(Optimizer):
             T_inv,
             ema_factor,
             kfac_approx,
+            ggn_type,
             inv_strategy,
             inv_dtype,
             initialize_to_identity,
@@ -225,6 +238,7 @@ class KFAC(Optimizer):
             T_inv=T_inv,
             ema_factor=ema_factor,
             kfac_approx=kfac_approx,
+            ggn_type=ggn_type,
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
             initialize_to_identity=initialize_to_identity,
@@ -235,6 +249,12 @@ class KFAC(Optimizer):
         # set debuggin flags
         self.USE_EXACT_BOUNDARY_GRAMIAN = USE_EXACT_BOUNDARY_GRAMIAN
         self.USE_EXACT_INTERIOR_GRAMIAN = USE_EXACT_INTERIOR_GRAMIAN
+        if (
+            self.USE_EXACT_BOUNDARY_GRAMIAN or self.USE_EXACT_INTERIOR_GRAMIAN
+        ) and ggn_type != "type-2":
+            raise NotImplementedError(
+                "Only type-2 GGN is supported with exact Gramians."
+            )
 
         # initialize KFAC matrices or Gramians for the interior term
         if self.USE_EXACT_INTERIOR_GRAMIAN:
@@ -346,7 +366,10 @@ class KFAC(Optimizer):
                 ):
                     exponential_moving_average(destination, update, ema_factor)
             else:
-                loss, kfacs = evaluate_interior_loss_and_kfac_expand(self.layers, X, y)
+                ggn_type = group["ggn_type"]
+                loss, kfacs = evaluate_interior_loss_and_kfac_expand(
+                    self.layers, X, y, ggn_type=ggn_type
+                )
                 for layer_idx, updates in kfacs.items():
                     for destination, update in zip(
                         self.kfacs_interior[layer_idx], updates
@@ -379,7 +402,10 @@ class KFAC(Optimizer):
                 ):
                     exponential_moving_average(destination, update, ema_factor)
             else:
-                loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
+                ggn_type = group["ggn_type"]
+                loss, kfacs = evaluate_boundary_loss_and_kfac_expand(
+                    self.layers, X, y, ggn_type=ggn_type
+                )
                 for layer_idx, updates in kfacs.items():
                     for destination, update in zip(
                         self.kfacs_boundary[layer_idx], updates
@@ -510,6 +536,7 @@ class KFAC(Optimizer):
         T_inv: int,
         ema_factor: float,
         kfac_approx: str,
+        ggn_type: str,
         inv_strategy: str,
         inv_dtype: dtype,
         initialize_to_identity,
@@ -523,6 +550,7 @@ class KFAC(Optimizer):
             T_inv: Number of steps between inverse KFAC updates.
             ema_factor: Exponential moving average factor.
             kfac_approx: KFAC approximation.
+            ggn_type: GGN type.
             inv_strategy: Inverse strategy.
             inv_dtype: Inverse dtype.
             initialize_to_identity: Flag to initialize the inverse to the identity.
@@ -538,6 +566,11 @@ class KFAC(Optimizer):
             raise ValueError(
                 f"Unsupported KFAC approximation: {kfac_approx}. "
                 + f"Supported: {cls.SUPPORTED_KFAC_APPROXIMATIONS}."
+            )
+        if ggn_type not in cls.SUPPORTED_GGN_TYPES:
+            raise ValueError(
+                f"Unsupported GGN type: {ggn_type}. "
+                + f"Supported: {cls.SUPPORTED_GGN_TYPES}."
             )
         if not 0 <= ema_factor < 1:
             raise ValueError(
