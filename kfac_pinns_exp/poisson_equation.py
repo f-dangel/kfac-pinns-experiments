@@ -1,7 +1,7 @@
 """Functionality for solving the Poisson equation."""
 
 from functools import partial
-from math import pi
+from math import pi, sqrt
 from typing import Callable, Dict, List, Tuple, Union
 
 from einops import einsum, rearrange
@@ -302,7 +302,12 @@ def evaluate_interior_loss_and_kfac_expand(
     # We used the residual in the loss and don't want its graph to be free
     # Therefore, set `retain_graph=True`.
     # trigger the backward hooks
-    grad(residual, X, grad_outputs=ones_like(residual), retain_graph=True)
+    grad(
+        residual,
+        X,
+        grad_outputs=ones_like(residual) / sqrt(batch_size),
+        retain_graph=True,
+    )
 
     # remove the hooks & reset original differentiability
     X.requires_grad = X_original_requires_grad
@@ -361,7 +366,12 @@ def evaluate_boundary_loss_and_kfac_expand(
     # We used the residual in the loss and don't want its graph to be freed.
     # Therefore, set `retain_graph=True`
     # trigger the backward hooks
-    grad(residual, X, grad_outputs=ones_like(residual), retain_graph=True)
+    grad(
+        residual,
+        X,
+        grad_outputs=ones_like(residual) / sqrt(batch_size),
+        retain_graph=True,
+    )
 
     # remove the hooks & reset original differentiability
     X.requires_grad = X_original_requires_grad
