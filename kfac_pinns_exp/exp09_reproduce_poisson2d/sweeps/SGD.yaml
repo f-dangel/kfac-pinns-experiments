@@ -16,7 +16,7 @@ method: random
 run_cap: 50
 parameters:
     num_steps:
-        value: 10_000
+        value: 50_000
     SGD_lr:
         distribution: log_uniform_values
         min: 1e-3
