@@ -315,8 +315,6 @@ class KFAC(Optimizer):
             idx for idx, layer in enumerate(self.layers) if list(layer.parameters())
         ]
 
-        print([p.grad for p in self.param_groups[0]["params"]])
-        raise Exception
         for layer_idx in layer_idxs:
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
@@ -432,7 +430,6 @@ class KFAC(Optimizer):
                 # The basis of KFAC is `(W, b).flatten()` but the Gramian's basis
                 # is `(flatten(W).T, b.T).T`. We need to re-arrange the Gramian to
                 # match the basis of KFAC.
-                assert len(dims) == len(self.gramians_interior)
                 gramians_interior = {
                     idx: gramian_basis_to_kfac_basis(g, dim_A, dim_B)
                     for (idx, g), (dim_A, dim_B) in zip(

@@ -48,7 +48,7 @@ def check_layers_and_initialize_kfac(
     return kfacs
 
 
-def gramian_basis_to_kfac_basis(gramian: Tensor, dim_A: int, dim_B: int) -> Tensor:
+def gramian_basis_to_kfac_basis(mat_or_vec: Tensor, dim_A: int, dim_B: int) -> Tensor:
     """Rearrange the Gramian such that its basis matches that of KFAC.
 
     For a linear layer with weight `W` and bias `b`, the Gramian's basis is
@@ -56,12 +56,15 @@ def gramian_basis_to_kfac_basis(gramian: Tensor, dim_A: int, dim_B: int) -> Tens
     different.
 
     Args:
-        gramian: The Gramian matrix.
+        mat_or_vec: A matrix or vector in the Gramian's basis.
         dim_A: The dimension of the first (input-based) Kronecker factor.
         dim_B: The dimension of the second (grad-output-based) Kronecker factor.
 
     Returns:
-        The rearranged Gramian.
+        The rearranged matrix or vector in the KFAC basis.
+
+    Raises:
+        ValueError: If the supplied tensor is not 1d or 2d.
     """
     # create a 1d array which maps current positions to new positions via slicing,
     # i.e. its i-th entry contains the position of the element in the old basis
@@ -73,4 +76,9 @@ def gramian_basis_to_kfac_basis(gramian: Tensor, dim_A: int, dim_B: int) -> Tens
         ],
         dim=1,
     ).flatten()
-    return gramian[rearrange, :][:, rearrange]
+    if mat_or_vec.ndim == 2:
+        return mat_or_vec[rearrange, :][:, rearrange]
+    elif mat_or_vec.ndim == 1:
+        return mat_or_vec[rearrange]
+    else:
+        raise ValueError(f"Only 1,2d tensors are supported. Got {mat_or_vec.ndim}d.")
