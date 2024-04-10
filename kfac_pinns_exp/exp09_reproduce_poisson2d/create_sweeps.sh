@@ -8,3 +8,4 @@ python yaml_to_sh.py sweeps/ENGD_full.yaml sweeps/ENGD_full.sh
 python yaml_to_sh.py sweeps/ENGD_per_layer.yaml sweeps/ENGD_per_layer.sh
 python yaml_to_sh.py sweeps/HessianFree.yaml sweeps/HessianFree.sh
 python yaml_to_sh.py sweeps/KFAC.yaml sweeps/KFAC.sh
+python yaml_to_sh.py sweeps/KFAC_empirical.yaml sweeps/KFAC_empirical.sh

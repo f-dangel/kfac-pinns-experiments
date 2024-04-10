@@ -1,0 +1,28 @@
+entity: kfac-pinns
+project: poisson2d
+name: KFAC-empirical
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFAC"
+    - "--KFAC_ggn_type=empirical"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: loss
+method: grid
+parameters:
+    num_steps:
+        value: 5_000
+    KFAC_ema_factor:
+        distribution: categorical
+        values: [0., 0.5, 0.95, 0.99]
+    KFAC_damping:
+        distribution: categorical
+        values: [1e0, 1e-2, 1e-4, 1e-6, 1e-8, 1e-10]
+    KFAC_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]

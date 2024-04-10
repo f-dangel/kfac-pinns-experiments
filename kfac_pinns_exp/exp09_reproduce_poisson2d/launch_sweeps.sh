@@ -8,3 +8,4 @@ sbatch ENGD_diagonal.sh
 sbatch ENGD_full.sh
 sbatch ENGD_per_layer.sh
 sbatch KFAC.sh
+sbatch KFAC_empirical.sh
