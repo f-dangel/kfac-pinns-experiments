@@ -18,7 +18,7 @@ class InverseKroneckerSum:
         B1: Tensor,
         B2: Tensor,
         inv_dtype: dtype = float64,
-        backend: str = "scipy",
+        backend: str = "torch",
     ):
         """Invert A₁ ⊗ A₂ + B₁ ⊗ B₂.
 
@@ -42,7 +42,7 @@ class InverseKroneckerSum:
                 Therefore, it is often helpful to carry them out in higher precision.
                 Default is `float64`.
             backend: Backend to use for solving the generalized eigenvalue problem.
-                Currently supports `"torch"` and `"scipy"`. Default is `"scipy"`, which
+                Currently supports `"torch"` and `"scipy"`. Default is `"torch"`, which
                 uses `scipy.linalg.eigh` which requires GPU-CPU syncs. `"torch"` will
                 use a PyTorch implementation that is based on the description in
                 ['Eigenvalue and Generalized Eigenvalue Problems:
