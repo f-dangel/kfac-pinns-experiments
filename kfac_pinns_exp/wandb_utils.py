@@ -1,7 +1,8 @@
 """Utility functions for Weights & Biases."""
 
-from os import path
-from typing import Tuple
+from glob import glob
+from os import path, remove
+from typing import List, Tuple
 
 from pandas import DataFrame, read_csv
 from wandb import Api
@@ -69,3 +70,20 @@ def load_best_run(
         df_meta.to_csv(meta_path, index=False)
 
     return df_history, df_meta
+
+
+def remove_unused_runs(keep: List[str], best_run_dir: str = ".", verbose: bool = True):
+    """Remove all saved best runs in a directory.
+
+    Args:
+        keep: The list of sweep ids to keep.
+        best_run_dir: The directory where the best runs are saved.
+            Default is the current directory.
+        verbose: Whether to print the files being removed. Default is `True`.
+    """
+    csv_files = glob(path.join(best_run_dir, "*.csv"))
+    delete = [csv for csv in csv_files if all(sweep_id not in csv for sweep_id in keep)]
+    for f in delete:
+        if verbose:
+            print(f"Removing unused sweep data in {f}.")
+        remove(f)
