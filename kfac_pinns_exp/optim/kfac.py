@@ -488,7 +488,7 @@ class KFAC(Optimizer):
         """
         layer = self.layers[layer_idx]
         grad_combined = cat(
-            [layer.weight.grad.data, layer.bias.data.unsqueeze(-1)], dim=1
+            [layer.weight.grad.data, layer.bias.grad.data.unsqueeze(-1)], dim=1
         )
         d_out, d_in = layer.weight.shape
         if self.USE_EXACT_BOUNDARY_GRAMIAN or self.USE_EXACT_INTERIOR_GRAMIAN:

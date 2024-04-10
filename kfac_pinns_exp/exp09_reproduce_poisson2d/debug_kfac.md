@@ -78,3 +78,6 @@ Re (i):
 Re (ii):
 - I verified that the Gramians used in KFAC and ENGD match at step 0.
 - I verified that the gradients used in KFAC and ENGD match at step 0.
+- I found that the update directions used by KFAC and ENGD do not match at step 0
+- I checked that the damped Gramians used by KFAC and ENGD match at step 0. Note that I had to convert the ENGD Gramians to the KFAC basis, which might contain a bug.
+- FOUND A BUG. While comparing the flattened gradients between ENGD and KFAC, I noticed that the bias entries were off. I was accidentally using `layer.bias.data` rather than `layer.bias.grad.data`
