@@ -230,7 +230,7 @@ def main():  # noqa: C901
 
     logged_steps = {
         int(s) for s in logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
-    } | {0}
+    } | {0, args.num_steps - 1}
 
     start = time()
 
@@ -333,8 +333,8 @@ def main():  # noqa: C901
                 f"Step: {step:06g}/{args.num_steps:06g},"
                 + f" Loss: {loss},"
                 + f" L2 Error: {l2},"
-                + f" Interior: {loss_interior:.10f},"
-                + f" Boundary: {loss_boundary:.10f},"
+                + f" Interior: {loss_interior},"
+                + f" Boundary: {loss_boundary},"
                 + f" Time: {expired:.1f}s",
                 flush=True,
             )

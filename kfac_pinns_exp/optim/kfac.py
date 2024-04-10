@@ -69,6 +69,13 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         default=0.95,
     )
     parser.add_argument(
+        f"--{prefix}ggn_type",
+        type=str,
+        choices=KFAC.SUPPORTED_GGN_TYPES,
+        help="Determines type of backpropagated error used to compute KFAC.",
+        default="type-2",
+    )
+    parser.add_argument(
         f"--{prefix}kfac_approx",
         type=str,
         choices=KFAC.SUPPORTED_KFAC_APPROXIMATIONS,
@@ -117,9 +124,18 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
 
 
 class KFAC(Optimizer):
-    """KFAC optimizer for PINN problems."""
+    """KFAC optimizer for PINN problems.
+
+    Attributes:
+        SUPPORTED_KFAC_APPROXIMATIONS: Available KFAC approximations. Currently only
+            supports KFAC-expand.
+        SUPPORTED_GGN_TYPES: Available approximations of the GGN used to approximate
+            KFAC. Currently supports `'type-2'`, `'empirical'`, and `'forward-only'`
+            (ordered in descending computational cost and approximation quality).
+    """
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand"}
+    SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
 
     def __init__(
         self,
@@ -131,6 +147,7 @@ class KFAC(Optimizer):
         ema_factor: float = 0.95,
         kfac_approx: str = "expand",
         inv_strategy: str = "invert kronecker sum",
+        ggn_type: str = "type-2",
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
     ) -> None:
@@ -156,6 +173,9 @@ class KFAC(Optimizer):
                 in `[0, 1)`. Default is `0.95`.
             kfac_approx: KFAC approximation method. Must be either `'expand'`, or
                 `'reduce'`. Defaults to `'expand'`.
+            ggn_type: Type of the GGN to use. This influences the backpropagted error
+                used to compute the KFAC matrices. Can be either `'type-2'`,
+                `'empirical'`, or `'forward-only'`. Default: `'type-2'`.
             inv_strategy: Inversion strategy. Must `'invert kronecker sum'`. Default is
                 `'invert kronecker sum'`.
             inv_dtype: Data type to carry out the curvature inversion. Default is
@@ -171,6 +191,7 @@ class KFAC(Optimizer):
             T_inv,
             ema_factor,
             kfac_approx,
+            ggn_type,
             inv_strategy,
             inv_dtype,
             initialize_to_identity,
@@ -182,6 +203,7 @@ class KFAC(Optimizer):
             T_inv=T_inv,
             ema_factor=ema_factor,
             kfac_approx=kfac_approx,
+            ggn_type=ggn_type,
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
             initialize_to_identity=initialize_to_identity,
@@ -189,16 +211,20 @@ class KFAC(Optimizer):
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
 
-        # initialize KFAC matrices
+        # initialize KFAC matrices for the interior and boundary term
         self.kfacs_interior = check_layers_and_initialize_kfac(
             layers, initialize_to_identity=initialize_to_identity
         )
         self.kfacs_boundary = check_layers_and_initialize_kfac(
             layers, initialize_to_identity=initialize_to_identity
         )
+
         self.steps = 0
-        self.inv: Dict[int, InverseKroneckerSum] = {}
+        self.inv: Dict[int, Union[InverseKroneckerSum, Tensor]] = {}
         self.layers = layers
+        self.layer_idxs = [
+            idx for idx, layer in enumerate(self.layers) if list(layer.parameters())
+        ]
 
     def step(
         self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
@@ -222,7 +248,7 @@ class KFAC(Optimizer):
         self.update_preconditioner()
 
         directions = []
-        for layer_idx in self.kfacs_interior.keys():
+        for layer_idx in self.layer_idxs:
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
 
@@ -244,10 +270,15 @@ class KFAC(Optimizer):
         """
         group = self.param_groups[0]
         if self.steps % group["T_kfac"] == 0:
-            loss, kfacs = evaluate_interior_loss_and_kfac_expand(self.layers, X, y)
             ema_factor = group["ema_factor"]
-            for layer_idx, updates in kfacs.items():
-                for destination, update in zip(self.kfacs_interior[layer_idx], updates):
+            ggn_type = group["ggn_type"]
+            loss, kfacs = evaluate_interior_loss_and_kfac_expand(
+                self.layers, X, y, ggn_type=ggn_type
+            )
+            for layer_idx in self.layer_idxs:
+                destinations = self.kfacs_interior[layer_idx]
+                updates = kfacs[layer_idx]
+                for destination, update in zip(destinations, updates):
                     exponential_moving_average(destination, update, ema_factor)
         else:
             loss, _, _ = evaluate_interior_loss(self.layers, X, y)
@@ -266,10 +297,15 @@ class KFAC(Optimizer):
         """
         group = self.param_groups[0]
         if self.steps % group["T_kfac"] == 0:
-            loss, kfacs = evaluate_boundary_loss_and_kfac_expand(self.layers, X, y)
             ema_factor = group["ema_factor"]
-            for layer_idx, updates in kfacs.items():
-                for destination, update in zip(self.kfacs_boundary[layer_idx], updates):
+            ggn_type = group["ggn_type"]
+            loss, kfacs = evaluate_boundary_loss_and_kfac_expand(
+                self.layers, X, y, ggn_type=ggn_type
+            )
+            for layer_idx in self.layer_idxs:
+                destinations = self.kfacs_boundary[layer_idx]
+                updates = kfacs[layer_idx]
+                for destination, update in zip(destinations, updates):
                     exponential_moving_average(destination, update, ema_factor)
         else:
             loss, _, _ = evaluate_boundary_loss(self.layers, X, y)
@@ -288,7 +324,7 @@ class KFAC(Optimizer):
         damping = group["damping"]
 
         # compute the KFAC inverse
-        for layer_idx in self.kfacs_interior.keys():
+        for layer_idx in self.layer_idxs:
             weight_dtype = self.layers[layer_idx].weight.dtype
             weight_device = self.layers[layer_idx].weight.device
 
@@ -321,16 +357,15 @@ class KFAC(Optimizer):
         """
         layer = self.layers[layer_idx]
         grad_combined = cat(
-            [layer.weight.grad.data, layer.bias.data.unsqueeze(-1)], dim=1
+            [layer.weight.grad.data, layer.bias.grad.data.unsqueeze(-1)], dim=1
         )
-        nat_grad_combined = self.inv[layer_idx] @ grad_combined
-
         _, d_in = layer.weight.shape
+        nat_grad_combined = self.inv[layer_idx] @ grad_combined
         nat_grad_weight, nat_grad_bias = nat_grad_combined.split([d_in, 1], dim=1)
         return nat_grad_weight, nat_grad_bias.squeeze(1)
 
     @classmethod
-    def _check_hyperparameters(
+    def _check_hyperparameters(  # noqa: C901
         cls,
         lr: Union[float, Tuple[str, List[float]]],
         damping: float,
@@ -338,6 +373,7 @@ class KFAC(Optimizer):
         T_inv: int,
         ema_factor: float,
         kfac_approx: str,
+        ggn_type: str,
         inv_strategy: str,
         inv_dtype: dtype,
         initialize_to_identity,
@@ -351,6 +387,7 @@ class KFAC(Optimizer):
             T_inv: Number of steps between inverse KFAC updates.
             ema_factor: Exponential moving average factor.
             kfac_approx: KFAC approximation.
+            ggn_type: GGN type.
             inv_strategy: Inverse strategy.
             inv_dtype: Inverse dtype.
             initialize_to_identity: Flag to initialize the inverse to the identity.
@@ -367,6 +404,11 @@ class KFAC(Optimizer):
                 f"Unsupported KFAC approximation: {kfac_approx}. "
                 + f"Supported: {cls.SUPPORTED_KFAC_APPROXIMATIONS}."
             )
+        if ggn_type not in cls.SUPPORTED_GGN_TYPES:
+            raise ValueError(
+                f"Unsupported GGN type: {ggn_type}. "
+                + f"Supported: {cls.SUPPORTED_GGN_TYPES}."
+            )
         if not 0 <= ema_factor < 1:
             raise ValueError(
                 "Exponential moving average factor must be in [0, 1). "
@@ -375,9 +417,8 @@ class KFAC(Optimizer):
         if isinstance(lr, float):
             if lr <= 0.0:
                 raise ValueError(f"Learning rate must be positive. Got {lr}.")
-        else:
-            if lr[0] != "grid_line_search":
-                raise ValueError(f"Unsupported line search: {lr[0]}.")
+        elif lr[0] != "grid_line_search":
+            raise ValueError(f"Unsupported line search: {lr[0]}.")
         if damping < 0.0:
             raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
         if inv_strategy != "invert kronecker sum":

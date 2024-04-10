@@ -16,11 +16,11 @@ method: random
 run_cap: 50
 parameters:
     num_steps:
-        value: 10_000
+        value: 50_000
     SGD_lr:
         distribution: log_uniform_values
-        min: 5e-4
-        max: 5e-1
+        min: 1e-3
+        max: 1e-1
     SGD_momentum:
         distribution: categorical
-        values: [0.0, 0.3, 0.6, 0.9]
+        values: [0.0, 0.3, 0.6, 0.9, 0.99]

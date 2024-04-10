@@ -39,14 +39,18 @@ ARGS = [
         for approximation in ["full", "per_layer", "diagonal"]
     ],
     # train with KFAC
-    [
-        "--num_steps=10",
-        "--optimizer=KFAC",
-        "--KFAC_T_kfac=2",
-        "--KFAC_T_inv=4",
-        "--KFAC_ema_factor=0.95",
-        "--KFAC_damping=0.01",
-        "--KFAC_lr=0.1",
+    *[
+        [
+            "--num_steps=10",
+            "--optimizer=KFAC",
+            "--KFAC_T_kfac=2",
+            "--KFAC_T_inv=4",
+            "--KFAC_ema_factor=0.95",
+            "--KFAC_damping=0.01",
+            "--KFAC_lr=0.1",
+            f"--KFAC_ggn_type={ggn_type}",
+        ]
+        for ggn_type in ["type-2", "empirical", "forward-only"]
     ],
     # train with SGD
     ["--num_steps=3", "--optimizer=SGD", "--SGD_lr=0.1", "--SGD_momentum=0.9"],

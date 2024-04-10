@@ -15,7 +15,7 @@ metric:
 method: grid
 parameters:
     num_steps:
-        value: 500
+        value: 10_000
     HessianFree_curvature_opt:
         distribution: categorical
         values: ["ggn", "hessian"]
