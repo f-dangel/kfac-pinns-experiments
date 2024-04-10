@@ -167,7 +167,7 @@ class KFAC(Optimizer):
     """KFAC optimizer for PINN problems."""
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand"}
-    SUPPORTED_GGN_TYPES = {"type-2", "empirical"}
+    SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
 
     def __init__(
         self,
@@ -209,8 +209,8 @@ class KFAC(Optimizer):
             kfac_approx: KFAC approximation method. Must be either `'expand'`, or
                 `'reduce'`. Defaults to `'expand'`.
             ggn_type: Type of the GGN to use. This influences the backpropagted error
-                used to compute the KFAC matrices. Can be either `'type-2'` or
-                `'empirical'`. Default: `'type-2'`.
+                used to compute the KFAC matrices. Can be either `'type-2'`,
+                `'empirical'`, or `'forward-only'`. Default: `'type-2'`.
             inv_strategy: Inversion strategy. Must `'invert kronecker sum'`. Default is
                 `'invert kronecker sum'`.
             inv_dtype: Data type to carry out the curvature inversion. Default is
@@ -249,12 +249,6 @@ class KFAC(Optimizer):
         # set debuggin flags
         self.USE_EXACT_BOUNDARY_GRAMIAN = USE_EXACT_BOUNDARY_GRAMIAN
         self.USE_EXACT_INTERIOR_GRAMIAN = USE_EXACT_INTERIOR_GRAMIAN
-        if (
-            self.USE_EXACT_BOUNDARY_GRAMIAN or self.USE_EXACT_INTERIOR_GRAMIAN
-        ) and ggn_type != "type-2":
-            raise NotImplementedError(
-                "Only type-2 GGN is supported with exact Gramians."
-            )
 
         # initialize KFAC matrices or Gramians for the interior term
         if self.USE_EXACT_INTERIOR_GRAMIAN:

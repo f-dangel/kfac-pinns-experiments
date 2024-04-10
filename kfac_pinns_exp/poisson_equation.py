@@ -5,7 +5,7 @@ from math import pi, sqrt
 from typing import Callable, Dict, List, Tuple, Union
 
 from einops import einsum, rearrange
-from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
+from torch import Tensor, cat, cos, eye, ones_like, prod, rand, randint, sin
 from torch import sum as torch_sum
 from torch.autograd import grad
 from torch.nn import Module
@@ -306,6 +306,13 @@ def evaluate_interior_loss_and_kfac_expand(
         error = ones_like(residual) / sqrt(batch_size)
     elif ggn_type == "empirical":
         error = residual.clone().detach() / sqrt(batch_size)
+    elif ggn_type == "forward-only":
+        X.requires_grad = X_original_requires_grad
+        for handle in handles:
+            handle.remove()
+        for _, B in kfacs.values():
+            B.fill_diagonal_(1.0)
+        return loss, kfacs
     else:
         raise NotImplementedError
     grad(residual, X, grad_outputs=error, retain_graph=True)
@@ -371,6 +378,13 @@ def evaluate_boundary_loss_and_kfac_expand(
         error = ones_like(residual) / sqrt(batch_size)
     elif ggn_type == "empirical":
         error = residual.clone().detach() / sqrt(batch_size)
+    elif ggn_type == "forward-only":
+        X.requires_grad = X_original_requires_grad
+        for handle in handles:
+            handle.remove()
+        for _, B in kfacs.values():
+            B.fill_diagonal_(1.0)
+        return loss, kfacs
     else:
         raise NotImplementedError
     grad(residual, X, grad_outputs=error, retain_graph=True)
