@@ -1,20 +1,19 @@
 """Functionality for solving the Poisson equation."""
 
-from functools import partial
 from math import pi
 from typing import Callable, Dict, List, Tuple, Union
 
-from einops import einsum, rearrange
+from einops import einsum, rearrange, reduce
 from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
 from torch import sum as torch_sum
 from torch.autograd import grad
 from torch.nn import Module
-from torch.utils.hooks import RemovableHandle
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian, autograd_input_hessian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.manual_differentiation import manual_forward
+from kfac_pinns_exp.utils import bias_augmentation
 
 
 # TODO Use code from exp02 once it is merged
@@ -248,8 +247,12 @@ def evaluate_boundary_loss(
     return 0.5 * (residual**2).mean(), residual, intermediates
 
 
-def evaluate_interior_loss_and_kfac_expand(
-    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str = "type-2"
+def evaluate_interior_loss_and_kfac(
+    layers: List[Module],
+    X: Tensor,
+    y: Tensor,
+    ggn_type: str = "type-2",
+    kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
     """Evaluate the interior loss and compute its KFAC-expand approximation.
 
@@ -259,19 +262,21 @@ def evaluate_interior_loss_and_kfac_expand(
         y: The target data.
         ggn_type: The type of GGN to compute. Can be `'empirical'`, `'type-2'`,
             or `'forward-only'`. Default: `'type-2'`.
+        kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
+            `'reduce'`. Default: `'expand'`.
 
     Returns:
         The (differentiable) interior loss and a dictionary whose keys are the layer
         indices and whose values are the two Kronecker factors.
-    """
-    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
-    # We turn X's differentiability on to trigger the grad-output based
-    # Kronecker factor computation by calling `grad` w.r.t. `X`. We restore the
-    # original value later.
-    X_original_requires_grad = X.requires_grad
-    if ggn_type != "forward-only":
-        X.requires_grad = True
+    Raises:
+        ValueError: If `kfac_approx` is not `'expand'` or `'reduce'`.
+    """
+    if kfac_approx not in {"expand", "reduce"}:
+        raise ValueError(
+            f"kfac_approx must be 'expand' or 'reduce'. Got {kfac_approx}."
+        )
+    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
     # Compute the forward Laplacian and all the intermediates
     loss, residual, intermediates = evaluate_interior_loss(layers, X, y)
@@ -279,16 +284,28 @@ def evaluate_interior_loss_and_kfac_expand(
     ###############################################################################
     #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
     ###############################################################################
-    batch_size, shared, d0 = X.shape[0], X.shape[1:-1].numel(), X.shape[-1]
-    num_outer_products = batch_size * shared * (d0 + 2)
     for layer_idx, (A, _) in kfacs.items():
-        for input_type, bias_augmentation in zip(
-            ["forward", "directional_gradients", "laplacian"], [1, 0, 0]
-        ):
-            x = intermediates[layer_idx][input_type]
-            add_input_based_kfac_expand(
-                x, num_outer_products, bias_augmentation, dest=A
-            )
+        layer_in = intermediates[layer_idx]
+        # batch_size x d_in
+        forward = layer_in["forward"]
+        # batch_size x d_0 x d_in
+        directional_gradients = layer_in["directional_gradients"]
+        # batch_size x d_in
+        laplacian = layer_in["laplacian"]
+        # batch_size x (d_0 + 2) x (d_in + 1)
+        T = cat(
+            [
+                bias_augmentation(forward.detach(), 1).unsqueeze(1),
+                bias_augmentation(directional_gradients.detach(), 0),
+                bias_augmentation(laplacian.detach(), 0).unsqueeze(1),
+            ],
+            dim=1,
+        )
+        if kfac_approx == "expand":
+            T = rearrange(T, "batch d_0 d_in -> (batch d_0) d_in")
+        else:  # KFAC-reduce
+            T = reduce(T, "batch d_0 d_in -> batch d_in", "mean")
+        A.add_(T.T @ T, alpha=1 / T.shape[0])
 
     if ggn_type == "forward-only":
         # set all grad-output Kronecker factors to identity, no backward pass required
@@ -299,31 +316,69 @@ def evaluate_interior_loss_and_kfac_expand(
     ###############################################################################
     #                   COMPUTE OUTPUT-BASED KRONECKER FACTORS                    #
     ###############################################################################
-    handles: List[RemovableHandle] = []
+    error = get_backpropagated_error(residual, ggn_type)
 
-    # Install hooks that accumulate the outer product into all B's
-    for layer_idx, (_, B) in kfacs.items():
-        for x in intermediates[layer_idx + 1].values():
-            hook = partial(hook_add_output_based_kfac_expand, dest=B)
-            hook_handle = x.register_hook(hook)
-            handles.append(hook_handle)
-
+    # compute the gradient w.r.t. all relevant layer outputs
+    outputs = []
+    for layer_idx in kfacs:
+        layer_out = intermediates[layer_idx + 1]
+        outputs.extend(
+            [
+                layer_out["forward"],
+                layer_out["directional_gradients"],
+                layer_out["laplacian"],
+            ]
+        )
     # We used the residual in the loss and don't want its graph to be free
     # Therefore, set `retain_graph=True`.
-    # trigger the backward hooks
-    error = get_backpropagated_error(residual, ggn_type)
-    grad(residual, X, grad_outputs=error, retain_graph=True)
+    grad_outputs = list(
+        grad(
+            residual,
+            outputs,
+            grad_outputs=error,
+            retain_graph=True,
+            # only the Laplacian of the last layer output is used, hence the
+            # directional gradients and forward outputs of the last layer are
+            # not used. Hence we must set this flag to true and also enable
+            # `materialize_grads` which sets these gradients to explicit zeros.
+            allow_unused=True,
+            materialize_grads=True,
+        )
+    )
 
-    # remove the hooks & reset original differentiability
-    X.requires_grad = X_original_requires_grad
-    for handle in handles:
-        handle.remove()
+    # concatenate gradients w.r.t. all layer outputs into grad_T and form B
+    batch_size = X.shape[0]
+    for _, B in kfacs.values():
+        # batch_size x d_out
+        grad_forward = grad_outputs.pop(0)
+        # batch_size x d_0 x d_out
+        grad_directional_gradients = grad_outputs.pop(0)
+        # batch_size x d_out
+        grad_laplacian = grad_outputs.pop(0)
+        # batch_size x (d_0 + 2) x d_out
+        grad_T = cat(
+            [
+                grad_forward.detach().unsqueeze(1),
+                grad_directional_gradients.detach(),
+                grad_laplacian.detach().unsqueeze(1),
+            ],
+            dim=1,
+        )
+        if kfac_approx == "expand":
+            grad_T = rearrange(grad_T, "batch d_0 d_out -> (batch d_0) d_out")
+        else:  # KFAC-reduce
+            grad_T = reduce(grad_T, "batch d_0 d_out -> batch d_out", "sum")
+        B.add_(grad_T.T @ grad_T, alpha=batch_size)
 
     return loss, kfacs
 
 
-def evaluate_boundary_loss_and_kfac_expand(
-    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str = "type-2"
+def evaluate_boundary_loss_and_kfac(
+    layers: List[Module],
+    X: Tensor,
+    y: Tensor,
+    ggn_type: str = "type-2",
+    kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
     """Evaluate the boundary loss and compute its KFAC-expand approximation.
 
@@ -333,19 +388,21 @@ def evaluate_boundary_loss_and_kfac_expand(
         y: The target data.
         ggn_type: The type of GGN to compute. Can be `'empirical'`, `'type-2'`,
             or `'forward-only'`. Default: `'type-2'`.
+        kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
+            `'reduce'`. Default: `'expand'`.
 
     Returns:
         The (differentiable) boundary loss and a dictionary whose keys are the layer
         indices and whose values are the two Kronecker factors.
-    """
-    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
-    # We turn X's differentiability on to trigger the grad-output based
-    # Kronecker factor computation by calling `grad` w.r.t. `X`. We restore the
-    # original value later.
-    X_original_requires_grad = X.requires_grad
-    if ggn_type != "forward-only":
-        X.requires_grad = True
+    Raises:
+        ValueError: If `kfac_approx` is not `'expand'` or `'reduce'`.
+    """
+    if kfac_approx not in {"expand", "reduce"}:
+        raise ValueError(
+            f"kfac_approx must be 'expand' or 'reduce'. Got {kfac_approx}."
+        )
+    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
     # Compute the NN prediction, boundary loss, and all intermediates
     loss, residual, intermediates = evaluate_boundary_loss(layers, X, y)
@@ -353,12 +410,10 @@ def evaluate_boundary_loss_and_kfac_expand(
     ###############################################################################
     #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
     ###############################################################################
-    batch_size, shared = X.shape[0], X.shape[1:-1].numel()
-    num_outer_products = batch_size * shared
-    bias_augmentation = 1
     for layer_idx, (A, _) in kfacs.items():
-        x = intermediates[layer_idx]
-        add_input_based_kfac_expand(x, num_outer_products, bias_augmentation, dest=A)
+        # no weight sharing here, hence KFAC expand and reduce are identical
+        x = bias_augmentation(intermediates[layer_idx], 1).detach()
+        A.add_(x.T @ x, alpha=1 / x.shape[0])
 
     if ggn_type == "forward-only":
         # set all grad-output Kronecker factors to identity, no backward pass required
@@ -369,24 +424,20 @@ def evaluate_boundary_loss_and_kfac_expand(
     ###############################################################################
     #                   COMPUTE OUTPUT-BASED KRONECKER FACTORS                    #
     ###############################################################################
-    handles: List[RemovableHandle] = []
-
-    # Install hooks that accumulate the outer product into all B's
-    for layer_idx, (_, B) in kfacs.items():
-        hook = partial(hook_add_output_based_kfac_expand, dest=B)
-        hook_handle = intermediates[layer_idx + 1].register_hook(hook)
-        handles.append(hook_handle)
-
-    # We used the residual in the loss and don't want its graph to be freed.
-    # Therefore, set `retain_graph=True`
-    # trigger the backward hooks
     error = get_backpropagated_error(residual, ggn_type)
-    grad(residual, X, grad_outputs=error, retain_graph=True)
 
-    # remove the hooks & reset original differentiability
-    X.requires_grad = X_original_requires_grad
-    for handle in handles:
-        handle.remove()
+    # compute the gradient w.r.t. all relevant layer outputs
+    outputs = [intermediates[layer_idx + 1] for layer_idx in kfacs]
+    # We used the residual in the loss and don't want its graph to be free
+    # Therefore, set `retain_graph=True`.
+    grad_outputs = list(grad(residual, outputs, grad_outputs=error, retain_graph=True))
+
+    # compute the grad-output covariance for each layer
+    batch_size = X.shape[0]
+    for _, B in kfacs.values():
+        grad_out = grad_outputs.pop(0).detach()
+        # no weight sharing here, hence KFAC expand and reduce are identical
+        B.add_(grad_out.T @ grad_out, alpha=batch_size)
 
     return loss, kfacs
 
@@ -411,41 +462,3 @@ def get_backpropagated_error(residual: Tensor, ggn_type: str) -> Tensor:
     elif ggn_type == "empirical":
         return residual.clone().detach() / batch_size
     raise NotImplementedError(f"GGN type {ggn_type} is not supported.")
-
-
-def hook_add_output_based_kfac_expand(grad_t: Tensor, dest: Tensor) -> None:
-    """Add the gradient's outer product into the destination tensor.
-
-    Args:
-        grad_t: The gradient w.r.t. the tensor `t` onto which this hook is installed.
-        dest: The destination tensor onto which the gradient outer product is added
-            in-place.
-    """
-    batch_size = grad_t.shape[0]
-    # flatten shared axes into one and use detached tensor for KFAC factor
-    grad_t = rearrange(grad_t, "... d_in -> (...) d_in").detach()
-    dest.add_(einsum(grad_t, grad_t, "n i, n j -> i j"), alpha=batch_size)
-
-
-def add_input_based_kfac_expand(
-    t: Tensor, num_outer_products: int, bias_augmentation: int, dest: Tensor
-) -> None:
-    """Add the input's outer product into the destination tensor.
-
-    Args:
-        t: The input tensor.
-        num_outer_products: The number of total outer products to average over.
-        bias_augmentation: The augmentation to apply to the input tensor to account for
-            the bias. Must be either `0` or `1`.
-        dest: The destination tensor onto which the input outer product is added.
-    """
-    # use detached tensors so that the KFAC factor is not part of the graph
-    # flatten batch and shared axes into one
-    t = rearrange(t.detach(), "... d_in -> (...) d_in")
-
-    # augment to account for bias
-    augmentation_fn = {0: t.new_zeros, 1: t.new_ones}[bias_augmentation]
-    t = cat([t, augmentation_fn((t.shape[0], 1))], dim=-1)
-
-    # add outer product to Kronecker factor
-    dest.add_(einsum(t, t, "n i, n j -> i j"), alpha=1.0 / num_outer_products)

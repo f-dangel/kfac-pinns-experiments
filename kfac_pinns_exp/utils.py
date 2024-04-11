@@ -74,3 +74,20 @@ def exponential_moving_average(dest: Tensor, update: Tensor, factor: float) -> N
             f"Exponential moving average factor must be in [0, 1). Got {factor}."
         )
     dest.mul_(factor).add_(update, alpha=1 - factor)
+
+
+def bias_augmentation(t: Tensor, augmentation: int, dim: int = -1) -> Tensor:
+    """Augment a tensor to account for the bias contribution.
+
+    Args:
+        t: The tensor to be augmented.
+        augmentation: The augmentation type. 0 for zeros, 1 for ones.
+        dim: The dimension to augment. Default is the last dimension.
+
+    Returns:
+        The augmented tensor whose `dim` dimension is increased by 1.
+    """
+    dim = dim if dim > 0 else dim + t.ndim
+    augmentation_fn = {0: t.new_zeros, 1: t.new_ones}[augmentation]
+    augmentation_shape = t.shape[:dim] + (1,) + t.shape[dim + 1 :]
+    return cat([t, augmentation_fn(augmentation_shape)], dim=dim)
