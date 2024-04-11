@@ -7,9 +7,7 @@ from torch import Tensor, cat, dtype, eye, float64
 from torch.nn import Module
 from torch.optim import Optimizer
 
-from kfac_pinns_exp.exp07_inverse_kronecker_sum.inverse_kronecker_sum import (
-    InverseKroneckerSum,
-)
+from kfac_pinns_exp.inverse_kronecker_sum import InverseKroneckerSum
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.optim.engd import ENGD_DEFAULT_LR
 from kfac_pinns_exp.optim.line_search import (
