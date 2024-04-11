@@ -8,7 +8,6 @@ command:
     - ${program}
     - "--wandb"
     - "--optimizer=KFAC"
-    - "--KFAC_ggn_type=empirical"
     - ${args_no_boolean_flags}
 metric:
     goal: minimize
@@ -17,6 +16,8 @@ method: grid
 parameters:
     num_steps:
         value: 10_000
+    KFAC_ggn_type:
+        value: empirical
     KFAC_ema_factor:
         distribution: categorical
         values: [0., 0.5, 0.95, 0.99]

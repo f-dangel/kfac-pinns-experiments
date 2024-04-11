@@ -16,7 +16,7 @@ method: random
 run_cap: 50
 parameters:
     num_steps:
-        value: 200_000
+        value: 500_000
     dim_Omega:
         value: 5
     N_Omega:
@@ -25,8 +25,8 @@ parameters:
         value: 500
     SGD_lr:
         distribution: log_uniform_values
-        min: 5e-4
-        max: 5e-1
+        min: 1e-3
+        max: 1e-2
     SGD_momentum:
         distribution: categorical
         values: [0.0, 0.3, 0.6, 0.9]
