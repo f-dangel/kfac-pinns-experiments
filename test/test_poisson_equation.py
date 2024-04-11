@@ -6,7 +6,7 @@ from torch.nn import Linear, Sequential, Tanh
 from kfac_pinns_exp.kfac_utils import gramian_basis_to_kfac_basis
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_gramian,
-    evaluate_boundary_loss_and_kfac_expand,
+    evaluate_boundary_loss_and_kfac,
     square_boundary,
     u,
 )
@@ -30,7 +30,7 @@ def test_boundary_kfac_batch_size_1():
     model = Sequential(*layers)
 
     # compute boundary KFACs and Gramians
-    _, kfacs = evaluate_boundary_loss_and_kfac_expand(layers, X_dOmega, y_dOmega)
+    _, kfacs = evaluate_boundary_loss_and_kfac(layers, X_dOmega, y_dOmega)
     gramians = evaluate_boundary_gramian(model, X_dOmega, "per_layer")
 
     # The Gramian's basis is `(W.flatten().T, b.T).T`, but KFAC's basis is

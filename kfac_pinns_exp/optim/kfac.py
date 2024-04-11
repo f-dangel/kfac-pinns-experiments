@@ -17,9 +17,9 @@ from kfac_pinns_exp.optim.line_search import (
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_loss,
-    evaluate_boundary_loss_and_kfac_expand,
+    evaluate_boundary_loss_and_kfac,
     evaluate_interior_loss,
-    evaluate_interior_loss_and_kfac_expand,
+    evaluate_interior_loss_and_kfac,
 )
 from kfac_pinns_exp.utils import exponential_moving_average
 
@@ -125,14 +125,14 @@ class KFAC(Optimizer):
     """KFAC optimizer for PINN problems.
 
     Attributes:
-        SUPPORTED_KFAC_APPROXIMATIONS: Available KFAC approximations. Currently only
-            supports KFAC-expand.
+        SUPPORTED_KFAC_APPROXIMATIONS: Available KFAC approximations. Supports
+            KFAC-expand and KFAC-reduce.
         SUPPORTED_GGN_TYPES: Available approximations of the GGN used to approximate
             KFAC. Currently supports `'type-2'`, `'empirical'`, and `'forward-only'`
             (ordered in descending computational cost and approximation quality).
     """
 
-    SUPPORTED_KFAC_APPROXIMATIONS = {"expand"}
+    SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
 
     def __init__(
@@ -153,10 +153,6 @@ class KFAC(Optimizer):
 
         Limitations:
             - No parameter group support. Can only train all parameters.
-            - No support for KFAC-reduce.
-            - No support for input-based curvature only.
-            - No performance gains if `T_kfac` is increased as the KFAC factors are
-              always computed and either incorporated or discarded.
 
         Args:
             layers: List of layers of the neural network.
@@ -182,18 +178,6 @@ class KFAC(Optimizer):
             initialize_to_identity: Whether to initialize the KFAC factors to the
                 identity matrix. Default is `False` (initialize with zero).
         """
-        self._check_hyperparameters(
-            lr,
-            damping,
-            T_kfac,
-            T_inv,
-            ema_factor,
-            kfac_approx,
-            ggn_type,
-            inv_strategy,
-            inv_dtype,
-            initialize_to_identity,
-        )
         defaults = dict(
             lr=lr,
             damping=damping,
@@ -208,6 +192,7 @@ class KFAC(Optimizer):
         )
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
+        self._check_hyperparameters()
 
         # initialize KFAC matrices for the interior and boundary term
         self.kfacs_interior = check_layers_and_initialize_kfac(
@@ -270,8 +255,9 @@ class KFAC(Optimizer):
         if self.steps % group["T_kfac"] == 0:
             ema_factor = group["ema_factor"]
             ggn_type = group["ggn_type"]
-            loss, kfacs = evaluate_interior_loss_and_kfac_expand(
-                self.layers, X, y, ggn_type=ggn_type
+            kfac_approx = group["kfac_approx"]
+            loss, kfacs = evaluate_interior_loss_and_kfac(
+                self.layers, X, y, ggn_type=ggn_type, kfac_approx=kfac_approx
             )
             for layer_idx in self.layer_idxs:
                 destinations = self.kfacs_interior[layer_idx]
@@ -297,8 +283,9 @@ class KFAC(Optimizer):
         if self.steps % group["T_kfac"] == 0:
             ema_factor = group["ema_factor"]
             ggn_type = group["ggn_type"]
-            loss, kfacs = evaluate_boundary_loss_and_kfac_expand(
-                self.layers, X, y, ggn_type=ggn_type
+            kfac_approx = group["kfac_approx"]
+            loss, kfacs = evaluate_boundary_loss_and_kfac(
+                self.layers, X, y, ggn_type=ggn_type, kfac_approx=kfac_approx
             )
             for layer_idx in self.layer_idxs:
                 destinations = self.kfacs_boundary[layer_idx]
@@ -362,63 +349,60 @@ class KFAC(Optimizer):
         nat_grad_weight, nat_grad_bias = nat_grad_combined.split([d_in, 1], dim=1)
         return nat_grad_weight, nat_grad_bias.squeeze(1)
 
-    @classmethod
-    def _check_hyperparameters(  # noqa: C901
-        cls,
-        lr: Union[float, Tuple[str, List[float]]],
-        damping: float,
-        T_kfac: int,
-        T_inv: int,
-        ema_factor: float,
-        kfac_approx: str,
-        ggn_type: str,
-        inv_strategy: str,
-        inv_dtype: dtype,
-        initialize_to_identity,
-    ):
+    def _check_hyperparameters(self):  # noqa: C901
         """Check the hyperparameters for the KFAC optimizer.
-
-        Args:
-            lr: Learning rate or tuple specifying the line search.
-            damping: Damping factor.
-            T_kfac: Number of steps between KFAC updates.
-            T_inv: Number of steps between inverse KFAC updates.
-            ema_factor: Exponential moving average factor.
-            kfac_approx: KFAC approximation.
-            ggn_type: GGN type.
-            inv_strategy: Inverse strategy.
-            inv_dtype: Inverse dtype.
-            initialize_to_identity: Flag to initialize the inverse to the identity.
 
         Raises:
             ValueError: If any hyperparameter is invalid.
         """
+        num_groups = len(self.param_groups)
+        if num_groups != 1:
+            raise ValueError(
+                f"KFAC optimizer expects exactly 1 parameter group. Got {num_groups}."
+            )
+        (group,) = self.param_groups
+
+        T_kfac = group["T_kfac"]
         if T_kfac <= 0:
             raise ValueError(f"T_kfac must be positive. Got {T_kfac}.")
+
+        T_inv = group["T_inv"]
         if T_inv <= 0:
             raise ValueError(f"T_inv must be positive. Got {T_inv}.")
-        if kfac_approx not in cls.SUPPORTED_KFAC_APPROXIMATIONS:
+
+        kfac_approx = group["kfac_approx"]
+        if kfac_approx not in self.SUPPORTED_KFAC_APPROXIMATIONS:
             raise ValueError(
                 f"Unsupported KFAC approximation: {kfac_approx}. "
-                + f"Supported: {cls.SUPPORTED_KFAC_APPROXIMATIONS}."
+                + f"Supported: {self.SUPPORTED_KFAC_APPROXIMATIONS}."
             )
-        if ggn_type not in cls.SUPPORTED_GGN_TYPES:
+
+        ggn_type = group["ggn_type"]
+        if ggn_type not in self.SUPPORTED_GGN_TYPES:
             raise ValueError(
                 f"Unsupported GGN type: {ggn_type}. "
-                + f"Supported: {cls.SUPPORTED_GGN_TYPES}."
+                + f"Supported: {self.SUPPORTED_GGN_TYPES}."
             )
+
+        ema_factor = group["ema_factor"]
         if not 0 <= ema_factor < 1:
             raise ValueError(
                 "Exponential moving average factor must be in [0, 1). "
                 f"Got {ema_factor}."
             )
+
+        lr = group["lr"]
         if isinstance(lr, float):
             if lr <= 0.0:
                 raise ValueError(f"Learning rate must be positive. Got {lr}.")
         elif lr[0] != "grid_line_search":
             raise ValueError(f"Unsupported line search: {lr[0]}.")
+
+        damping = group["damping"]
         if damping < 0.0:
             raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
+
+        inv_strategy = group["inv_strategy"]
         if inv_strategy != "invert kronecker sum":
             raise ValueError(f"Unsupported inversion strategy: {inv_strategy}.")
 
