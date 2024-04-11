@@ -1,6 +1,6 @@
 """Implements a class to multiply with the inverse of a sum of Kronecker matrices."""
 
-from typing import Tuple
+from typing import Tuple, Union
 
 from einops import einsum
 from scipy.linalg import eigh as scipy_eigh
@@ -18,7 +18,7 @@ class InverseKroneckerSum:
         B1: Tensor,
         B2: Tensor,
         inv_dtype: dtype = float64,
-        backend: str = "torch",
+        backend: str = "scipy",
     ):
         """Invert A₁ ⊗ A₂ + B₁ ⊗ B₂.
 
@@ -42,7 +42,7 @@ class InverseKroneckerSum:
                 Therefore, it is often helpful to carry them out in higher precision.
                 Default is `float64`.
             backend: Backend to use for solving the generalized eigenvalue problem.
-                Currently supports `"torch"` and `"scipy"`. Default is `"torch"`, which
+                Currently supports `"torch"` and `"scipy"`. Default is `"scipy"`, which
                 uses `scipy.linalg.eigh` which requires GPU-CPU syncs. `"torch"` will
                 use a PyTorch implementation that is based on the description in
                 ['Eigenvalue and Generalized Eigenvalue Problems:
@@ -71,8 +71,12 @@ class InverseKroneckerSum:
         self.kronecker_dims = (A1.shape[0], A2.shape[0])
 
         # solve generalized eigenvalue problem in specified precision
-        diagLam1, V1 = self.eigh(A1.to(inv_dtype), B1.to(inv_dtype), backend)
-        diagLam2, V2 = self.eigh(A2.to(inv_dtype), B2.to(inv_dtype), backend)
+        diagLam1, V1, B1_inv = self.eigh(
+            A1.to(inv_dtype), B1.to(inv_dtype), backend, return_B_inv=True
+        )
+        diagLam2, V2, B2_inv = self.eigh(
+            A2.to(inv_dtype), B2.to(inv_dtype), backend, return_B_inv=True
+        )
 
         # convert eigenvalues back to original precision
         self.diagLam1 = diagLam1.to(dt)
@@ -80,19 +84,18 @@ class InverseKroneckerSum:
 
         # compute the other required quantities in `inv_dtype` precision and convert
         # back to original precision
-        B1_inv = inverse(B1.to(inv_dtype)).to(dt)
         V1_inv = inverse(V1).to(dt)
-        self.V1_inv_B1_inv = V1_inv @ B1_inv
-
-        B2_inv = inverse(B2.to(inv_dtype)).to(dt)
+        self.V1_inv_B1_inv = V1_inv @ B1_inv.to(dt)
         V2_inv = inverse(V2).to(dt)
-        self.B2_inv_T_V2_inv_T = (V2_inv @ B2_inv).T
+        self.B2_inv_T_V2_inv_T = (V2_inv @ B2_inv.to(dt)).T
 
         self.V1 = V1.to(dt)
         self.V2_T = V2.to(dt).T
 
     @classmethod
-    def eigh(cls, A: Tensor, B: Tensor, backend: str) -> Tuple[Tensor, Tensor]:
+    def eigh(
+        cls, A: Tensor, B: Tensor, backend: str, return_B_inv: bool = False
+    ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor, Tensor]]:
         """Solve a generalized eigenvalue problem defined by (A, B).
 
         Finds ϕ (dxd, orthonormal), Λ (dxd, diagonal) such that A ϕ = B ϕ Λ.
@@ -100,24 +103,36 @@ class InverseKroneckerSum:
         Args:
             A: Symmetric positive definite matrix.
             B: Symmetric positive definite matrix.
+            backend: Backend to use for solving the generalized eigenvalue problem.
+                Currently supports `"torch"` and `"scipy"`.
+            return_B_inv: Whether to return the inverse of B.
 
         Returns:
-            Tuple of generalized eigenvalues (Λ) and eigenvectors (ϕ).
+            Tuple of generalized eigenvalues (Λ) and eigenvectors (ϕ), and maybe the
+            inverse of B.
 
         Raises:
             ValueError: If the backend is not supported.
         """
         if backend == "scipy":
             (dev,) = {A.device, B.device}
-            diagLam, V = scipy_eigh(A.cpu().numpy(), B.cpu().numpy())
-            return from_numpy(diagLam).to(dev), from_numpy(V).to(dev)
+            A_numpy, B_numpy = A.cpu().numpy(), B.cpu().numpy()
+            diagLam, V = scipy_eigh(A_numpy, B_numpy)
+            diagLam, V = from_numpy(diagLam).to(dev), from_numpy(V).to(dev)
+            return (diagLam, V, inverse(B)) if return_B_inv else (diagLam, V)
 
         elif backend == "torch":
             # see Algorithm 1 in https://arxiv.org/pdf/1903.11240.pdf
             diagLam_B, Phi_B = torch_eigh(B)
+            if return_B_inv:
+                B_inv = einsum(Phi_B, diagLam_B.pow(-1), Phi_B.T, "i j, j, j k -> i k")
             Phi_B = einsum(Phi_B, diagLam_B.pow(-0.5), "i j, j -> i j")
             diagLamA, Phi_A = torch_eigh(Phi_B.T @ A @ Phi_B)
-            return diagLamA, Phi_B @ Phi_A
+            return (
+                (diagLamA, Phi_B @ Phi_A, B_inv)
+                if return_B_inv
+                else (diagLamA, Phi_B @ Phi_A)
+            )
 
         raise ValueError(
             f"Unsupported backend: {backend}. Supported: 'torch', 'scipy'."
