@@ -1,13 +1,13 @@
 entity: kfac-pinns
 project: poisson2d_deep
-name: ENGD_full
+name: KFAC
 program: ../../train.py
 command:
     - ${env}
     - python
     - ${program}
     - "--wandb"
-    - "--optimizer=ENGD"
+    - "--optimizer=KFAC"
     - ${args_no_boolean_flags}
 metric:
     goal: minimize
@@ -18,14 +18,12 @@ parameters:
         value: mlp-tanh-64-48-32-16
     num_steps:
         value: 10_000
-    ENGD_approximation:
-        value: full
-    ENGD_damping:
+    KFAC_ema_factor:
         distribution: categorical
-        values: [1e-6, 1e-8, 1e-10, 1e-12, 0.0]
-    ENGD_ema_factor:
+        values: [0., 0.5, 0.95, 0.99]
+    KFAC_damping:
         distribution: categorical
-        values: [0.0, 0.3, 0.6, 0.9, 0.99]
-    ENGD_initialize_to_identity:
+        values: [1e-4, 1e-6, 1e-8, 1e-10, 1e-12, 0]
+    KFAC_initialize_to_identity:
         distribution: categorical
         values: [false, true]
