@@ -29,7 +29,7 @@ parameters:
         values: [0., 0.5, 0.95, 0.99]
     KFAC_damping:
         distribution: categorical
-        values: [1e0, 1e-2, 1e-4, 1e-6, 1e-8, 1e-10]
+        values: [100, 10, 1e0, 1e-1, 1e-2, 1e-4]
     KFAC_initialize_to_identity:
         distribution: categorical
         values: [false, true]
