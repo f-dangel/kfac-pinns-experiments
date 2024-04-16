@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple
 
-from torch import Tensor, eye, zeros
+from torch import Tensor, arange, cat, eye, zeros
 from torch.nn import Linear, Module
 
 
@@ -46,3 +46,39 @@ def check_layers_and_initialize_kfac(
             kfacs[layer_idx] = (A, B)
 
     return kfacs
+
+
+def gramian_basis_to_kfac_basis(mat_or_vec: Tensor, dim_A: int, dim_B: int) -> Tensor:
+    """Rearrange the Gramian such that its basis matches that of KFAC.
+
+    For a linear layer with weight `W` and bias `b`, the Gramian's basis is
+    `(W.flatten().T, b.T).T` while KFAC's basis is `(W, b).flatten()` which is
+    different.
+
+    Args:
+        mat_or_vec: A matrix or vector in the Gramian's basis.
+        dim_A: The dimension of the first (input-based) Kronecker factor.
+        dim_B: The dimension of the second (grad-output-based) Kronecker factor.
+
+    Returns:
+        The rearranged matrix or vector in the KFAC basis.
+
+    Raises:
+        ValueError: If the supplied tensor is not 1d or 2d.
+    """
+    # create a 1d array which maps current positions to new positions via slicing,
+    # i.e. its i-th entry contains the position of the element in the old basis
+    # which should be the i-th vector in the new basis
+    rearrange = cat(
+        [
+            arange(dim_B * dim_A).reshape(dim_B, dim_A),
+            arange(dim_B * dim_A, dim_B * (dim_A + 1)).unsqueeze(1),
+        ],
+        dim=1,
+    ).flatten()
+    if mat_or_vec.ndim == 2:
+        return mat_or_vec[rearrange, :][:, rearrange]
+    elif mat_or_vec.ndim == 1:
+        return mat_or_vec[rearrange]
+    else:
+        raise ValueError(f"Only 1,2d tensors are supported. Got {mat_or_vec.ndim}d.")

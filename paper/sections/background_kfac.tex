@@ -13,13 +13,34 @@ We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was 
 In the first step the Fisher-information matrix $\mF$ can be approximated by a block diagonal matrix with blocks corresponding to the Fisher-information matrices of the individual layers of the network, i.e., $\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$. 
 Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence reducing the computational complexity. 
 
+\paragraph{Flattening, Jacobians, and Hessians}
+%Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
+%In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
+%We consider the following vectorization of the matrices appearing as the trainable parameters of the network.
+To vectorize the weight matrices of the linear layers we follow the % index convention to vectorize will be
+\emph{first-varies-fastest} convention, which means column-stacking (row index varies first, column index varies second).
+We denote the corresponding flattening operation by $\flatten(\cdot)$.
+Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$
+%\begin{equation}\label{eq:vecTrick}
+%  \flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}
+%\end{equation}
+for matrices $\mA, \mX, \mB$.
+In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
+The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
+Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
+It collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
+For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ w.r.t.\,a matrix $\mA$, we simply have $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
+Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ w.r.t.\,a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
+For the Hessian $\gradsquared{\mA} b$ of a scalar $b$ w.r.t.\,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
+We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
+
 \paragraph{Kronecker-factored approximation of the blocks}
 We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point. 
-The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and note that by the vec-trick, we have $\jac_{\vtheta^{(l)}} \vz^{(l)} = \vz^{(l-1)} \otimes I$. 
+The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and note that by the vec-trick, we have $\jac_{\vtheta^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$. 
 By the chain rule, we have
 \begin{align}
     \jac_{\vtheta^{(l)}} u_{\vtheta}(\vx_n) & = \jac_{\vtheta^{(l)}} \vz_n^{(l)} \jac_{\vz^{(l)}}  \vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n = 
-    \vz^{(l-1)}_n\otimes  \jac_{\vz^{(l)}}  \vz^{(L)}_n. 
+    {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vz^{(L)}_n. 
 \end{align}
 %and hence 
 %\begin{align}
@@ -40,7 +61,19 @@ Solving a Kronecker-factored linear system is only as expensive as solving two s
 Now consider a layer whose weight is applied onto \emph{multiple} vectors.
 This concept is known as weight sharing.
 This could be a linear layer with matrix-valued inputs like in attention, a convolution layer whose kernel is shared between patches of the input, or weights that are used multiple times throughout the computation graph (e.g.\, weight tying).
-This means the layer will not process a single vector $\va$, but a sequence of vectors $\left\{ \va_1, \dots, \va_S \right\}$ where $S$ denotes weight sharing number.
+This means the layer will not process a single vector $\vz^{(l)}$, but a sequence of vectors $\left\{ \vz^{(l)}_1, \dots, \vz^{(l)}_S \right\}$ where $S$ denotes weight sharing number.
+We can column-stack these vectors into a matrix $\mZ^{(l)} \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\mZ^{(l+1)} = \mW^{(l)} \mZ^{(l)} \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG^{(l)} \in \sR^{D_{\text{out}} \times S}$.\todo{introduce the gradient notation} 
+The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW^{(l)}} \mZ^{(l+1)} = {\mZ^{(l)}}^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
+%As described by \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
+We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed by~\citet{grosse2016kroneckerfactored}.
+It treats the shared axis like a batch axis,
+\begin{align}
+    \mF(\mW^{(l)}) = \frac1S \sum_{s=1}^S (\vz_s^{(l)} \otimes {\vg_s^{(l)}}^\top)({\vz_s^{(l)}}^{\top}\otimes \vg_s^{(l)}) \approx \frac{1}{S} \sum_{s=1}^S \va_s \va_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top}, \qaud \text{where } \vg_s = ...%\grad{\vz_s} \ell(\vx, \hat{\vy}, \mW).
+\end{align}
+We can express this in matrix notation as $\mF(\mW^{(l)}) \approx \nicefrac{1}{S} \mZ^{(l)} {\mZ^{(l)}}^{\top} \otimes \mG^{(l)} {\mG^{(l)}}^{\top}$.
+
+\begin{comment}
+    This means the layer will not process a single vector $\va$, but a sequence of vectors $\left\{ \va_1, \dots, \va_S \right\}$ where $S$ denotes weight sharing number.
 We can column-stack these vectors into a matrix $\mA \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\vz = \mW \mA \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG \in \sR^{D_{\text{out}} \times S}$.
 The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW} \mZ = \mA^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
 As described by \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
@@ -48,6 +81,7 @@ We will focus on the \emph{expand} approximation, which yields the Kronecker app
 It treats the shared axis like a batch axis,
 $\mF(\mW) \approx \nicefrac{1}{S} \sum_{s=1}^S \va_s \va_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top}$ where $\vg_s = \grad{\vz_s} \ell(\vx, \hat{\vy}, \mW)$.
 We can express this in matrix notation as $\mF(\mW) \approx \nicefrac{1}{S} \mA \mA^{\top} \otimes \mG \mG^{\top}$.
+\end{comment}
 
 
 %%% Local Variables:

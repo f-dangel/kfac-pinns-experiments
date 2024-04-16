@@ -2,9 +2,7 @@
 
 from torch import allclose, eye, inverse, kron, manual_seed, randn
 
-from kfac_pinns_exp.exp07_inverse_kronecker_sum.inverse_kronecker_sum import (
-    InverseKroneckerSum,
-)
+from kfac_pinns_exp.inverse_kronecker_sum import InverseKroneckerSum
 
 
 def main():
@@ -32,15 +30,16 @@ def main():
     K_inv = inverse(K)
 
     # class approach
-    K_inv_class = InverseKroneckerSum(A1, A2, B1, B2)
+    for backend in ["scipy", "torch"]:
+        K_inv_class = InverseKroneckerSum(A1, A2, B1, B2, backend=backend)
 
-    # multiply onto flattened vector
-    x = randn(dim1 * dim2).double()
-    assert allclose(K_inv @ x, K_inv_class @ x, **tols)
+        # multiply onto flattened vector
+        x = randn(dim1 * dim2).double()
+        assert allclose(K_inv @ x, K_inv_class @ x, **tols)
 
-    # multiply onto un-flattened vector
-    x = x.reshape(dim1, dim2)
-    assert allclose(K_inv @ x.flatten(), (K_inv_class @ x).flatten(), **tols)
+        # multiply onto un-flattened vector
+        x = x.reshape(dim1, dim2)
+        assert allclose(K_inv @ x.flatten(), (K_inv_class @ x).flatten(), **tols)
 
 
 if __name__ == "__main__":
