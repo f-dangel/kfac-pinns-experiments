@@ -1,0 +1,37 @@
+entity: kfac-pinns
+project: poisson5d_deep
+name: ENGD_full
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=ENGD"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: loss
+method: grid
+parameters:
+    model:
+        value: mlp-tanh-64-48-32-16
+    num_steps:
+        value: 50_000
+    dim_Omega:
+        value: 5
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 500
+    ENGD_approximation:
+        value: full
+    ENGD_damping:
+        distribution: categorical
+        values: [1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 0.0]
+    ENGD_ema_factor:
+        distribution: categorical
+        values: [0.0, 0.3, 0.6, 0.9]
+    ENGD_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]
