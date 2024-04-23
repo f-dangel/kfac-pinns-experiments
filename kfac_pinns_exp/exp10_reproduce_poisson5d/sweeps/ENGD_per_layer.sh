@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --qos=m4
+
 #SBATCH --partition=rtx6000
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
