@@ -5,6 +5,7 @@
 % before loading neurips_2023
 
 \usepackage[preprint]{neurips_2023}
+\usepackage{comment}
 
 % to compile a preprint version, e.g., for submission to arXiv, add add the
 % [preprint] option:
@@ -34,14 +35,6 @@
   %The challenge to develop approximations to the Gramian is that it requires taking the parameter derivative of the PDE operator, which itself contains higher-order derivative.
   %Here, we propose a Kronecker-factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
 \end{abstract}
-
-TODOs: 
-\begin{itemize}
-    \item debug KFAC 
-    \item small problems (compare everything), medium size problems (compare to BFGS / LBFGS), large problems (compare to Adam, to "naive" KFAC) 
-    \item what about Hessian free?
-    %\item understand what people mean by KFAC in the VMC community 
-\end{itemize}
 
 \section{Introduction}
 \input{sections/introduction.tex}
