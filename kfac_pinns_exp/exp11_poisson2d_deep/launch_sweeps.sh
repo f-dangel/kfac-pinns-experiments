@@ -19,6 +19,7 @@ for optim in \
             m \
             normal\
         ; do
+        echo sbatch $optim.sh --qos=$qos
         sbatch $optim.sh --qos=$qos
     done
 done
