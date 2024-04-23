@@ -40,11 +40,13 @@ from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
     l2_error,
+    square_boundary,
 )
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
-SUPPORTED_EQUATIONS = ["poisson", "poisson_cos_sum"]
+SUPPORTED_EQUATIONS = ["poisson"]
 SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
+SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum"]
 
 
 def parse_general_args(verbose: bool = False) -> Namespace:
@@ -73,6 +75,13 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default="poisson",
         choices=SUPPORTED_EQUATIONS,
         help="Which equation and solution will be solved.",
+    )
+    parser.add_argument(
+        "--boundary_condition",
+        type=str,
+        default="sin_product",
+        choices=SUPPORTED_BOUNDARY_CONDITIONS,
+        help="Which boundary condition will be used.",
     )
     parser.add_argument(
         "--dim_Omega",
@@ -193,22 +202,21 @@ def main():  # noqa: C901
     dt = args.dtype
     print(f"Running on device {str(dev)}")
 
+    # data
     manual_seed(args.data_seed)
-
     X_Omega = rand(args.N_Omega, args.dim_Omega).to(dev, dt)
     X_Omega_eval = rand(10 * args.N_Omega, args.dim_Omega).to(dev, dt)
-    X_dOmega = poisson_equation.square_boundary(args.N_dOmega, args.dim_Omega).to(
-        dev, dt
-    )
-
-    if args.equation == "poisson":
-        f = poisson_equation.f
-        u = poisson_equation.u
-
-    elif args.equation == "poisson_cos_sum":
-        f = poisson_equation.f_cos_sum
-        u = poisson_equation.u_cos_sum
-
+    X_dOmega = square_boundary(args.N_dOmega, args.dim_Omega).to(dev, dt)
+    # combinations of differential equations and supported boundary conditions/solutions
+    f, u = {
+        "poisson": {
+            "sin_product": (
+                poisson_equation.f_sin_product,
+                poisson_equation.u_sin_product,
+            ),
+            "cos_sum": (poisson_equation.f_cos_sum, poisson_equation.u_cos_sum),
+        }
+    }[args.equation][args.boundary_condition]
     y_Omega = f(X_Omega)
     y_dOmega = u(X_dOmega)
 

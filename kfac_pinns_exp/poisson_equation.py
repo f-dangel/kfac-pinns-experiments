@@ -39,9 +39,7 @@ def square_boundary(N: int, dim: int) -> Tensor:
     return X
 
 
-# Right-hand side of the Poisson equation
-# TODO Use code from exp02 once it is merged
-def f(X: Tensor) -> Tensor:
+def f_sin_product(X: Tensor) -> Tensor:
     """The right-hand side of the Prod sine Poisson equation we aim to solve.
 
     Args:
@@ -55,9 +53,7 @@ def f(X: Tensor) -> Tensor:
     return d * pi**2 * prod(sin(pi * X), dim=1, keepdim=True)
 
 
-# Manufactured solution
-# TODO Use code from exp02 once it is merged
-def u(X: Tensor) -> Tensor:
+def u_sin_product(X: Tensor) -> Tensor:
     """Prod sine solution of the Poisson equation we aim to solve.
 
     Args:
