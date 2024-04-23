@@ -14,6 +14,8 @@ metric:
     name: loss
 method: grid
 parameters:
+    equation:
+        value: poisson_cos_sum
     num_steps:
         value: 50_000
     dim_Omega:
