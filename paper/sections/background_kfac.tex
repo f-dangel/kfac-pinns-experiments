@@ -6,12 +6,12 @@ We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was 
 %We review the general principle here. 
 %This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here. 
 %Later, we will expand this to Gramian matrices with PDE terms. 
-\toodoo{We could also follow \cite{eschenhagen2023kroneckerfactored} for the notation} 
+%\toodoo{We could also follow \cite{eschenhagen2023kroneckerfactored} for the notation} 
 
 
 \paragraph{Block-diagonal approximation}
 In the first step the Fisher-information matrix $\mF$ can be approximated by a block diagonal matrix with blocks corresponding to the Fisher-information matrices of the individual layers of the network, i.e., $\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$. 
-Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence reducing the computational complexity. 
+Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence significantly reducing the computational complexity. 
 
 \paragraph{Flattening, Jacobians, and Hessians}
 %Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
@@ -36,41 +36,26 @@ We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scala
 
 \paragraph{Kronecker-factored approximation of the blocks}
 We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point. 
-The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and note that by the vec-trick, we have $\jac_{\vtheta^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$. 
+The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and note that by the vec-trick, we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$. 
 By the chain rule, we have
 \begin{align}
-    \jac_{\vtheta^{(l)}} u_{\vtheta}(\vx_n) & = \jac_{\vtheta^{(l)}} \vz_n^{(l)} \jac_{\vz^{(l)}}  \vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n = 
-    {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vz^{(L)}_n. 
+    \jac_{\mW^{(l)}} \vu_n%u_{\vtheta}(\vx_n) 
+    & = \jac_{\vz^{(l)}}  \vu_n \jac_{\mW^{(l)}} \vz_n^{(l)}%\vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n 
+    = {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vu_n.%\vz^{(L)}_n. 
 \end{align}
 %and hence 
 %\begin{align}
 %    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.  
 %\end{align}
-Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx (\sum_n \mA_n) \otimes (\sum_n \mB_n)$ we obtain 
+Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ we obtain 
 \begin{equation}
-    \mF(\vtheta^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top 
-    \approx \left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N\nabla_{\vz^{(l)}}  \vu_n\nabla_{\vz^{(l)}}  \vu_n^\top\right),
+    \mF(\mW^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top 
+    \approx \frac1N\left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N\nabla_{\vz^{(l)}}  \vu_n\nabla_{\vz^{(l)}}  \vu_n^\top\right),
 \end{equation}
 see~\citep{eschenhagen2023kroneckerfactored}. 
-Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost. \todo{correct?} 
+Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost. 
 %the inverse of a Kronecker-factored matrix is given by the Kronecker product of the individual inverses hence reducing the computational complexity of the corresponding linear system. 
 
-% expand approximation treats the shared axis like a batch axis
-\paragraph{Weight sharing}
-\todo{adjust}
-Now consider a layer whose weight is applied onto \emph{multiple} vectors.
-This concept is known as weight sharing.
-This could be a linear layer with matrix-valued inputs like in attention, a convolution layer whose kernel is shared between patches of the input, or weights that are used multiple times throughout the computation graph (e.g.\, weight tying).
-This means the layer will not process a single vector $\vz^{(l)}$, but a sequence of vectors $\left\{ \vz^{(l)}_1, \dots, \vz^{(l)}_S \right\}$ where $S$ denotes weight sharing number.
-We can column-stack these vectors into a matrix $\mZ^{(l)} \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\mZ^{(l+1)} = \mW^{(l)} \mZ^{(l)} \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG^{(l)} \in \sR^{D_{\text{out}} \times S}$.\todo{introduce the gradient notation} 
-The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW^{(l)}} \mZ^{(l+1)} = {\mZ^{(l)}}^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
-%As described by \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
-We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed by~\citet{grosse2016kroneckerfactored}.
-It treats the shared axis like a batch axis,
-\begin{align}
-    \mF(\mW^{(l)}) = \frac1S \sum_{s=1}^S (\vz_s^{(l)} \otimes {\vg_s^{(l)}}^\top)({\vz_s^{(l)}}^{\top}\otimes \vg_s^{(l)}) \approx \frac{1}{S} \sum_{s=1}^S \va_s \va_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top}, \qaud \text{where } \vg_s = ...%\grad{\vz_s} \ell(\vx, \hat{\vy}, \mW).
-\end{align}
-We can express this in matrix notation as $\mF(\mW^{(l)}) \approx \nicefrac{1}{S} \mZ^{(l)} {\mZ^{(l)}}^{\top} \otimes \mG^{(l)} {\mG^{(l)}}^{\top}$.
 
 \begin{comment}
     This means the layer will not process a single vector $\va$, but a sequence of vectors $\left\{ \va_1, \dots, \va_S \right\}$ where $S$ denotes weight sharing number.
