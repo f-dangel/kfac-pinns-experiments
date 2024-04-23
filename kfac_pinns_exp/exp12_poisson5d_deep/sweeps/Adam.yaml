@@ -15,6 +15,8 @@ metric:
 method: random
 run_cap: 50
 parameters:
+    equation:
+        value: poisson_cos_sum
     model:
         value: mlp-tanh-64-48-32-16
     num_steps:
