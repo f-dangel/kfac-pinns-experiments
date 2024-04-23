@@ -66,6 +66,20 @@ ARGS = [
     ["--num_steps=3", "--optimizer=LBFGS"],
     # train with HessianFree
     ["--num_steps=3", "--optimizer=HessianFree"],
+    # train with a deeper net
+    [
+        "--num_steps=3",
+        "--optimizer=SGD",
+        "--SGD_lr=0.1",
+        "--model=mlp-tanh-64-48-32-16",
+    ],
+    # train with different boundary conditions
+    [
+        "--num_steps=3",
+        "--optimizer=SGD",
+        "--SGD_lr=0.1",
+        "--boundary_condition=cos_sum",
+    ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 
