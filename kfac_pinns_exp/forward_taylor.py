@@ -3,7 +3,7 @@
 from typing import Dict, List
 
 from einops import einsum
-from torch import Tensor, eye, gt, zeros, zeros_like
+from torch import Tensor, eye, gt, zeros
 from torch.nn import Linear, Module, ReLU, Sigmoid, Tanh
 
 
