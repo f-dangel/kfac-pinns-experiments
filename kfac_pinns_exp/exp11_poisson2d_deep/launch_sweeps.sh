@@ -1,4 +1,5 @@
 # Launch all sweeps using the sbatch command
+cd sweeps/
 
 # launch each script with different qos,
 # e.g. sbatch SGD.sh --qos=m4

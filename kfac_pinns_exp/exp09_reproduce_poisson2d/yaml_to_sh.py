@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # create the .sh file
     TEMPLATE = (
         r"""#!/bin/bash
-#SBATCH --partition=rtx6000
+#SBATCH --partition=rtx6000,t4v1,t4v2
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=02:00:00
