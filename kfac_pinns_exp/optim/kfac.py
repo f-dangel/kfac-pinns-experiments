@@ -327,7 +327,7 @@ class KFAC(Optimizer):
             B1 = B1 + damping * eye(*B1.shape, **kwargs)
             B2 = B2 + damping * eye(*B2.shape, **kwargs)
 
-            self.inv[layer_idx] = InverseKroneckerSum(
+            self.inv[layer_idx] = InverseKroneckerSum(  # noqa: B909
                 A1, A2, B1, B2, inv_dtype=inv_dtype
             )
 
