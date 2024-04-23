@@ -4,8 +4,36 @@ from typing import List, Tuple, Union
 
 from einops import einsum, rearrange
 from torch import Tensor, cat
-from torch.func import functional_call, grad, hessian, vmap
+from torch.func import functional_call, grad, hessian, jacrev, vmap
 from torch.nn import Module, Parameter
+
+
+def autograd_input_jacobian(model: Module, X: Tensor) -> Tensor:
+    """Compute the batched Jacobian of the model w.r.t. its input.
+
+    Args:
+        model: The model whose Jacobian will be computed.
+        X: The input to the model. First dimension is the batch dimension.
+            Must be differentiable.
+
+    Returns:
+        The Jacobian of the model w.r.t. X. Has shape
+        `[batch_size, *model(X).shape[1:], *X.shape[1:]]`.
+    """
+
+    def f(x: Tensor) -> Tensor:
+        """Forward pass on an un-batched input.
+
+        Args:
+            x: Un-batched input.
+
+        Returns:
+            Un-batched output.
+        """
+        return model(x)
+
+    jac_f_X = vmap(jacrev(f))
+    return jac_f_X(X)
 
 
 def autograd_input_hessian(model: Module, X: Tensor) -> Tensor:
