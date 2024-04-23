@@ -23,6 +23,20 @@ CASES = [
         "id": "linear-sigmoid-linear",
     },
     {
+        "layers_fn": lambda: [
+            Linear(10, 8),
+            Sigmoid(),
+            Linear(8, 6),
+            Sigmoid(),
+            Linear(6, 4),
+            Sigmoid(),
+            Linear(4, 1),
+        ],
+        "input_fn": lambda: rand(4, 10),
+        "seed": 0,
+        "id": "3x(linear-sigmoid)-linear",
+    },
+    {
         "layers_fn": lambda: [Linear(10, 5), Tanh(), Linear(5, 1)],
         "input_fn": lambda: rand(4, 10),
         "seed": 0,
@@ -30,15 +44,45 @@ CASES = [
     },
     {
         "layers_fn": lambda: [
-            Linear(10, 5),
-            ReLU(),
-            Linear(5, 3),
-            Sigmoid(),  # needed to introduce some curvature
-            Linear(3, 1),
+            Linear(10, 8),
+            Tanh(),
+            Linear(8, 6),
+            Tanh(),
+            Linear(6, 4),
+            Tanh(),
+            Linear(4, 1),
         ],
         "input_fn": lambda: rand(4, 10),
         "seed": 0,
-        "id": "linear-relu-linear-sigmoid-linear",
+        "id": "3x(linear-tanh)-linear",
+    },
+    {
+        "layers_fn": lambda: [
+            Linear(10, 8),
+            ReLU(),
+            Linear(8, 6),
+            ReLU(),
+            Linear(6, 4),
+            ReLU(),
+            Linear(4, 1),
+        ],
+        "input_fn": lambda: rand(4, 10),
+        "seed": 0,
+        "id": "3x(linear-relu)-linear",
+    },
+    {
+        "layers_fn": lambda: [
+            Linear(10, 8),
+            ReLU(),
+            Linear(8, 6),
+            Sigmoid(),  # needed to introduce some curvature
+            Linear(6, 4),
+            Tanh(),  # needed to introduce some curvature
+            Linear(4, 1),
+        ],
+        "input_fn": lambda: rand(4, 10),
+        "seed": 0,
+        "id": "mixed",
     },
 ]
 CASE_IDS = [case["id"] for case in CASES]

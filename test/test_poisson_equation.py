@@ -8,7 +8,7 @@ from kfac_pinns_exp.poisson_equation import (
     evaluate_boundary_gramian,
     evaluate_boundary_loss_and_kfac,
     square_boundary,
-    u,
+    u_sin_product,
 )
 
 
@@ -21,7 +21,7 @@ def test_boundary_kfac_batch_size_1():
     # data
     N_dOmega, dim_Omega = 1, 2
     X_dOmega = square_boundary(N_dOmega, dim_Omega).double()
-    y_dOmega = zeros_like(u(X_dOmega))
+    y_dOmega = zeros_like(u_sin_product(X_dOmega))
 
     # neural net
     D_hidden = 64

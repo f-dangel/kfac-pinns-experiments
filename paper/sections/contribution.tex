@@ -1,38 +1,9 @@
-There are some challenges we need to overcome to define a Kronecker-factored approximation of the Gramian from \Cref{eq:gramian}:
-\begin{itemize}
-\item The Gramian of the interior loss involves the parameter gradient of the Laplacian. To establish a Kronecker approximation, we need to know how the weight matrix of a layer enters the computation of the Laplacian. We will show that, when using the forward Laplacian framework from \cite{li2023forward}, the weight matrix enters the computation by multiplication onto another matrix. This is great, because we know how to define KFAC in such cases, thanks to the KFAC-for-weight-sharing framework developed by \citet{eschenhagen2023kroneckerfactored}.
 
-\item The PINN loss consists of two terms, the interior and boundary loss.
-  We can develop a Kronecker approximation for both individually, which leaves us with the problem how to work with both terms to pre-condition a gradient.
-  One way is to keep the both Kronecker approximations separate, but then we need to invert a sum of two Kronecker products.
-  This can be done, see \Cref{sec:inverse_kronecker_sum}, but adds twice the memory overhead compared to having a single Kronecker approximation.
-  Also, the Kronecker sum's inversion requires solving a generalized eigenvalue problem, for which there is currently no API in PyTorch.
-  Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
-  Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance.
-\end{itemize}
-
-Here, we introduce a Kronecker-factored approximation of the Gauß-Newton algorithm for PINNs. 
-To this end we consider a general PDE of the general form 
-\begin{equation}
-    \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
-\end{equation}
-where we assume $\Psi\colon \mathbb R^K\to\mathbb R^M$ to be a smooth function.
-%We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
-By $r_\theta\coloneqq \Psi(u_\vtheta, \dots, \partial^{(k)} u_\vtheta)$ we denote the residual and for suitable integration points $\vx_n$ we consider the PINN loss
-\begin{equation}
-    %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
-    L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
-\end{equation}
-where we assume $\ell\colon\mathbb R^M\to\mathbb R$ is a convex function with definite Hessian $\nabla^2\ell\succ0$ and unique minimizer at $0$. 
-We consider the Gauß-Newton matrix
-\begin{equation}
-    \mG(\vtheta) \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
-\end{equation}
-where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ is the Hessian matrix~\citep{eschenhagen2023kroneckerfrwtactored}. 
-Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = I$. 
-Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
-If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
-We obtain this via higher-order forward mode automatic differentiation. 
+The overall Gauß-Newton matrix is given by the sum $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$ of two Gramian matrices stemming from the PDE and the boundary term, respectively. 
+A Kronecker factored approximation of the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ can be obtained just like the case of the  Fisher $\mF(\vtheta)$. 
+The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section. 
+For this, we use forward mode automatic differentiation to express the computation of higher-order derivatives as forward passes of a larger network with shared weights, for which Kronecker approximations have been developed by~\citet{eschenhagen2023kroneckerfactored}. 
+The two individual Kronecker-factored approximations can either be combined into a single Kronecker-factored approximation or inverted using an explicit formula based on the individual inversions. 
 
 \subsection{Higher-order forward mode automatic differentiation}
 \label{sec:taylor-mode-AD}
@@ -46,81 +17,334 @@ The computation of the gradient through forward mode differentiation uses the ch
 If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by 
 \begin{align} 
        %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\ 
-       \partial_i \partial_j (f \circ g)(\vz) & = \partial_i g(\vz)^\top D^2f(g(\vz))\partial_j g(\vz) + Df(g(\vz)) \partial_i \partial_j g(\vz). 
+       \partial_{\vx_i} \partial_{\vx_j} (f \circ g)(\vx) & = \partial_{\vx_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{\vx_j} g(\vx) + \jac f(g(\vx)) \partial_{\vx_i} \partial_{\vx_j} g(\vx). 
 \end{align}
-If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz + \vb^{(l)}$ is a linear layer, then the second order forward pass is given by 
+If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz %+ \vb^{(l)}
+$ is a linear layer, then setting $z^{(0)} = x\in\mathbb R^d, \partial_{x_i}z^{(0)} = \textrm{e}_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{x_i}\partial_{x_j}z^{(0)} = 0\in\mathbb R^d$, the second-order forward pass is given by 
 \begin{subequations}
     \begin{align}
-    \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} + \vb^{(l)} \\ 
-    \partial_{i} \vz^{(l)} & = \mW^{(l)} \partial_i \vz^{(l-1)} \\ 
-    \partial_i\partial_j \vz^{(l)} & = \mW^{(l)} \partial_i\partial_j \vz^{(l-1)} \label{subeq:secondOrderForward-LinearLayer}. 
+    \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} %+ \vb^{(l)}
+    \\ 
+    \partial_{\vx_i} \vz^{(l)} & = \mW^{(l)} \partial_{\vx_i} \vz^{(l-1)} \\ 
+    \partial_{\vx_i}\partial_{\vx_j} \vz^{(l)} & = \mW^{(l)} \partial_{\vx_i}\partial_{\vx_j} \vz^{(l-1)} \label{subeq:secondOrderForward-LinearLayer}. 
 \end{align}
 \end{subequations}
 The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$ is given by  
 \begin{subequations}
     \begin{align}
     \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\ 
-    \partial_{i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_i \vz^{(l-1)} \\ 
-    \partial_i\partial_j \vz^{(l)} & = \partial_i \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_j \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_i \partial_j \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}. 
+    \partial_{\vx_i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_{\vx_i} \vz^{(l-1)} \\ 
+    \partial_{\vx_i}\partial_{\vx_j} \vz^{(l)} & = \partial_{\vx_i} \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_{\vx_j} \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_{\vx_i} \partial_{\vx_j} \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}. 
 \end{align}
 \end{subequations}
 
 
+
 \paragraph{Forward Laplacian} 
-To compute not the full Hessian but only the Laplacian, we can simplify the forward pass to only propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}. 
-We obtain the Laplacian forward pass by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ which yields 
-\begin{subequations}
-    \begin{align}
-        \Delta \vz^{(l)} & = \mW^{(l)} \Delta \vz^{(l-1)} \quad \text{and } \\ 
-        \Delta \vz^{(l)} & = \sum_i \sigma''(\vz^{(l-1)}) \odot (\partial_i \vz^{(l-1)})^{\odot 2} + \sigma'(\vz^{(l-1)}) \odot \Delta \vz^{(l-1)}
-    \end{align}
-\end{subequations}
-for linear and nonlinear layers, respectively. 
-This greatly reduces the computational complexity of the forward pass, but can only be used for PDEs that only involve second-order derivatives via the Laplacian, i.e., for PDEs of the form $\Psi(u, \partial u, \Delta u)=0$. 
-
-\subsection{Kronecker-factored approximate Gauß-Newton}
-
-In matrix form: 
-\begin{align}
-  \nonumber
-  \underbrace{
-  \begin{pmatrix}
+To compute not the full Hessian but only the Laplacian, we can simplify the forward pass to only propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}. Introducing the vector $\mZ^{(l)}\coloneqq  \begin{pmatrix}
     \vz^{(l)}
     &
-    \partial_{i} \vz^{(l)}
+    \partial_{\vx_1} \vz^{(l)}
     &
-    \partial_i\partial_j \vz^{(l)}
+    \dots
+    &
+    \partial_{\vx_d} \vz^{(l)}
+    &
+    %\partial_i\partial_j
+    \Delta_\vx\vz^{(l)}
+\end{pmatrix}\in \mathbb R^{(d+2)h^{(l)}}$ with $\mZ^{(0)}=  \begin{pmatrix}
+    x
+    &
+    \mathrm e_1
+    &
+    \dots
+    &
+    \mathrm e_d
+    &
+    0
+\end{pmatrix}\in \mathbb R^{(d+2)d}$ and summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ we obtain the Laplacian forward pass for linear layers by 
+
+%We obtain the Laplacian forward pass by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ which yields 
+%\begin{subequations}
+%    \begin{align}
+%        \Delta \vz^{(l)} & = \mW^{(l)} \Delta \vz^{(l-1)} \quad \text{and } \\ 
+%        \Delta \vz^{(l)} & = \sum_i \sigma''(\vz^{(l-1)}) \odot (\partial_{\vx_i} \vz^{(l-1)})^{\odot 2} + \sigma'(\vz^{(l-1)}) \odot \Delta \vz^{(l-1)}
+%    \end{align}
+%\end{subequations}
+\begin{align}
+  %\nonumber
+  \mZ^{(l)}\coloneqq %\underbrace{
+  \begin{pmatrix}
+    \vz^{(l)}
+    \\
+    \partial_{\vx_1} \vz^{(l)}
+    \\
+    \vdots
+    \\
+    \partial_{\vx_d} \vz^{(l)}
+    \\
+    %\partial_i\partial_j
+    \Delta_\vx\vz^{(l)}
   \end{pmatrix}
-  }_{\coloneq \mT^f \in \sR^{D_{\text{out}} \times (D+2)}}
-  &=
-    \begin{pmatrix}
-      \mW & \vb
-    \end{pmatrix}
-    \underbrace{
-    \begin{pmatrix}
-      \vz^{(l)}
-      &
-      \partial_{i} \vz^{(l)}
-      &
-        \partial_i\partial_j \vz^{(l)}
-      \\
-      1 & 0 & 0
-    \end{pmatrix}
-    }_{\coloneq \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
+  %}_{\eqqcolon %\mT^f 
+  %\in \sR^{D_{\text{out}} \times (D+2)}
+  %\mZ^{(l)}}
+  & =
+    %\begin{pmatrix}
+      %\mW^{(l)} %& \vb^{(l)}
+    %\end{pmatrix}
+    %\underbrace{
+    %\begin{pmatrix}
+    %  \vz^{(l-1)}
+    %  &
+    %  \partial_{i} \vz^{(l-1)}
+    %  &
+    %    \partial_i\partial_j \vz^{(l-1)}
+      %\\1 & 0 & 0
+    %\end{pmatrix}
+    %}_{\eqqcolon \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
     %\shortintertext{or, in compact form,}
     %\mT^f
   %&=
     %\tilde{\mW}
     %\mT^h\,.
+    \begin{pmatrix}
+    \mW^{(l)}\vz^{(l-1)}
+    \\
+    \mW^{(l)}\partial_{\vx_1} \vz^{(l-1)}
+    \\
+    \vdots
+    \\
+    \mW^{(l)}\partial_{\vx_d} \vz^{(l-1)}
+    \\
+    %\partial_i\partial_j
+    \mW^{(l)}\Delta_\vx\vz^{(l-1)}
+  \end{pmatrix}
+     %= \tilde{\mW}^{(l)}\mZ^{(l-1)}, 
+     %\quad \mZ^{(l)} = F(\mZ^{(l-1)})
     \label{eq:forward-laplacian-linear-layer-compact}
 \end{align}
-or $\mT^f=\tilde{\mW}\mT^h$. 
+and for nonlinear layers by
+\begin{align}
+    \mZ^{(l)}
+    =
+     \begin{pmatrix}
+         \sigma(\vz^{(l-1)}) \\
+         \sigma'(\vz^{(l-1)})\odot \partial_{x_1}\vz^{(l-1)} \\ 
+         \vdots \\
+         \sigma'(\vz^{(l-1)})\odot \partial_{x_d}\vz^{(l-1)} \\
+         \sigma'(\vz^{(l-1)})\odot\Delta_x\vz^{(l-1)} + \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot \partial_{x_i}\vz^{(l-1)}^{\odot 2}
+     \end{pmatrix}
+     \label{eq:forward-laplacian-nonlinear-layer-compact}
+\end{align}
+This greatly reduces the computational complexity of the forward pass, but is restricted to PDEs that involve second-order derivatives only via the Laplacian. %, i.e., for PDEs of the form $\Psi(u, \partial u, \Delta u)=0$. 
+%In matrix form, higher-order forward mode automatic differentiation is given by 
+%or $\mT^f=\tilde{\mW}\mT^h$. \todo{do we need this notation?}
+%for linear and nonlinear layers, respectively, where $\tilde{\mW}^{(l)} = \operatorname{diag}(\mW^{(l)}, \dots, \mW^{(l)})$ is a block diagonal matrix. 
+We can interpret this formula as a forward pass through a larger neural network with weight sharing in the spirit of \cite{eschenhagen2023kroneckerfactored}  by rearranging $\mZ^{(l)}$ as a matrix of shape $(d+2)\times h^{(l)}$ and noting that $\mZ^{(l)} = \mZ^{(l-1)}W^{(l)}^\top$. 
 
-\paragraph{KFAC with weight sharing}
+\subsection{Kronecker-factored approximations for the Poisson equation}
+For the Poisson equation, the individual block matrices of the PDE Gramian are given by 
+\begin{align}
+    \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
+\end{align}
+Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute 
+\begin{align*}
+    \jac_{\mW^{(l)}} \Delta_\vx \vu_n & = \jac_{\mZ^{(l)}}\Delta_\vx \vu_n \jac_{\mW^{(l)}} \mZ^{(l)} %= 
+    %\jac_{\mW^{(l)}} \mZ^{(l)} \jac_{\mZ^{(l)}}\mZ^{(L)}\jac_{\mZ^{(L)}}\Delta_\vx \vu_n. 
+    \\ & = 
+    %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \mI, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \mI\right) \jac_{\mZ^{(l)}}\Delta_\vx \vu_n
+    \begin{pmatrix}
+        \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\ 
+        \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\ 
+        \vdots \\ 
+        \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\ 
+        \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\ 
+    \end{pmatrix}^\top
+    \begin{pmatrix}
+        {\vz^{(l-1)}_n}^\top \otimes \mI \\ 
+        {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\ 
+        \vdots \\ 
+        {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\ 
+        {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\ 
+    \end{pmatrix}
+    \\ & = \sum_{s=1}^S \mZ^{(l-1)}_n \otimes \nabla_{\mZ^{(l)}} \Delta_{\vx}\vu_n 
+    %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n 
+    %+
+    %\sum_{i=1}^d {\partial_{\vx_i}\vz^{(l-1)}_n}^\top \otimes \jac_{\partial_{\vx_i}\vz^{(l)}}\Delta_{\vx}\vu_n 
+    %\\ & \quad 
+    %+
+    %{\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \jac_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n. 
+    %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \jac_{\vz^{(l-1)}} \Delta_{\vx} \vu_n, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \jac_{\Delta_\vx\vz^{(l-1)}} \Delta_{\vx} \vu_n\right)? not quite
+\end{align*}
+Introducing the notation $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}$ and likewise (up to transposition) for $\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n$ we obtain
+\begin{equation}\label{eq:laplace_gramian_block_exact}
+    \mG_\Omega(\mW^{(l)}) 
+    =
+    \frac1N\sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \sum_{s=1}^S \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right] 
+\end{equation}
+
+%
+%\paragraph{Kronecker approximation of the PDE Gramian}
+
+\paragraph{The reduce approximation}
+Approximating the sum of Kronecker products (running over $s$) by the Kronecker product of the sum, simplifying and again approximating for the outer sum (running over $n$) we obtain
+\begin{align}
+    \hat{\mG}_\Omega^{\textup{red}}(\mW^{(l)}) 
+    \coloneqq
+    \frac{1}{N^2 S^2} \left[\sum_{n=1}^N \left( \sum_{s=1}^S \mZ^{(l-1)}_{n,s} \right) \left(\sum_{s=1}^S {\mZ^{(l-1)}_{n,s}}\right)^\top\right]
+    \otimes
+    \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right] 
+\end{align}
+Up to normalization factors, this approximation agrees with the \emph{reduce} setting described by~\citet{eschenhagen2023kroneckerfactored}.
+\todo{I don't understand why Eschenhagen et al divide by $S$, or even by $S^2$ in the reduce setting. To me that seems weird (unless I miss sth) and we can try to see what the performance is when not doing it.}
+
+\paragraph{Individual steps} Can be moved to the appendix or deleted: 
+
+\begin{align*}
+    &\; \sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \sum_{s=1}^S \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]  
+    \\ \approx & \;
+    \sum_{n=1}^N
+    \frac{1}{S^2}\left[\left(\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)\otimes \left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)\right)
+    \cdot
+    \left(\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)^\top\otimes \left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)^\top\right)\right]  
+    \\ = & \;
+    \frac{1}{S^2}\sum_{n=1}^N
+    \left[\left(\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)^\top \right)\otimes \left(\left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)\left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)^\top\right)
+     \right]  
+    \\ \approx & \;
+    \frac{1}{N S^2}\left[\sum_{n=1}^N \left( \sum_{s=1}^S \mZ^{(l-1)}_{n,s} \right) \left(\sum_{s=1}^S {\mZ^{(l-1)}_{n,s}}\right)^\top\right]
+    \otimes
+    \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right] 
+\end{align*}
+
+
+\paragraph{The expand approximation}
+Alternatively, approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain
+\begin{align}
+    \hat{\mG}_\Omega^{\textup{exp}}(\mW^{(l)}) 
+    \coloneqq \frac{1}{N^2 S}
+    \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}\mZ^{(l-1)}_{n,s}^\top \right]
+    \otimes
+    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}\vg^{(l)}_{n,s}^\top   \right]. 
+\end{align}
+which coincides -- again up to normalization constants -- 
+with the \emph{expand} setting of \cite{eschenhagen2023kroneckerfactored}.
+
+\paragraph{Individual steps} Can be moved to the appendix or deleted: 
+
+\begin{align*}
+    & \sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \sum_{s=1}^S \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]  
+    \\ \approx & \;
+    \frac{1}{S?}\sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]  
+    \\ = & \;
+    \frac{1}{S}\sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}{\mZ
+    ^{(l-1)}_{n,s}}^\top\otimes \vg_{n,s}^{(l)}{\vg_{n,s}^{(l)}}^\top \right)
+    \right]  
+    \\ \approx & \;
+    \frac{1}{NS}\left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}\mZ^{(l-1)}_{n,s}^\top \right]
+    \otimes
+    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}\vg^{(l)}_{n,s}^\top \right]
+\end{align*}
+
+
+
+\paragraph{Empirical and non empirical Gramians}
 
 \paragraph{Combining PDE and boundary Gramian}
+One way is to keep the both Kronecker approximations separate, but then we need to invert a sum of two Kronecker products.
+This can be done, see \Cref{sec:inverse_kronecker_sum}, but adds twice the memory overhead compared to having a single Kronecker approximation.
+Also, the Kronecker sum's inversion requires solving a generalized eigenvalue problem, for which there is currently no API in PyTorch.
+Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
+Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance. 
+\todo{combine with appendix}
+\todo{which one do we use?}
 
-\paragraph{Higher-order PDEs}
+
+% expand approximation treats the shared axis like a batch axis
+\begin{comment}
+\paragraph{Kronecker approximation under weight sharing} 
+Now consider a layer whose weight is applied onto \emph{multiple} vectors.
+This concept is known as weight sharing.
+This could be a linear layer with matrix-valued inputs like in attention, a convolution layer whose kernel is shared between patches of the input, or weights that are used multiple times throughout the computation graph (e.g.\, weight tying).
+This means the layer will not process a single vector $\vz^{(l)}$, but a sequence of vectors $\{ \vz^{(l)}_1, \dots, \vz^{(l)}_S \}$ where $S$ denotes weight sharing number.
+We can column-stack these vectors
+and obtain 
+\begin{align}
+  \begin{pmatrix}
+    \vz^{(l)}_1
+    &
+    \cdots
+    &
+    \vz^{(l)}_S
+  \end{pmatrix}
+  &=
+    %\begin{pmatrix}
+      \mW^{(l)} %& \vb
+    %\end{pmatrix}
+    \begin{pmatrix}
+      \vz^{(l-1)}_1
+      &
+      \cdots
+      &
+        \vz^{(l-1)}_S
+      %\\
+      %1 & 0 & 0
+    \end{pmatrix}.
+    \label{eq:forward-laplacian-linear-layer-compact}
+\end{align}
+The parameter Jacobian is consequently given by the 
+\begin{align}
+    \jac_{\mW^{(l)}} \mZ^{(l)} 
+  &=
+    %\begin{pmatrix}
+      %\mW^{(l)} %& \vb
+    %\end{pmatrix}
+    \begin{pmatrix}
+      \vz^{(l-1)}_1 \otimes \mI
+      &
+      \cdots
+      &
+        \vz^{(l-1)}_S\otimes \mI
+      %\\
+      %1 & 0 & 0
+    \end{pmatrix}.
+    \label{eq:forward-laplacian-linear-layer-compact}
+\end{align}
+Using the notation $\vg_s\coloneqq \nabla_{\vz^{(l)}_s} \vz^{L}_s$ the Gauß-Newton matrix is given by 
+\begin{align}
+    \mF(\mW^{(l)}) = {\jac_{\mW^{(l)}} \mZ^{(L)}}^\top \jac_{\mW^{(l)}} \mZ^{(L)}
+\end{align}
+
+into a matrix $\mZ^{(l)} \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\mZ^{(l+1)} = \mW^{(l)} \mZ^{(l)} \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG^{(l)} \in \sR^{D_{\text{out}} \times S}$.\todo{introduce the gradient notation} 
+The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW^{(l)}} \mZ^{(l+1)} = {\mZ^{(l)}}^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
+%As described by \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
+We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed by~\citet{grosse2016kroneckerfactored}.
+It treats the shared axis like a batch axis,
+\begin{align}
+    \mF(\mW^{(l)}) = \frac1S \sum_{s=1}^S (\vz_s^{(l)} \otimes {\vg_s^{(l)}}^\top)({\vz_s^{(l)}}^{\top}\otimes \vg_s^{(l)}) \approx \frac{1}{S} \sum_{s=1}^S \vz_s \vz_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top}. %, %\quad \text{where } \vg_s = ...%\grad{\vz_s} \ell(\vx, \hat{\vy}, \mW).
+\end{align}
+We can express this in matrix notation as $\mF(\mW^{(l)}) \approx \nicefrac{1}{S} \mZ^{(l)} {\mZ^{(l)}}^{\top} \otimes \mG^{(l)} {\mG^{(l)}}^{\top}$.
+\end{comment}
+\subsection{Discussion and generalizations}
+
 
 \paragraph{Input-based Kronecker approximation:} One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to be able to compute the grad-output-based Kronecker factors.
 Some works find that if setting this factor to $\mI$, the resulting input-based KFAC still yields good performance~\cite{benzing2022gradient,petersen2023isaac}
@@ -138,3 +362,60 @@ However, then one needs to manually implement the additional backpropagation (th
 %%% mode: latex
 %%% TeX-master: "../main"
 %%% End:
+
+\section{General PDEs}
+%\paragraph{Setting}
+We consider the general second-order PDE 
+\begin{equation}
+    %\Psi(u, \nabla u, \nabla^{2} u) = 0,
+    \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
+\end{equation}
+where we assume $\Psi\colon \mathbb R^{K}\to\mathbb R^M$ to be smooth.
+%We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
+%Set $v_\vtheta(x)\coloneqq (u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))$
+%and 
+We denote the residual by $r_\vtheta(\vx)\coloneqq \Psi(u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))%v_\vtheta(x))
+$ %we denote the residual and for suitable integration points $\vx_n$ we 
+and consider the PINN loss 
+\begin{equation}
+    %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
+    L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
+\end{equation}
+where we assume $\ell\colon\mathbb R^M\to\mathbb R$ is a convex function with definite Hessian $\nabla^2\ell\succ0$ and unique minimizer at $0$. 
+We consider the Gauß-Newton matrix
+\begin{align}
+    \mG(\vtheta) & \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n), 
+    %\\ & = \frac1N\sum_{n=1}^N \jac_\vtheta v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mA(\vtheta, \vx)}  \jac_\vtheta v_\vtheta(\vx_n), 
+\end{align}
+where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ denotes the Hessian of the per-sample loss. %~\citep{eschenhagen2023kroneckerfrwtactored} yxxx
+%and $v_\vtheta$ is a forward network with shared weights. 
+
+Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = \mI$. 
+Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations. 
+If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations. 
+We obtain this via higher-order forward mode automatic differentiation. 
+
+Writing $v_\vtheta(\vx)\coloneqq (u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))$
+we can express the Gauß-Newton matrix as 
+\begin{align}    
+    \mG(\vtheta) & = \frac1N\sum_{n=1}^N \jac_\vtheta v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mH(\vtheta, \vx)}  \jac_\vtheta v_\vtheta(\vx_n), 
+\end{align}
+and $v_\vtheta$ is a forward network with shared weights. 
+The reduce approximation is then given by 
+\begin{align}
+    \hat{\mG}(\mW^{(l)}) \coloneqq \left(\sum_{n=1}^N \left( \sum_{s=1}^S \vz^{(l)}_{n,s} \right) \left(\sum_{s=1}^S {\vz^{(l)}_{n,s}}^\top\right)\right)\otimes\left(\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \mH(\vtheta, \vx_n) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}}^\top \right) \right)? 
+\end{align}
+
+%There are some challenges we need to overcome to define a Kronecker-factored approximation of the Gramian from \Cref{eq:gramian}:
+%\begin{itemize}
+%\item The Gramian of the interior loss involves the parameter gradient of the Laplacian. To establish a Kronecker approximation, we need to know how the weight matrix of a layer enters the computation of the Laplacian. We will show that, when using the forward Laplacian framework from \cite{li2023forward}, the weight matrix enters the computation by multiplication onto another matrix. This is great, because we know how to define KFAC in such cases, thanks to the KFAC-for-weight-sharing framework developed by \citet{eschenhagen2023kroneckerfactored}.
+
+%\item %The PINN loss consists of two terms, the interior and boundary loss.
+  %We can develop a Kronecker approximation for both individually, which leaves us with the problem how to work with both terms to pre-condition a gradient.
+  %One way is to keep the both Kronecker approximations separate, but then we need to invert a sum of two Kronecker products.
+  %This can be done, see \Cref{sec:inverse_kronecker_sum}, but adds twice the memory overhead compared to having a single Kronecker approximation.
+  %Also, the Kronecker sum's inversion requires solving a generalized eigenvalue problem, for which there is currently no API in PyTorch.
+  %Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
+  %Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance. 
+%\end{itemize}
+
