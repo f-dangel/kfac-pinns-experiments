@@ -12,7 +12,7 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_hessian,
     autograd_input_jacobian,
 )
-from kfac_pinns_exp.forward_taylor import manual_forward_taylor
+from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.manual_differentiation import manual_forward
 from kfac_pinns_exp.poisson_equation import get_backpropagated_error, square_boundary
@@ -76,9 +76,9 @@ def evaluate_interior_loss(
 
     Args:
         model: The model or a list of layers that form the sequential model. If the
-            layers are supplied, the forward pass will use forward Taylor-mode to com-
-            pute the derivatives and return a list of dictionaries containing the push-
-            forwards through all layers.
+            layers are supplied, the forward pass will use the forward Laplacian
+            framework to compute the derivatives and return a list of dictionaries
+            containing the push-forwards through all layers.
         X: Input for the interior loss.
         y: Target for the interior loss (all-zeros tensor).
 
@@ -89,22 +89,23 @@ def evaluate_interior_loss(
     Raises:
         ValueError: If the model is not a Module or a list of Modules.
     """
+    (_, d0) = X.shape
+    spatial = list(range(1, d0))
+
     # use autograd to compute the Laplacian and time derivative
     if isinstance(model, Module):
         intermediates = None
         # slice away the time dimension of the Hessian
-        spatial_hessian = autograd_input_hessian(model, X)[:, 1:][:, :, 1:]
+        spatial_hessian = autograd_input_hessian(model, X, coordinates=spatial)
         spatial_laplacian = einsum(spatial_hessian, "batch i i -> batch").unsqueeze(1)
         # slice away the spatial dimensions of the Jacobian
         time_jacobian = autograd_input_jacobian(model, X).squeeze(1)[:, [0]]
-    # use Taylor-mode AD
+    # use forward Laplacian
     elif isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        intermediates = manual_forward_taylor(model, X)
-        # slice away the time dimension of the Hessian
-        spatial_hessian = intermediates[-1]["c_2"][:, 1:][:, :, 1:]
-        spatial_laplacian = einsum(spatial_hessian, "batch i i out -> batch out")
+        intermediates = manual_forward_laplacian(model, X, coordinates=spatial)
+        spatial_laplacian = intermediates[-1]["laplacian"]
         # slice away the spatial dimensions of the Jacobian
-        time_jacobian = intermediates[-1]["c_1"][:, 0]
+        time_jacobian = intermediates[-1]["directional_gradients"][:, 0]
     else:
         raise ValueError(
             "Model must be a Module or a list of Modules that form a sequential model."
@@ -188,27 +189,24 @@ def evaluate_interior_loss_and_kfac(
     for layer_idx, (A, _) in kfacs.items():
         layer_in = intermediates[layer_idx]
         # batch_size x d_in
-        forward = layer_in["c_0"]
+        forward = layer_in["forward"]
         # batch_size x d_0 x d_in
-        gradients = layer_in["c_1"]
-        # batch_size x d_0 x d_0 x d_in, flatten the rows and columns
-        hessians = rearrange(
-            layer_in["c_2"],
-            "batch d_0_row d_0_col d_in -> batch (d_0_row d_0_col) d_in",
-        )
-        # batch_size x (d_0^2 + d_0 + 1) x (d_in + 1)
+        directional_gradients = layer_in["directional_gradients"]
+        # batch_size x d_in
+        laplacian = layer_in["laplacian"]
+        # batch_size x (d_0 + 2) x (d_in + 1)
         T = cat(
             [
                 bias_augmentation(forward.detach(), 1).unsqueeze(1),
-                bias_augmentation(gradients.detach(), 0),
-                bias_augmentation(hessians.detach(), 0),
+                bias_augmentation(directional_gradients.detach(), 0),
+                bias_augmentation(laplacian.detach(), 0).unsqueeze(1),
             ],
             dim=1,
         )
         if kfac_approx == "expand":
-            T = rearrange(T, "batch shared d_in -> (batch shared) d_in")
+            T = rearrange(T, "batch d_0 d_in -> (batch d_0) d_in")
         else:  # KFAC-reduce
-            T = reduce(T, "batch shared d_in -> batch d_in", "mean")
+            T = reduce(T, "batch d_0 d_in -> batch d_in", "mean")
         A.add_(T.T @ T, alpha=1 / T.shape[0])
 
     if ggn_type == "forward-only":
@@ -226,7 +224,13 @@ def evaluate_interior_loss_and_kfac(
     outputs = []
     for layer_idx in kfacs:
         layer_out = intermediates[layer_idx + 1]
-        outputs.extend([layer_out["c_0"], layer_out["c_1"], layer_out["c_2"]])
+        outputs.extend(
+            [
+                layer_out["forward"],
+                layer_out["directional_gradients"],
+                layer_out["laplacian"],
+            ]
+        )
     # We used the residual in the loss and don't want its graph to be free
     # Therefore, set `retain_graph=True`.
     grad_outputs = list(
@@ -250,25 +254,22 @@ def evaluate_interior_loss_and_kfac(
         # batch_size x d_out
         grad_forward = grad_outputs.pop(0)
         # batch_size x d_0 x d_out
-        grad_gradients = grad_outputs.pop(0)
-        # batch_size x d_0 x d_0 x d_out, flatten the rows and columns
-        grad_hessians = rearrange(
-            grad_outputs.pop(0),
-            "batch d_0_row d_0_col d_out -> batch (d_0_row d_0_col) d_out",
-        )
-        # batch_size x (d_0^2 + d_0 + 1) x d_out
+        grad_directional_gradients = grad_outputs.pop(0)
+        # batch_size x d_out
+        grad_laplacian = grad_outputs.pop(0)
+        # batch_size x (d_0 + 2) x d_out
         grad_T = cat(
             [
                 grad_forward.detach().unsqueeze(1),
-                grad_gradients.detach(),
-                grad_hessians.detach(),
+                grad_directional_gradients.detach(),
+                grad_laplacian.detach().unsqueeze(1),
             ],
             dim=1,
         )
         if kfac_approx == "expand":
-            grad_T = rearrange(grad_T, "batch shared d_out -> (batch shared) d_out")
+            grad_T = rearrange(grad_T, "batch d_0 d_out -> (batch d_0) d_out")
         else:  # KFAC-reduce
-            grad_T = reduce(grad_T, "batch shared d_out -> batch d_out", "sum")
+            grad_T = reduce(grad_T, "batch d_0 d_out -> batch d_out", "sum")
         B.add_(grad_T.T @ grad_T, alpha=batch_size)
 
     return loss, kfacs

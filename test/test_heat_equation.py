@@ -130,8 +130,12 @@ def test_u_sin_product(dim_Omega: int):
     # points from the initial condition
     X_initial = unit_square_at_start(num_data_total // 3, dim_Omega)
 
+    coordinates = list(range(1, dim_Omega + 1))
+
     for X in [X_interior, X_boundary, X_initial]:
-        input_hessian = autograd_input_hessian(u_sin_product, X)[:, 1:][:, :, 1:]
+        input_hessian = autograd_input_hessian(
+            u_sin_product, X, coordinates=coordinates
+        )
         input_laplacian = einsum(input_hessian, "batch i i -> batch").unsqueeze(-1)
         time_jacobian = autograd_input_jacobian(u_sin_product, X)[:, :, 0]
         assert input_laplacian.shape == time_jacobian.shape
