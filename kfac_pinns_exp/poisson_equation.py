@@ -124,7 +124,7 @@ def evaluate_interior_gramian(
     batch_size = X.shape[0]
     param_names = [n for n, _ in model.named_parameters()]
     gramian = autograd_gramian(
-        model, X, param_names, loss_type="interior", approximation=approximation
+        model, X, param_names, loss_type="poisson_interior", approximation=approximation
     )
     if approximation == "per_layer":
         return [g.div_(batch_size) for g in gramian]
@@ -176,7 +176,7 @@ def evaluate_interior_loss(
 
 
 def evaluate_boundary_gramian(
-    model: Module, X, approximation: str
+    model: Module, X: Tensor, approximation: str
 ) -> Union[Tensor, List[Tensor]]:
     """Evaluate the boundary loss' Gramian.
 
@@ -196,7 +196,7 @@ def evaluate_boundary_gramian(
     batch_size = X.shape[0]
     param_names = [n for n, _ in model.named_parameters()]
     gramian = autograd_gramian(
-        model, X, param_names, loss_type="boundary", approximation=approximation
+        model, X, param_names, loss_type="poisson_boundary", approximation=approximation
     )
     if approximation == "per_layer":
         return [g.div_(batch_size) for g in gramian]

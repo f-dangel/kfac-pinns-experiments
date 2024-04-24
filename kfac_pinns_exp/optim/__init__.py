@@ -46,9 +46,18 @@ def set_up_optimizer(
     args_dict = vars(args)  # each key has a prefix that needs to be removed
     args_dict = {key.removeprefix(prefix): value for key, value in args_dict.items()}
 
+    # Some optimizer require passing the equation as argument. We parse this as general
+    # argument and overwrite the entry from the optimizer's parser.
+    if optimizer in {"KFAC", "ENGD"}:
+        if verbose:
+            print(
+                f"Overwriting {optimizer}_equation={args_dict['equation']!r}"
+                f" -> {equation!r} from general args."
+            )
+        args_dict["equation"] = equation
+
     if optimizer == "KFAC":
         param_representation = layers
-        args_dict["equation"] = equation
     elif optimizer == "ENGD":
         param_representation = Sequential(*layers)
     else:

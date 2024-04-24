@@ -94,6 +94,14 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         action="store_true",
         help="Whether to initialize the KFAC matrices to identity.",
     )
+    parser.add_argument(
+        f"--{prefix}equation",
+        type=str,
+        choices=KFAC.SUPPORTED_EQUATIONS,
+        help="The equation to solve.",
+        default="poisson",
+    )
+
     args = parse_known_args_and_remove_from_argv(parser)
     # overwrite inv_dtype with value from dictionary
     inv_dtype = f"{prefix}inv_dtype"
@@ -231,6 +239,7 @@ class KFAC(Optimizer):
                 f"Equation {equation} not supported."
                 f" Supported are: {self.SUPPORTED_EQUATIONS}."
             )
+        self.equation = equation
         # functions for evaluating the interior and boundary losses
         self.eval_interior_loss = self.EVAL_INTERIOR_LOSS[equation]
         self.eval_boundary_loss = self.EVAL_BOUNDARY_LOSS[equation]

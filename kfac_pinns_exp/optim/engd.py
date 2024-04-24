@@ -1,24 +1,19 @@
 """Implements enery-natural gradient descent flavours from Mueller et al. 2023."""
 
 from argparse import ArgumentParser, Namespace
-from typing import List, Set, Tuple, Union
+from typing import Callable, Dict, List, Set, Tuple, Union
 
 from torch import Tensor, cat, eye, logspace, ones, zeros
 from torch.linalg import lstsq
 from torch.nn import Module
 from torch.optim import Optimizer
 
+from kfac_pinns_exp import heat_equation, poisson_equation
 from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
-from kfac_pinns_exp.poisson_equation import (
-    evaluate_boundary_gramian,
-    evaluate_boundary_loss,
-    evaluate_interior_gramian,
-    evaluate_interior_loss,
-)
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
@@ -62,6 +57,13 @@ def parse_ENGD_args(verbose: bool = False, prefix: str = "ENGD_") -> Namespace:
         action="store_true",
         help="Initialize the Gramian matrix to the identity matrix.",
     )
+    parser.add_argument(
+        f"--{prefix}equation",
+        type=str,
+        choices=ENGD.SUPPORTED_EQUATIONS,
+        help="The equation to solve.",
+        default="poisson",
+    )
     args = parse_known_args_and_remove_from_argv(parser)
 
     lr = f"{prefix}lr"
@@ -87,6 +89,10 @@ ENGD_DEFAULT_LR = (
     logspace(-30, 0, steps=31, base=2).tolist(),
 )
 
+# signature of functions that evaluate only the loss or only the Gramian
+LOSS_EVALUATOR = Callable[[Module, Tensor, Tensor], Tuple[Tensor, Tensor, None]]
+GRAMIAN_EVALUATOR = Callable[[Module, Tensor, str], Union[Tensor, List[Tensor]]]
+
 
 class ENGD(Optimizer):
     """Energy natural gradient descent with the exact Gramian matrix.
@@ -99,9 +105,35 @@ class ENGD(Optimizer):
 
     Attributes:
         SUPPORTED_APPROXIMATIONS: Set of supported Gramian approximations.
+        SUPPORTED_EQUATIONS: Set of supported PDEs.
+        EVAL_INTERIOR_LOSS: Dictionary mapping the equation type to the function
+            that evaluates the interior loss.
+        EVAL_BOUNDARY_LOSS: Dictionary mapping the equation type to the function
+            that evaluates the boundary loss.
+        EVAL_INTERIOR_GRAMIAN: Dictionary mapping the equation type to the function
+            that evaluates the interior loss Gramian.
+        EVAL_BOUNDARY_GRAMIAN: Dictionary mapping the equation type to the function
+            that evaluates the boundary loss Gramian.
     """
 
     SUPPORTED_APPROXIMATIONS: Set[str] = {"full", "diagonal", "per_layer"}
+    SUPPORTED_EQUATIONS: Set[str] = {"poisson", "heat"}
+    EVAL_INTERIOR_LOSS: Dict[str, LOSS_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_interior_loss,
+        "heat": heat_equation.evaluate_interior_loss,
+    }
+    EVAL_BOUNDARY_LOSS: Dict[str, LOSS_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_boundary_loss,
+        "heat": heat_equation.evaluate_boundary_loss,
+    }
+    EVAL_INTERIOR_GRAMIAN: Dict[str, GRAMIAN_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_interior_gramian,
+        "heat": heat_equation.evaluate_interior_gramian,
+    }
+    EVAL_BOUNDARY_GRAMIAN: Dict[str, GRAMIAN_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_boundary_gramian,
+        "heat": heat_equation.evaluate_boundary_gramian,
+    }
 
     def __init__(
         self,
@@ -111,6 +143,7 @@ class ENGD(Optimizer):
         ema_factor: float = 0.0,
         approximation: str = "full",
         initialize_to_identity: bool = False,
+        equation: str = "poisson",
     ):
         """Initialize the ENGD optimizer.
 
@@ -127,8 +160,11 @@ class ENGD(Optimizer):
             initialize_to_identity: Whether to initialize the Gramian to the identity
                 matrix. Default: `False`. If `True`, the Gramian is initialized to
                 identity.
+            equation: PDE to solve. Default: `'poisson'`.
         """
-        self._check_hyperparameters(model, lr, damping, ema_factor, approximation)
+        self._check_hyperparameters(
+            model, lr, damping, ema_factor, approximation, equation
+        )
         defaults = dict(
             lr=lr,
             damping=damping,
@@ -137,6 +173,14 @@ class ENGD(Optimizer):
             initialize_to_identity=initialize_to_identity,
         )
         super().__init__(list(model.parameters()), defaults)
+
+        self.equation = equation
+        # functions for evaluating the interior and boundary losses
+        self.eval_interior_loss = self.EVAL_INTERIOR_LOSS[equation]
+        self.eval_boundary_loss = self.EVAL_BOUNDARY_LOSS[equation]
+        # functions for evaluating the interior and boundary Gramians
+        self.eval_interior_gramian = self.EVAL_INTERIOR_GRAMIAN[equation]
+        self.eval_boundary_gramian = self.EVAL_BOUNDARY_GRAMIAN[equation]
 
         self.model = model
         self.gramian = self._initialize_curvature()
@@ -158,7 +202,7 @@ class ENGD(Optimizer):
         (
             interior_loss,
             boundary_loss,
-        ) = self._evaluate_loss_and_gradient_and_update_curvature(
+        ) = self._eval_loss_and_gradient_and_update_curvature(
             X_Omega, y_Omega, X_dOmega, y_dOmega
         )
         directions = self._compute_natural_gradients()
@@ -174,6 +218,7 @@ class ENGD(Optimizer):
         damping: float,
         ema_factor: float,
         approximation: str,
+        equation: str,
     ):
         """Verify the supplied constructor arguments.
 
@@ -184,6 +229,7 @@ class ENGD(Optimizer):
             ema_factor: Factor for the exponential moving average with which previous
                 Gramians are accumulated.
             approximation: Type of Gramian matrix to use.
+            equation: PDE to solve.
 
         Raises:
             ValueError: If one of the supplied arguments has invalid value.
@@ -208,6 +254,11 @@ class ENGD(Optimizer):
             raise NotImplementedError(f"Line search {lr[0]} not implemented.")
         if not isinstance(model, Module):
             raise ValueError(f"Model must be a torch.nn.Module. Got {type(model)}.")
+        if equation not in cls.SUPPORTED_EQUATIONS:
+            raise ValueError(
+                f"Unsupported equation: {equation}. Supported equations: "
+                f"{cls.SUPPORTED_EQUATIONS}."
+            )
 
     def _initialize_curvature(self) -> Union[Tensor, List[Tensor]]:
         """Initialize the Gramian matrices.
@@ -348,10 +399,10 @@ class ENGD(Optimizer):
                 Returns:
                     The loss value.
                 """
-                interior_loss, _, _ = evaluate_interior_loss(
+                interior_loss, _, _ = self.eval_interior_loss(
                     self.model, X_Omega, y_Omega
                 )
-                boundary_loss, _, _ = evaluate_boundary_loss(
+                boundary_loss, _, _ = self.eval_boundary_loss(
                     self.model, X_dOmega, y_dOmega
                 )
                 return interior_loss + boundary_loss
@@ -362,7 +413,7 @@ class ENGD(Optimizer):
         else:
             raise NotImplementedError(f"Line search {lr[0]} not implemented.")
 
-    def _evaluate_loss_and_gradient_and_update_curvature(
+    def _eval_loss_and_gradient_and_update_curvature(
         self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
     ) -> Tuple[Tensor, Tensor]:
         """Evaluate the loss and gradient and update the Gramian matrices.
@@ -383,14 +434,16 @@ class ENGD(Optimizer):
         """
         approximation = self.param_groups[0]["approximation"]
         # compute gradients and Gramians on current data
-        interior_gramian = evaluate_interior_gramian(self.model, X_Omega, approximation)
-        interior_loss, _, _ = evaluate_interior_loss(self.model, X_Omega, y_Omega)
+        interior_gramian = self.eval_interior_gramian(
+            self.model, X_Omega, approximation
+        )
+        interior_loss, _, _ = self.eval_interior_loss(self.model, X_Omega, y_Omega)
         interior_loss.backward()
 
-        boundary_gramian = evaluate_boundary_gramian(
+        boundary_gramian = self.eval_boundary_gramian(
             self.model, X_dOmega, approximation
         )
-        boundary_loss, _, _ = evaluate_boundary_loss(self.model, X_dOmega, y_dOmega)
+        boundary_loss, _, _ = self.eval_boundary_loss(self.model, X_dOmega, y_dOmega)
         boundary_loss.backward()
 
         ema_factor = self.param_groups[0]["ema_factor"]

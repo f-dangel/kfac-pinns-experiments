@@ -322,6 +322,10 @@ def main():  # noqa: C901
     )
     check_all_args_parsed()
 
+    # check that the equation was correctly passed to PDE-aware optimizers
+    if isinstance(optimizer, (KFAC, ENGD)):
+        assert optimizer.equation == args.equation
+
     if args.wandb:
         cmd = " ".join(["python"] + argv)
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}

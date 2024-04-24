@@ -1,5 +1,6 @@
 """Test the training script (integration test)."""
 
+from itertools import product
 from subprocess import CalledProcessError, run
 from typing import List
 
@@ -26,23 +27,27 @@ def _run(cmd: List[str]):
 
 
 ARGS = [
-    # train with ENGD
+    # train with ENGD and on different equations
     *[
         [
             "--num_steps=3",
             "--optimizer=ENGD",
+            f"--equation={equation}",
             "--ENGD_ema_factor=0.99",
             "--ENGD_damping=0.0001",
             "--ENGD_lr=0.1",
             f"--ENGD_approximation={approximation}",
         ]
-        for approximation in ["full", "per_layer", "diagonal"]
+        for equation, approximation in product(
+            ["poisson", "heat"], ["full", "per_layer", "diagonal"]
+        )
     ],
     # train with KFAC
     *[
         [
             "--num_steps=10",
             "--optimizer=KFAC",
+            f"--equation={equation}",
             "--KFAC_T_kfac=2",
             "--KFAC_T_inv=4",
             "--KFAC_ema_factor=0.95",
@@ -50,10 +55,21 @@ ARGS = [
             "--KFAC_lr=0.1",
             f"--KFAC_ggn_type={ggn_type}",
         ]
-        for ggn_type in ["type-2", "empirical", "forward-only"]
+        for equation, ggn_type in product(
+            ["poisson", "heat"], ["type-2", "empirical", "forward-only"]
+        )
     ],
     # train with SGD
-    ["--num_steps=3", "--optimizer=SGD", "--SGD_lr=0.1", "--SGD_momentum=0.9"],
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=SGD",
+            f"--equation={equation}",
+            "--SGD_lr=0.1",
+            "--SGD_momentum=0.9",
+        ]
+        for equation in ["poisson", "heat"]
+    ],
     # train with Adam
     [
         "--num_steps=3",
@@ -63,9 +79,23 @@ ARGS = [
         "--Adam_beta2=0.99",
     ],
     # train with LBFGS
-    ["--num_steps=3", "--optimizer=LBFGS"],
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=LBFGS",
+            f"--equation={equation}",
+        ]
+        for equation in ["poisson", "heat"]
+    ],
     # train with HessianFree
-    ["--num_steps=3", "--optimizer=HessianFree"],
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=HessianFree",
+            f"--equation={equation}",
+        ]
+        for equation in ["poisson", "heat"]
+    ],
     # train with a deeper net
     [
         "--num_steps=3",
@@ -79,13 +109,6 @@ ARGS = [
         "--optimizer=SGD",
         "--SGD_lr=0.1",
         "--boundary_condition=cos_sum",
-    ],
-    # train with a different PDE
-    [
-        "--num_steps=3",
-        "--optimizer=SGD",
-        "--SGD_lr=0.1",
-        "--equation=heat",
     ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
