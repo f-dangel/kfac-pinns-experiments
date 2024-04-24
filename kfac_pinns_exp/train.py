@@ -25,11 +25,12 @@ from torch import (
     logspace,
     manual_seed,
     rand,
+    zeros,
 )
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
 
-from kfac_pinns_exp import poisson_equation
+from kfac_pinns_exp import heat_equation, poisson_equation
 from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
 from kfac_pinns_exp.optim.kfac import KFAC
@@ -37,17 +38,32 @@ from kfac_pinns_exp.parse_utils import (
     check_all_args_parsed,
     parse_known_args_and_remove_from_argv,
 )
-from kfac_pinns_exp.poisson_equation import (
-    evaluate_boundary_loss,
-    evaluate_interior_loss,
-    l2_error,
-    square_boundary,
-)
+from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
-SUPPORTED_EQUATIONS = ["poisson"]
+SUPPORTED_EQUATIONS = ["poisson", "heat"]
 SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
 SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum"]
+
+SOLUTIONS = {
+    "poisson": {
+        "sin_product": poisson_equation.u_sin_product,
+        "cos_sum": poisson_equation.u_cos_sum,
+    },
+    "heat": {
+        "sin_product": heat_equation.u_sin_product,
+    },
+}
+INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS = {
+    "poisson": (
+        poisson_equation.evaluate_interior_loss,
+        poisson_equation.evaluate_boundary_loss,
+    ),
+    "heat": (
+        heat_equation.evaluate_interior_loss,
+        heat_equation.evaluate_boundary_loss,
+    ),
+}
 
 
 def parse_general_args(verbose: bool = False) -> Namespace:
@@ -151,16 +167,17 @@ def parse_general_args(verbose: bool = False) -> Namespace:
     args.dtype = DTYPES[args.dtype]
 
     if verbose:
-        print(f"General arguments for the Poisson equation: {args}")
+        print(f"General arguments for the PINN problem: {args}")
 
     return args
 
 
-def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
+def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
     """Set up the layers of the neural network.
 
     Args:
         model: The name of the model. Must be in `SUPPORTED_MODELS`.
+        equation: The name of the equation.
         dim_Omega: The spatial dimension of the domain Ω.
 
     Returns:
@@ -169,15 +186,16 @@ def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
     Raises:
         ValueError: If the model is not supported.
     """
+    in_dim = {"poisson": dim_Omega, "heat": dim_Omega + 1}[equation]
     if model == "mlp-tanh-64":
         layers = [
-            Linear(dim_Omega, 64),
+            Linear(in_dim, 64),
             Tanh(),
             Linear(64, 1),
         ]
     elif model == "mlp-tanh-64-48-32-16":
         layers = [
-            Linear(dim_Omega, 64),
+            Linear(in_dim, 64),
             Tanh(),
             Linear(64, 48),
             Tanh(),
@@ -195,46 +213,117 @@ def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
     return layers
 
 
+def create_interior_data(
+    equation: str, condition: str, dim_Omega: int, num_data: int
+) -> Tuple[Tensor, Tensor]:
+    """Create random inputs and targets from the PDE's domain.
+
+    Args:
+        equation: The name of the equation.
+        condition: The name of the boundary/initial condition.
+        dim_Omega: The spatial dimension of the PDE's spatial domain Ω.
+        num_data: The number of data points to generate.
+
+    Returns:
+        A tensor of shape `(num_data, dim)` with random input data where `dim` is the
+        dimensionality of the PDE's entire domain (i.e. might add a time axis) and a
+        tensor of shape `(num_data, 1)` containing the targets.
+
+    Raises:
+        NotImplementedError: If the combination of equation and condition is not
+            supported.
+    """
+    dim = {"poisson": dim_Omega, "heat": dim_Omega + 1}[equation]
+    X = rand(num_data, dim)
+    if equation == "poisson" and condition in {"sin_product", "cos_sum"}:
+        f = {
+            "sin_product": poisson_equation.f_sin_product,
+            "cos_sum": poisson_equation.f_cos_sum,
+        }[condition]
+        y = f(X)
+    elif equation == "heat" and condition == "sin_product":
+        y = zeros(num_data, 1)
+    else:
+        raise NotImplementedError(
+            f"Equation {equation} with condition {condition} is not supported."
+        )
+
+    return X, y
+
+
+def create_condition_data(
+    equation: str, condition: str, dim_Omega: int, num_data: int
+) -> Tuple[Tensor, Tensor]:
+    """Create data points to enforce conditions on a PDE.
+
+    Conditions can be boundary conditions or initial value conditions.
+
+    Args:
+        equation: The name of the equation.
+        condition: The name of the boundary/initial condition.
+        dim_Omega: The spatial dimension of the PDE's spatial domain Ω.
+        num_data: The number of data points to generate.
+
+    Returns:
+        A tuple `(X, y)` with the input data and labels for the boundary/initial
+        condition.
+
+    Raises:
+        NotImplementedError: If the equation is not supported.
+    """
+    if equation == "poisson":
+        # boundary condition
+        X_dOmega = square_boundary(num_data, dim_Omega)
+    elif equation == "heat":
+        # boundary condition
+        X_dOmega1 = heat_equation.square_boundary_random_time(num_data // 2, dim_Omega)
+        # initial value condition
+        X_dOmega2 = heat_equation.unit_square_at_start(num_data // 2, dim_Omega)
+        X_dOmega = cat([X_dOmega1, X_dOmega2])
+    else:
+        raise NotImplementedError(f"Equation {equation} is not supported.")
+
+    u = SOLUTIONS[equation][condition]
+    return X_dOmega, u(X_dOmega)
+
+
 def main():  # noqa: C901
     """Execute training with the specified command line arguments."""
-    cmd = " ".join(["python"] + argv)
     args = parse_general_args(verbose=True)
+    dev, dt = device("cuda" if cuda.is_available() else "cpu"), args.dtype
+    print(f"Running on device {str(dev)} in dtype {dt}.")
 
-    dev = device("cuda" if cuda.is_available() else "cpu")
-    dt = args.dtype
-    print(f"Running on device {str(dev)}")
-
-    # data
+    # DATA
     manual_seed(args.data_seed)
-    X_Omega = rand(args.N_Omega, args.dim_Omega).to(dev, dt)
-    X_Omega_eval = rand(10 * args.N_Omega, args.dim_Omega).to(dev, dt)
-    X_dOmega = square_boundary(args.N_dOmega, args.dim_Omega).to(dev, dt)
-    # combinations of differential equations and supported boundary conditions/solutions
-    f, u = {
-        "poisson": {
-            "sin_product": (
-                poisson_equation.f_sin_product,
-                poisson_equation.u_sin_product,
-            ),
-            "cos_sum": (poisson_equation.f_cos_sum, poisson_equation.u_cos_sum),
-        }
-    }[args.equation][args.boundary_condition]
-    y_Omega = f(X_Omega)
-    y_dOmega = u(X_dOmega)
+    equation, condition = args.equation, args.boundary_condition
+    dim_Omega, N_Omega, N_dOmega = args.dim_Omega, args.N_Omega, args.N_dOmega
 
-    # neural net
+    # for satisfying the PDE on the domain
+    X_Omega, y_Omega = create_interior_data(equation, condition, dim_Omega, N_Omega)
+    X_Omega, y_Omega = X_Omega.to(dev, dt), y_Omega.to(dev, dt)
+    X_Omega_eval, _ = create_interior_data(equation, condition, dim_Omega, 10 * N_Omega)
+    X_Omega_eval = X_Omega_eval.to(dev, dt)
+
+    # for satisfying boundary and (maybe) initial conditions
+    X_dOmega, y_dOmega = create_condition_data(equation, condition, dim_Omega, N_dOmega)
+    X_dOmega, y_dOmega = X_dOmega.to(dev, dt), y_dOmega.to(dev, dt)
+
+    # NEURAL NET
     manual_seed(args.model_seed)
-    layers = set_up_layers(args.model, args.dim_Omega)
+    layers = set_up_layers(args.model, args.equation, args.dim_Omega)
     layers = [layer.to(dev, dt) for layer in layers]
     model = Sequential(*layers).to(dev)
     print(f"Model: {model}")
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters())}")
 
-    # optimizer and its hyper-parameters
-    optimizer, optimizer_args = set_up_optimizer(layers, args.optimizer, verbose=True)
+    # OPTIMIZER
+    optimizer, optimizer_args = set_up_optimizer(
+        layers, args.optimizer, args.equation, verbose=True
+    )
     check_all_args_parsed()
 
     if args.wandb:
+        cmd = " ".join(["python"] + argv)
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
         wandb.init(config=config)
 
@@ -242,9 +331,14 @@ def main():  # noqa: C901
         int(s) for s in logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
     } | {0, args.num_steps - 1}
 
+    # functions used to evaluate the interior and boundary/condition losses
+    evaluate_interior_loss, evaluate_boundary_loss = (
+        INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[args.equation]
+    )
+
+    # TRAINING
     start = time()
 
-    # training loop
     for step in range(args.num_steps):
         optimizer.zero_grad()
 
@@ -338,6 +432,8 @@ def main():  # noqa: C901
         loss = loss_interior + loss_boundary
 
         if step in logged_steps:
+            # function to evaluate the known solution
+            u = SOLUTIONS[equation][condition]
             l2 = l2_error(model, X_Omega_eval, u)
             print(
                 f"Step: {step:06g}/{args.num_steps:06g},"

@@ -80,6 +80,13 @@ ARGS = [
         "--SGD_lr=0.1",
         "--boundary_condition=cos_sum",
     ],
+    # train with a different PDE
+    [
+        "--num_steps=3",
+        "--optimizer=SGD",
+        "--SGD_lr=0.1",
+        "--equation=heat",
+    ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 

@@ -1,12 +1,13 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 from torch import Tensor, cat, dtype, eye, float64
 from torch.nn import Module
 from torch.optim import Optimizer
 
+from kfac_pinns_exp import heat_equation, poisson_equation
 from kfac_pinns_exp.inverse_kronecker_sum import InverseKroneckerSum
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.optim.engd import ENGD_DEFAULT_LR
@@ -15,12 +16,6 @@ from kfac_pinns_exp.optim.line_search import (
     parse_grid_line_search_args,
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
-from kfac_pinns_exp.poisson_equation import (
-    evaluate_boundary_loss,
-    evaluate_boundary_loss_and_kfac,
-    evaluate_interior_loss,
-    evaluate_interior_loss_and_kfac,
-)
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
@@ -121,6 +116,14 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
     return args
 
 
+# signatures of functions that evaluate only the loss, or the loss and the KFAC matrices
+LOSS_EVALUATOR = Callable[[List[Module], Tensor, Tensor], Tuple[Tensor, Tensor, None]]
+LOSS_AND_KFAC_EVALUATOR = Callable[
+    [List[Module], Tensor, Tensor, str, str],
+    Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]],
+]
+
+
 class KFAC(Optimizer):
     """KFAC optimizer for PINN problems.
 
@@ -130,10 +133,37 @@ class KFAC(Optimizer):
         SUPPORTED_GGN_TYPES: Available approximations of the GGN used to approximate
             KFAC. Currently supports `'type-2'`, `'empirical'`, and `'forward-only'`
             (ordered in descending computational cost and approximation quality).
+        SUPPORTED_EQUATIONS: Available equations to solve. Currently supports the
+            Poisson (`'poisson'`) and heat (`'heat'`) equations.
+        EVAL_INTERIOR_LOSS: Dictionary mapping the equation type to the function
+            that evaluates the interior loss.
+        EVAL_BOUNDARY_LOSS: Dictionary mapping the equation type to the function
+            that evaluates the boundary loss.
+        EVAL_INTERIOR_LOSS_AND_KFAC: Dictionary mapping the equation type to the
+            function that evaluates the interior loss and its KFAC matrices.
+        EVAL_BOUNDARY_LOSS_AND_KFAC: Dictionary mapping the equation type to the
+            function that evaluates the boundary loss and its KFAC matrices.
     """
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
+    SUPPORTED_EQUATIONS = {"poisson", "heat"}
+    EVAL_INTERIOR_LOSS: Dict[str, LOSS_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_interior_loss,
+        "heat": heat_equation.evaluate_interior_loss,
+    }
+    EVAL_BOUNDARY_LOSS: Dict[str, LOSS_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_boundary_loss,
+        "heat": heat_equation.evaluate_boundary_loss,
+    }
+    EVAL_INTERIOR_LOSS_AND_KFAC: Dict[str, LOSS_AND_KFAC_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_interior_loss_and_kfac,
+        "heat": heat_equation.evaluate_interior_loss_and_kfac,
+    }
+    EVAL_BOUNDARY_LOSS_AND_KFAC: Dict[str, LOSS_AND_KFAC_EVALUATOR] = {
+        "poisson": poisson_equation.evaluate_boundary_loss_and_kfac,
+        "heat": heat_equation.evaluate_boundary_loss_and_kfac,
+    }
 
     def __init__(
         self,
@@ -148,6 +178,7 @@ class KFAC(Optimizer):
         ggn_type: str = "type-2",
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
+        equation: str = "poisson",
     ) -> None:
         """Set up the optimizer.
 
@@ -177,6 +208,7 @@ class KFAC(Optimizer):
                 data type as the parameters after the inversion.
             initialize_to_identity: Whether to initialize the KFAC factors to the
                 identity matrix. Default is `False` (initialize with zero).
+            equation: Equation to solve. Currently only supports `'poisson'`.
         """
         defaults = dict(
             lr=lr,
@@ -193,6 +225,18 @@ class KFAC(Optimizer):
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
         self._check_hyperparameters()
+
+        if equation not in self.SUPPORTED_EQUATIONS:
+            raise ValueError(
+                f"Equation {equation} not supported."
+                f" Supported are: {self.SUPPORTED_EQUATIONS}."
+            )
+        # functions for evaluating the interior and boundary losses
+        self.eval_interior_loss = self.EVAL_INTERIOR_LOSS[equation]
+        self.eval_boundary_loss = self.EVAL_BOUNDARY_LOSS[equation]
+        # functions for evaluating the interior and boundary losses and their KFACs
+        self.eval_interior_loss_and_kfac = self.EVAL_INTERIOR_LOSS_AND_KFAC[equation]
+        self.eval_boundary_loss_and_kfac = self.EVAL_BOUNDARY_LOSS_AND_KFAC[equation]
 
         # initialize KFAC matrices for the interior and boundary term
         self.kfacs_interior = check_layers_and_initialize_kfac(
@@ -256,7 +300,7 @@ class KFAC(Optimizer):
             ema_factor = group["ema_factor"]
             ggn_type = group["ggn_type"]
             kfac_approx = group["kfac_approx"]
-            loss, kfacs = evaluate_interior_loss_and_kfac(
+            loss, kfacs = self.eval_interior_loss_and_kfac(
                 self.layers, X, y, ggn_type=ggn_type, kfac_approx=kfac_approx
             )
             for layer_idx in self.layer_idxs:
@@ -265,7 +309,7 @@ class KFAC(Optimizer):
                 for destination, update in zip(destinations, updates):
                     exponential_moving_average(destination, update, ema_factor)
         else:
-            loss, _, _ = evaluate_interior_loss(self.layers, X, y)
+            loss, _, _ = self.eval_interior_loss(self.layers, X, y)
 
         return loss
 
@@ -284,7 +328,7 @@ class KFAC(Optimizer):
             ema_factor = group["ema_factor"]
             ggn_type = group["ggn_type"]
             kfac_approx = group["kfac_approx"]
-            loss, kfacs = evaluate_boundary_loss_and_kfac(
+            loss, kfacs = self.eval_boundary_loss_and_kfac(
                 self.layers, X, y, ggn_type=ggn_type, kfac_approx=kfac_approx
             )
             for layer_idx in self.layer_idxs:
@@ -293,7 +337,7 @@ class KFAC(Optimizer):
                 for destination, update in zip(destinations, updates):
                     exponential_moving_average(destination, update, ema_factor)
         else:
-            loss, _, _ = evaluate_boundary_loss(self.layers, X, y)
+            loss, _, _ = self.eval_boundary_loss(self.layers, X, y)
 
         return loss
 
@@ -441,10 +485,10 @@ class KFAC(Optimizer):
                     Returns:
                         Loss value.
                     """
-                    interior_loss, _, _ = evaluate_interior_loss(
+                    interior_loss, _, _ = self.eval_interior_loss(
                         self.layers, X_Omega, y_Omega
                     )
-                    boundary_loss, _, _ = evaluate_boundary_loss(
+                    boundary_loss, _, _ = self.eval_boundary_loss(
                         self.layers, X_dOmega, y_dOmega
                     )
                     return interior_loss + boundary_loss
