@@ -1,0 +1,2 @@
+config,name
+"{'cmd': 'python ../../train.py --wandb --optimizer=SGD --N_Omega=3000 --N_dOmega=500 --SGD_lr=0.005928035632346852 --SGD_momentum=0.9 --dim_Omega=5 --equation=poisson_cos_sum --num_steps=500000', 'dtype': 'torch.float64', 'model': 'mlp-tanh-64', 'wandb': True, 'SGD_lr': 0.005928035632346852, 'N_Omega': 3000, 'N_dOmega': 500, 'equation': 'poisson_cos_sum', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 5, 'num_steps': 500000, 'optimizer': 'SGD', 'model_seed': 1, 'SGD_momentum': 0.9}",rose-sweep-45
