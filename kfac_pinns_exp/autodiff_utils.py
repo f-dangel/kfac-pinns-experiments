@@ -1,6 +1,6 @@
 """Utility functions for automatic differentiation."""
 
-from typing import List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 from einops import einsum, rearrange
 from torch import Tensor, cat
@@ -8,11 +8,14 @@ from torch.func import functional_call, grad, hessian, jacrev, vmap
 from torch.nn import Module, Parameter
 
 
-def autograd_input_jacobian(model: Module, X: Tensor) -> Tensor:
+def autograd_input_jacobian(
+    model: Union[Module, Callable[[Tensor], Tensor]], X: Tensor
+) -> Tensor:
     """Compute the batched Jacobian of the model w.r.t. its input.
 
     Args:
-        model: The model whose Jacobian will be computed.
+        model: The model whose Jacobian will be computed. Can either be an `nn.Module`
+            or a tensor-to-tensor function.
         X: The input to the model. First dimension is the batch dimension.
             Must be differentiable.
 
@@ -36,18 +39,30 @@ def autograd_input_jacobian(model: Module, X: Tensor) -> Tensor:
     return jac_f_X(X)
 
 
-def autograd_input_hessian(model: Module, X: Tensor) -> Tensor:
+def autograd_input_hessian(
+    model: Union[Module, Callable[[Tensor], Tensor]],
+    X: Tensor,
+    coordinates: Optional[List[int]] = None,
+) -> Tensor:
     """Compute the batched Hessian of the model w.r.t. its input.
 
     Args:
         model: The model whose Hessian will be computed. Must produce batched scalars as
-            output.
+            output. Can either be an `nn.Module` or a tensor-to-tensor function.
         X: The input to the model. First dimension is the batch dimension.
             Must be differentiable.
+        coordinates: List of indices specifying the Hessian rows and columns to keep.
+            If None, the full Hessian is computed. Default: `None`. Currently this
+            feature only works if `X` is a batched vector.
 
     Returns:
         The Hessians of the model w.r.t. X. Has shape
         `[batch_size, *X.shape[1:], *X.shape[1:]]`.
+
+    Raises:
+        ValueError: If `coordinates` are specified but not unique or out of range.
+        NotImplementedError: If `coordinates` is specified but the input is not a batched
+            vector.
     """
 
     def f(x: Tensor) -> Tensor:
@@ -73,7 +88,27 @@ def autograd_input_hessian(model: Module, X: Tensor) -> Tensor:
         return output
 
     hess_f_X = vmap(hessian(f))
-    return hess_f_X(X)
+    hess = hess_f_X(X)
+
+    # slice rows and columns if coordinates are specified
+    if coordinates is not None:
+        if len(set(coordinates)) != len(coordinates) or len(coordinates) == 0:
+            raise ValueError(
+                f"Coordinates must be unique and non-empty. Got {coordinates}."
+            )
+        if X.ndim != 2:
+            raise NotImplementedError(
+                f"Coordinates only support batched vector (2d) inputs. Got {X.ndim}d."
+            )
+        _, num_features = X.shape
+        if any(c < 0 or c >= num_features for c in coordinates):
+            raise ValueError(
+                f"Coordinates must be in the range [0, {num_features})."
+                f" Got {coordinates}."
+            )
+        hess = hess[:, coordinates][:, :, coordinates]
+
+    return hess
 
 
 def autograd_gram_grads(

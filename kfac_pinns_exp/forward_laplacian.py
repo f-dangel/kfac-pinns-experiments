@@ -1,6 +1,6 @@
 """Implementation of the forward Laplacian framework from Li et. al 2023."""
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 
 from einops import einsum
 from torch import Tensor, eye, gt, zeros_like
@@ -8,13 +8,16 @@ from torch.nn import Linear, Module, ReLU, Sigmoid, Tanh
 
 
 def manual_forward_laplacian(
-    layers: List[Module], x: Tensor
+    layers: List[Module], x: Tensor, coordinates: Optional[List[int]] = None
 ) -> List[Dict[str, Tensor]]:
     """Compute the NN prediction and Laplacian in one forward pass.
 
     Args:
         layers: A list of layers defining the NN.
         x: The input to the first layer. First dimension is batch dimension.
+        coordinates: List of indices specifying the Hessian diagonal entries
+            that are summed into the Laplacian. If `None`, all diagonal entries
+            are summed. Default: `None`.
 
     Returns:
         A list of dictionaries, each containing the Taylor coefficients (0th-, 1st-, and
@@ -22,6 +25,7 @@ def manual_forward_laplacian(
 
     Raises:
         ValueError: If a layer uses in-place operations.
+        ValueError: If coordinates are not unique or out of range.
     """
     # inialize Taylor coefficients
     batch_size, feature_dims = x.shape[0], x.shape[1:]
@@ -38,6 +42,17 @@ def manual_forward_laplacian(
         "laplacian": laplacian_init,
     }
 
+    if coordinates is not None:
+        if len(set(coordinates)) != len(coordinates) or len(coordinates) == 0:
+            raise ValueError(
+                f"Coordinates must be unique and non-empty. Got {coordinates}."
+            )
+        if any(c < 0 or c >= num_features for c in coordinates):
+            raise ValueError(
+                f"Coordinates must be in the range [0, {num_features})."
+                f" Got {coordinates}."
+            )
+
     # pass Taylor coefficients through the network
     result = [coefficients]
 
@@ -46,20 +61,25 @@ def manual_forward_laplacian(
             raise ValueError(
                 f"Layers with in-place operations are not supported. Got {layer}."
             )
-        coefficients = manual_forward_laplacian_layer(layer, coefficients)
+        coefficients = manual_forward_laplacian_layer(
+            layer, coefficients, coordinates=coordinates
+        )
         result.append(coefficients)
 
     return result
 
 
 def manual_forward_laplacian_layer(
-    layer: Module, coefficients: Dict[str, Tensor]
+    layer: Module, coefficients: Dict[str, Tensor], coordinates: Union[List[int], None]
 ) -> Dict[str, Tensor]:
     """Propagate the 0th, 1st, and summed 2nd-order Taylor coefficients through a layer.
 
     Args:
         layer: The layer to propagate the Taylor coefficients through.
         coefficients: A dictionary containing the Taylor coefficients.
+        coordinates: List of indices specifying the Hessian diagonal entries
+            that are summed into the Laplacian. If `None`, all diagonal entries
+            are summed.
 
     Returns:
         A dictionary containing the new Taylor coefficients.
@@ -88,6 +108,9 @@ def manual_forward_laplacian_layer(
         new_directional_gradients = einsum(
             old_directional_gradients, jac, "n d0 ..., n ... -> n d0 ..."
         )
+        # only use the relevant coordinates for the Laplacian
+        if coordinates is not None:
+            old_directional_gradients = old_directional_gradients[:, coordinates]
         new_laplacian = einsum(
             hess, old_directional_gradients**2, "n ..., n d0 ... -> n ..."
         ) + einsum(jac, old_laplacian, "n ..., n ... -> n ... ")
@@ -103,6 +126,9 @@ def manual_forward_laplacian_layer(
         new_directional_gradients = einsum(
             old_directional_gradients, jac, "n d0 ..., n ... -> n d0 ..."
         )
+        # only use the relevant coordinates for the Laplacian
+        if coordinates is not None:
+            old_directional_gradients = old_directional_gradients[:, coordinates]
         new_laplacian = einsum(
             hess, old_directional_gradients**2, "n ..., n d0 ... -> n ..."
         ) + einsum(jac, old_laplacian, "n ..., n ... -> n ... ")
