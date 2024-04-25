@@ -216,7 +216,11 @@ class KFAC(Optimizer):
                 data type as the parameters after the inversion.
             initialize_to_identity: Whether to initialize the KFAC factors to the
                 identity matrix. Default is `False` (initialize with zero).
-            equation: Equation to solve. Currently only supports `'poisson'`.
+            equation: Equation to solve. Currently supports `'poisson'` and `'heat'`.
+                Default: `'poisson'`.
+
+        Raises:
+            ValueError: If the supplied equation is unsupported.
         """
         defaults = dict(
             lr=lr,

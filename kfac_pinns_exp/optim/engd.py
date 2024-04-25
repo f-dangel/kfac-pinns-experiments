@@ -1,7 +1,7 @@
 """Implements enery-natural gradient descent flavours from Mueller et al. 2023."""
 
 from argparse import ArgumentParser, Namespace
-from typing import Callable, Dict, List, Set, Tuple, Union
+from typing import List, Set, Tuple, Union
 
 from torch import Tensor, cat, eye, logspace, ones, zeros
 from torch.linalg import lstsq
@@ -9,6 +9,7 @@ from torch.nn import Module
 from torch.optim import Optimizer
 
 from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
@@ -89,10 +90,6 @@ ENGD_DEFAULT_LR = (
     logspace(-30, 0, steps=31, base=2).tolist(),
 )
 
-# signature of functions that evaluate only the loss or only the Gramian
-LOSS_EVALUATOR = Callable[[Module, Tensor, Tensor], Tuple[Tensor, Tensor, None]]
-GRAMIAN_EVALUATOR = Callable[[Module, Tensor, str], Union[Tensor, List[Tensor]]]
-
 
 class ENGD(Optimizer):
     """Energy natural gradient descent with the exact Gramian matrix.
@@ -106,34 +103,10 @@ class ENGD(Optimizer):
     Attributes:
         SUPPORTED_APPROXIMATIONS: Set of supported Gramian approximations.
         SUPPORTED_EQUATIONS: Set of supported PDEs.
-        EVAL_INTERIOR_LOSS: Dictionary mapping the equation type to the function
-            that evaluates the interior loss.
-        EVAL_BOUNDARY_LOSS: Dictionary mapping the equation type to the function
-            that evaluates the boundary loss.
-        EVAL_INTERIOR_GRAMIAN: Dictionary mapping the equation type to the function
-            that evaluates the interior loss Gramian.
-        EVAL_BOUNDARY_GRAMIAN: Dictionary mapping the equation type to the function
-            that evaluates the boundary loss Gramian.
     """
 
     SUPPORTED_APPROXIMATIONS: Set[str] = {"full", "diagonal", "per_layer"}
     SUPPORTED_EQUATIONS: Set[str] = {"poisson", "heat"}
-    EVAL_INTERIOR_LOSS: Dict[str, LOSS_EVALUATOR] = {
-        "poisson": poisson_equation.evaluate_interior_loss,
-        "heat": heat_equation.evaluate_interior_loss,
-    }
-    EVAL_BOUNDARY_LOSS: Dict[str, LOSS_EVALUATOR] = {
-        "poisson": poisson_equation.evaluate_boundary_loss,
-        "heat": heat_equation.evaluate_boundary_loss,
-    }
-    EVAL_INTERIOR_GRAMIAN: Dict[str, GRAMIAN_EVALUATOR] = {
-        "poisson": poisson_equation.evaluate_interior_gramian,
-        "heat": heat_equation.evaluate_interior_gramian,
-    }
-    EVAL_BOUNDARY_GRAMIAN: Dict[str, GRAMIAN_EVALUATOR] = {
-        "poisson": poisson_equation.evaluate_boundary_gramian,
-        "heat": heat_equation.evaluate_boundary_gramian,
-    }
 
     def __init__(
         self,
@@ -175,13 +148,6 @@ class ENGD(Optimizer):
         super().__init__(list(model.parameters()), defaults)
 
         self.equation = equation
-        # functions for evaluating the interior and boundary losses
-        self.eval_interior_loss = self.EVAL_INTERIOR_LOSS[equation]
-        self.eval_boundary_loss = self.EVAL_BOUNDARY_LOSS[equation]
-        # functions for evaluating the interior and boundary Gramians
-        self.eval_interior_gramian = self.EVAL_INTERIOR_GRAMIAN[equation]
-        self.eval_boundary_gramian = self.EVAL_BOUNDARY_GRAMIAN[equation]
-
         self.model = model
         self.gramian = self._initialize_curvature()
 
@@ -399,12 +365,8 @@ class ENGD(Optimizer):
                 Returns:
                     The loss value.
                 """
-                interior_loss, _, _ = self.eval_interior_loss(
-                    self.model, X_Omega, y_Omega
-                )
-                boundary_loss, _, _ = self.eval_boundary_loss(
-                    self.model, X_dOmega, y_dOmega
-                )
+                interior_loss, _, _ = self.eval_loss(X_Omega, y_Omega, "interior")
+                boundary_loss, _, _ = self.eval_loss(X_dOmega, y_dOmega, "boundary")
                 return interior_loss + boundary_loss
 
             grid = lr[1]
@@ -432,18 +394,13 @@ class ENGD(Optimizer):
         Raises:
             NotImplementedError: If the chosen approximation is not supported.
         """
-        approximation = self.param_groups[0]["approximation"]
         # compute gradients and Gramians on current data
-        interior_gramian = self.eval_interior_gramian(
-            self.model, X_Omega, approximation
-        )
-        interior_loss, _, _ = self.eval_interior_loss(self.model, X_Omega, y_Omega)
+        interior_gramian = self.eval_gramian(X_Omega, "interior")
+        interior_loss, _, _ = self.eval_loss(X_Omega, y_Omega, "interior")
         interior_loss.backward()
 
-        boundary_gramian = self.eval_boundary_gramian(
-            self.model, X_dOmega, approximation
-        )
-        boundary_loss, _, _ = self.eval_boundary_loss(self.model, X_dOmega, y_dOmega)
+        boundary_gramian = self.eval_gramian(X_dOmega, "boundary")
+        boundary_loss, _, _ = self.eval_loss(X_dOmega, y_dOmega, "boundary")
         boundary_loss.backward()
 
         ema_factor = self.param_groups[0]["ema_factor"]
@@ -464,3 +421,62 @@ class ENGD(Optimizer):
             )
 
         return interior_loss, boundary_loss
+
+    def eval_loss(self, X: Tensor, y: Tensor, loss_type: str) -> Tensor:
+        """Evaluate the loss.
+
+        Args:
+            X: Input data.
+            y: Target data.
+            loss_type: Type of the loss function. Can be `'interior'` or `'boundary'`.
+
+        Returns:
+            The differentiable loss.
+        """
+        loss_evaluator = {
+            "poisson": {
+                "interior": poisson_equation.evaluate_interior_loss,
+                "boundary": poisson_equation.evaluate_boundary_loss,
+            },
+            "heat": {
+                "interior": heat_equation.evaluate_interior_loss,
+                "boundary": heat_equation.evaluate_boundary_loss,
+            },
+        }[self.equation][loss_type]
+        loss, _, _ = loss_evaluator(self.model, X, y)
+        return loss
+
+    def eval_gramian(self, X: Tensor, loss_type: str) -> Union[Tensor, List[Tensor]]:
+        """Evaluate the Gramian matrix.
+
+        Args:
+            X: Batched input data on which the Gramian is evaluated.
+            loss_type: Type of the loss function. Can be `'interior'` or `'boundary'`.
+
+        Returns:
+            The Gramian matrix or a list of Gramian matrices, depending on the
+            approximation that is specified.
+
+        Raises:
+            ValueError: If the approximation is not one of `'full'`, `'diagonal'`, or
+                `'per_layer'`.
+        """
+        approximation = self.param_groups[0]["approximation"]
+        batch_size = X.shape[0]
+        param_names = [n for n, _ in self.model.named_parameters()]
+        gramian = autograd_gramian(
+            self.model,
+            X,
+            param_names,
+            loss_type=f"{self.equation}_{loss_type}",
+            approximation=approximation,
+        )
+        if approximation == "per_layer":
+            return [g.div_(batch_size) for g in gramian]
+        elif approximation in {"full", "diagonal"}:
+            return gramian.div_(batch_size)
+        else:
+            raise ValueError(
+                f"Unknown approximation {approximation!r}. "
+                "Must be one of 'full', 'diagonal', or 'per_layer'."
+            )

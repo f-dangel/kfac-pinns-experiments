@@ -133,12 +133,12 @@ def autograd_gram_grads(
             For `'heat_interior'`, the gradients of the difference between the
             temporal Jacobian and scaled spatial Laplacian are computed.
             For `'poisson_boundary'` and `'heat_boundary'`, the model's gradients are
-            computed. Default: `'interior'`.
+            computed. Default: `'poisson_interior'`.
 
     Returns:
         The Gramian's gradients w.r.t. the specified parameters in tuple format:
         - `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)]}` if `loss_type='poisson_interior'`
-        - `gᵢ = ∇_θ {∇_t f((tᵢ, xᵢ), θ) - [∇ₓ²f((tᵢ, xᵢ), θ)] / 4}` if
+        - `gᵢ = ∇_θ {∇_t f((tᵢ, xᵢ), θ) - Tr[∇ₓ²f((tᵢ, xᵢ), θ)] / 4}` if
           `loss_type='heat_interior'`
         - `gᵢ = ∇_θ {f(xᵢ, θ)}` if `loss_type='poisson_boundary'`
         - `gᵢ = ∇_θ {f((tᵢ, xᵢ), θ)}` if `loss_type='heat_boundary'`
@@ -173,7 +173,7 @@ def autograd_gram_grads(
         Returns:
             The scalar-valued Laplacian, i.e. `Tr[∇ₓ²f(x, θ)]`.
         """
-        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇ₓ²f(x, θ)
+        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇²ₓf(x, θ)
         return einsum(hess_f(x, *params), "d d ->")
 
     def heat_pde_operator(x: Tensor, *params: Parameter) -> Tensor:
@@ -186,9 +186,9 @@ def autograd_gram_grads(
 
         Returns:
             The difference of time-Jacobian and spatial-Laplacian, i.e.
-            `∇_{(t, x)} f((t, x), θ) - Tr[∇ₓ²f((t, x), θ)] / 4`.
+            `∇_t f((t, x), θ) - Tr[∇ₓ²f((t, x), θ)] / 4`.
         """
-        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇_{(t, x)}²f((t, x), θ)
+        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇²_{(t, x)} f((t, x), θ)
         jacobian_f = jacrev(f, argnums=0)  # (x, θ) → ∇_{(t,x)} f((t, x), θ)
 
         # evaluate Hessian, remove temporal dimension and take Laplacian
