@@ -14,8 +14,8 @@ metric:
     name: loss
 method: grid
 parameters:
-    equation:
-        value: poisson_cos_sum
+    boundary_condition:
+        value: cos_sum
     model:
         value: mlp-tanh-64-48-32-16
     num_steps:
