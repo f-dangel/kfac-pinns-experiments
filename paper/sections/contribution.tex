@@ -141,7 +141,7 @@ This greatly reduces the computational complexity of the forward pass, but is re
 %In matrix form, higher-order forward mode automatic differentiation is given by
 %or $\mT^f=\tilde{\mW}\mT^h$. \todo{do we need this notation?}
 %for linear and nonlinear layers, respectively, where $\tilde{\mW}^{(l)} = \operatorname{diag}(\mW^{(l)}, \dots, \mW^{(l)})$ is a block diagonal matrix.
-We can interpret this formula as a forward pass through a larger neural network with weight sharing in the spirit of \cite{eschenhagen2023kroneckerfactored}  by rearranging $\mZ^{(l)}$ as a matrix of shape $(d+2)\times h^{(l)}$ and noting that $\mZ^{(l)} = \mZ^{(l-1)}{W^{(l)}}^\top$.
+We can interpret this formula as a forward pass through a larger neural network with weight sharing in the spirit of \cite{eschenhagen2023kroneckerfactored}  by rearranging $\mZ^{(l)}$ as a matrix of shape $(d+2)\times h^{(l)}$ and noting that $\mZ^{(l)} = \mZ^{(l-1)}{\mW^{(l)}}^\top$.
 
 \subsection{Kronecker-factored approximations for the Poisson equation}
 For the Poisson equation, the individual block matrices of the PDE Gramian are given by
@@ -152,23 +152,24 @@ Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use t
 \begin{align*}
     \jac_{\mW^{(l)}} \Delta_\vx \vu_n & = \jac_{\mZ^{(l)}}\Delta_\vx \vu_n \jac_{\mW^{(l)}} \mZ^{(l)} %=
     %\jac_{\mW^{(l)}} \mZ^{(l)} \jac_{\mZ^{(l)}}\mZ^{(L)}\jac_{\mZ^{(L)}}\Delta_\vx \vu_n.
-    \\ & =
+    %\\ & =
     %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \mI, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \mI\right) \jac_{\mZ^{(l)}}\Delta_\vx \vu_n
-    \begin{pmatrix}
-        \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\
-        \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\
-        \vdots \\
-        \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\
-        \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\
-    \end{pmatrix}^\top
-    \begin{pmatrix}
-        {\vz^{(l-1)}_n}^\top \otimes \mI \\
-        {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\
-        \vdots \\
-        {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
-        {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
-    \end{pmatrix}
-    \\ & = \sum_{s=1}^S \mZ^{(l-1)}_n \otimes \nabla_{\mZ^{(l)}} \Delta_{\vx}\vu_n
+    %\begin{pmatrix}
+    %    \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\
+    %    \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\
+    %    \vdots \\
+    %    \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\
+    %    \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\
+    %\end{pmatrix}^\top
+    %\begin{pmatrix}
+    %    {\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %    {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %    \vdots \\
+    %    {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %    {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %\end{pmatrix}
+    \\ & = \sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
+    \\ & = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
     %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
     %+
     %\sum_{i=1}^d {\partial_{\vx_i}\vz^{(l-1)}_n}^\top \otimes \jac_{\partial_{\vx_i}\vz^{(l)}}\Delta_{\vx}\vu_n
@@ -177,7 +178,9 @@ Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use t
     %{\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \jac_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n.
     %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \jac_{\vz^{(l-1)}} \Delta_{\vx} \vu_n, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \jac_{\Delta_\vx\vz^{(l-1)}} \Delta_{\vx} \vu_n\right)? not quite
 \end{align*}
-Introducing the notation $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}$ and likewise (up to transposition) for $\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n$ we obtain
+where $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}$.
+Using the notation
+$\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n$ we obtain
 \begin{equation}\label{eq:laplace_gramian_block_exact}
     \mG_\Omega(\mW^{(l)})
     =
