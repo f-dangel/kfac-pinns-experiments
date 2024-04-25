@@ -3,9 +3,9 @@
 from torch import allclose, kron, zeros_like
 from torch.nn import Linear, Sequential, Tanh
 
+from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.kfac_utils import gramian_basis_to_kfac_basis
 from kfac_pinns_exp.poisson_equation import (
-    evaluate_boundary_gramian,
     evaluate_boundary_loss_and_kfac,
     square_boundary,
     u_sin_product,
@@ -31,7 +31,14 @@ def test_boundary_kfac_batch_size_1():
 
     # compute boundary KFACs and Gramians
     _, kfacs = evaluate_boundary_loss_and_kfac(layers, X_dOmega, y_dOmega)
-    gramians = evaluate_boundary_gramian(model, X_dOmega, "per_layer")
+    # NOTE For batch size 1 we don't have to divide by the batch size explicitly
+    gramians = autograd_gramian(
+        model,
+        X_dOmega,
+        [n for n, _ in model.named_parameters()],
+        loss_type="poisson_boundary",
+        approximation="per_layer",
+    )
 
     # The Gramian's basis is `(W.flatten().T, b.T).T`, but KFAC's basis is
     # `(W, b).flatten()` which is different. Hence, we need to rearrange the Gramian to

@@ -365,8 +365,8 @@ class ENGD(Optimizer):
                 Returns:
                     The loss value.
                 """
-                interior_loss, _, _ = self.eval_loss(X_Omega, y_Omega, "interior")
-                boundary_loss, _, _ = self.eval_loss(X_dOmega, y_dOmega, "boundary")
+                interior_loss = self.eval_loss(X_Omega, y_Omega, "interior")
+                boundary_loss = self.eval_loss(X_dOmega, y_dOmega, "boundary")
                 return interior_loss + boundary_loss
 
             grid = lr[1]
@@ -396,11 +396,11 @@ class ENGD(Optimizer):
         """
         # compute gradients and Gramians on current data
         interior_gramian = self.eval_gramian(X_Omega, "interior")
-        interior_loss, _, _ = self.eval_loss(X_Omega, y_Omega, "interior")
+        interior_loss = self.eval_loss(X_Omega, y_Omega, "interior")
         interior_loss.backward()
 
         boundary_gramian = self.eval_gramian(X_dOmega, "boundary")
-        boundary_loss, _, _ = self.eval_loss(X_dOmega, y_dOmega, "boundary")
+        boundary_loss = self.eval_loss(X_dOmega, y_dOmega, "boundary")
         boundary_loss.backward()
 
         ema_factor = self.param_groups[0]["ema_factor"]
