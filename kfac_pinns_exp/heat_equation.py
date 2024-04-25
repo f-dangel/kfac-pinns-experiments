@@ -65,7 +65,7 @@ def u_sin_product(X: Tensor) -> Tensor:
     """
     dim_Omega = X.shape[-1] - 1
     time, spatial = X.split([1, dim_Omega], dim=-1)
-    scale = -(pi**2 * dim_Omega) / 4
+    scale = -(pi**2) * dim_Omega / 4
     return (scale * time).exp() * (pi * spatial).sin().prod(dim=-1, keepdim=True)
 
 
@@ -156,7 +156,7 @@ def evaluate_interior_loss_and_kfac(
     ggn_type: str = "type-2",
     kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
-    """Evaluate the interior loss and compute its KFAC-expand approximation.
+    """Evaluate the interior loss and compute its KFAC approximation.
 
     Args:
         layers: The list of layers in the neural network.
@@ -282,7 +282,7 @@ def evaluate_boundary_loss_and_kfac(
     ggn_type: str = "type-2",
     kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
-    """Evaluate the boundary loss and compute its KFAC-expand approximation.
+    """Evaluate the boundary loss and compute its KFAC approximation.
 
     Args:
         layers: The list of layers in the neural network.

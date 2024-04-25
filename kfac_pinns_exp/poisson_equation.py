@@ -181,7 +181,7 @@ def evaluate_interior_loss_and_kfac(
     ggn_type: str = "type-2",
     kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
-    """Evaluate the interior loss and compute its KFAC-expand approximation.
+    """Evaluate the interior loss and compute its KFAC approximation.
 
     Args:
         layers: The list of layers in the neural network.
@@ -307,7 +307,7 @@ def evaluate_boundary_loss_and_kfac(
     ggn_type: str = "type-2",
     kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
-    """Evaluate the boundary loss and compute its KFAC-expand approximation.
+    """Evaluate the boundary loss and compute its KFAC approximation.
 
     Args:
         layers: The list of layers in the neural network.

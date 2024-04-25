@@ -46,7 +46,7 @@ def set_up_optimizer(
     args_dict = vars(args)  # each key has a prefix that needs to be removed
     args_dict = {key.removeprefix(prefix): value for key, value in args_dict.items()}
 
-    # Some optimizer require passing the equation as argument. We parse this as general
+    # Some optimizers require passing the equation as argument. We parse this as general
     # argument and overwrite the entry from the optimizer's parser.
     if optimizer in {"KFAC", "ENGD"}:
         if verbose:

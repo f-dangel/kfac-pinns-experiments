@@ -133,7 +133,8 @@ class ENGD(Optimizer):
             initialize_to_identity: Whether to initialize the Gramian to the identity
                 matrix. Default: `False`. If `True`, the Gramian is initialized to
                 identity.
-            equation: PDE to solve. Default: `'poisson'`.
+            equation: PDE to solve. Can be `'poisson'` or `'heat'`.
+                Default: `'poisson'`.
         """
         self._check_hyperparameters(
             model, lr, damping, ema_factor, approximation, equation
