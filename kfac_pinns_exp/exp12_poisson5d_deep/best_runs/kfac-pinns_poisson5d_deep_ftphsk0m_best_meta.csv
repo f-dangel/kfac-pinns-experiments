@@ -1,0 +1,2 @@
+config,name
+"{'cmd': 'python ../../train.py --wandb --optimizer=LBFGS --LBFGS_history_size=175 --LBFGS_lr=0.1 --N_Omega=3000 --N_dOmega=500 --dim_Omega=5 --equation=poisson_cos_sum --model=mlp-tanh-64-48-32-16 --num_steps=50000', 'dtype': 'torch.float64', 'model': 'mlp-tanh-64-48-32-16', 'wandb': True, 'N_Omega': 3000, 'LBFGS_lr': 0.1, 'N_dOmega': 500, 'equation': 'poisson_cos_sum', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 5, 'num_steps': 50000, 'optimizer': 'LBFGS', 'model_seed': 1, 'LBFGS_max_iter': 20, 'LBFGS_history_size': 175}",chocolate-sweep-33

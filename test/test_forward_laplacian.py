@@ -26,6 +26,8 @@ def test_manual_forward_laplacian(
 
     Args:
         case: A dictionary describing a test case.
+        coordinate_fn: A function that takes the input data `X` and returns
+            the coordinates whose diagonal entries are summed into the Laplacian.
     """
     layers, X = set_up(case)
     coordinates = coordinate_fn(X)

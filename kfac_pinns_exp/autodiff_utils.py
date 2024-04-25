@@ -61,8 +61,8 @@ def autograd_input_hessian(
 
     Raises:
         ValueError: If `coordinates` are specified but not unique or out of range.
-        NotImplementedError: If `coordinates` is specified but the input is not a batched
-            vector.
+        NotImplementedError: If `coordinates` is specified but the input is not a
+            batched vector.
     """
 
     def f(x: Tensor) -> Tensor:
