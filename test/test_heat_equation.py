@@ -26,7 +26,7 @@ DIM_OMEGA_IDS = [f"dim_Omega={dim}" for dim in DIM_OMEGAS]
 
 @mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
 def test_evaluate_interior_loss(dim_Omega: int):
-    """Check that autograd and Taylor-mode implementation of interior loss match.
+    """Check that autograd and forward Laplacian implementation of interior loss match.
 
     Args:
         dim_Omega: The spatial dimension of the domain.
@@ -54,16 +54,16 @@ def test_evaluate_interior_loss(dim_Omega: int):
     loss_auto, residual_auto, _ = evaluate_interior_loss(model, X, y)
     grad_auto = grad(loss_auto, params)
 
-    # compute via layers (using Taylor-mode)
-    loss_taylor, residual_taylor, _ = evaluate_interior_loss(layers, X, y)
-    grad_taylor = grad(loss_taylor, params)
+    # compute via layers (using forward Laplacian)
+    loss_manual, residual_manual, _ = evaluate_interior_loss(layers, X, y)
+    grad_manual = grad(loss_manual, params)
 
-    report_nonclose(residual_auto, residual_taylor)
+    report_nonclose(residual_auto, residual_manual)
     assert not allclose(residual_auto, zeros_like(residual_auto))
-    report_nonclose(loss_auto, loss_taylor)
+    report_nonclose(loss_auto, loss_manual)
     assert not allclose(loss_auto, zeros_like(loss_auto))
-    for g_auto, g_taylor in zip(grad_auto, grad_taylor):
-        report_nonclose(g_auto, g_taylor)
+    for g_auto, g_manual in zip(grad_auto, grad_manual):
+        report_nonclose(g_auto, g_manual)
         assert not allclose(g_auto, zeros_like(g_auto))
 
 
@@ -102,16 +102,16 @@ def test_evaluate_boundary_loss(dim_Omega: int):
     loss_auto, residual_auto, _ = evaluate_boundary_loss(model, X, y)
     grad_auto = grad(loss_auto, params)
 
-    # compute via layers (using Taylor-mode)
-    loss_taylor, residual_taylor, _ = evaluate_boundary_loss(layers, X, y)
-    grad_taylor = grad(loss_taylor, params)
+    # compute via layers (using manual forward)
+    loss_manual, residual_manual, _ = evaluate_boundary_loss(layers, X, y)
+    grad_manual = grad(loss_manual, params)
 
-    report_nonclose(residual_auto, residual_taylor)
+    report_nonclose(residual_auto, residual_manual)
     assert not allclose(residual_auto, zeros_like(residual_auto))
-    report_nonclose(loss_auto, loss_taylor)
+    report_nonclose(loss_auto, loss_manual)
     assert not allclose(loss_auto, zeros_like(loss_auto))
-    for g_auto, g_taylor in zip(grad_auto, grad_taylor):
-        report_nonclose(g_auto, g_taylor)
+    for g_auto, g_manual in zip(grad_auto, grad_manual):
+        report_nonclose(g_auto, g_manual)
         assert not allclose(g_auto, zeros_like(g_auto))
 
 
