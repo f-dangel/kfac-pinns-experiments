@@ -15,8 +15,10 @@ metric:
 method: random
 run_cap: 50
 parameters:
+    boundary_condition:
+        value: poisson_cos_sum
     num_steps:
-        value: 200_000
+        value: 500_000
     dim_Omega:
         value: 5
     N_Omega:
@@ -25,5 +27,5 @@ parameters:
         value: 500
     Adam_lr:
         distribution: log_uniform_values
-        min: 5e-4
+        min: 5e-2
         max: 5e-1

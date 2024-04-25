@@ -14,8 +14,10 @@ metric:
     name: loss
 method: grid
 parameters:
+    boundary_condition:
+        value: poisson_cos_sum
     num_steps:
-        value: 2_000
+        value: 50_000
     dim_Omega:
         value: 5
     N_Omega:
@@ -27,7 +29,7 @@ parameters:
         values: ["ggn", "hessian"]
     HessianFree_damping:
         distribution: categorical
-        values: [100, 1.0, 1e-2, 1e-4, 1e-6]
+        values: [1.0, 1e-1, 1e-2, 1e-3, 1e-4]
     HessianFree_no_adapt_damping:
         distribution: categorical
         values: [false, true]

@@ -1,0 +1,40 @@
+entity: kfac-pinns
+project: poisson5d_deep
+name: HessianFree
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=HessianFree"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: loss
+method: grid
+parameters:
+    boundary_condition:
+        value: cos_sum
+    model:
+        value: mlp-tanh-64-48-32-16
+    num_steps:
+        value: 50_000
+    dim_Omega:
+        value: 5
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 500
+    HessianFree_curvature_opt:
+        distribution: categorical
+        values: ["ggn", "hessian"]
+    HessianFree_damping:
+        distribution: categorical
+        values: [1.0, 1e-1, 1e-2, 1e-3, 1e-4]
+    HessianFree_no_adapt_damping:
+        distribution: categorical
+        values: [false, true]
+    HessianFree_cg_max_iter:
+        distribution: categorical
+        values: [50, 250]

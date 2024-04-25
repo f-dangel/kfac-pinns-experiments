@@ -167,10 +167,7 @@ class InverseKroneckerSum:
             x = x.reshape(*self.kronecker_dims)
 
         x = self.V1_inv_B1_inv @ x @ self.B2_inv_T_V2_inv_T
-        x = x.flatten() / (
-            einsum(self.diagLam1, self.diagLam2, "i, j -> i j").flatten() + 1
-        )
-        x = x.reshape(*self.kronecker_dims)
+        x = x / (einsum(self.diagLam1, self.diagLam2, "i, j -> i j") + 1.0)
         x = self.V1 @ x @ self.V2_T
 
         return x.flatten() if flattened else x

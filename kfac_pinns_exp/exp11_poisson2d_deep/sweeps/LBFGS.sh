@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --qos=m4
-#SBATCH --partition=rtx6000
+
+#SBATCH --partition=rtx6000,t4v1,t4v2
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=02:00:00
@@ -10,4 +10,4 @@
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-wandb agent --count 1 kfac-pinns/poisson2d_deep/zgt6lkkg
+wandb agent --count 1 kfac-pinns/poisson2d_deep/jytjr3ih

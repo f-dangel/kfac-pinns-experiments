@@ -9,6 +9,7 @@ python train.py --help
 from argparse import ArgumentParser, Namespace
 from functools import partial
 from math import log10
+from sys import argv
 from time import time
 from typing import List, Tuple
 
@@ -196,6 +197,7 @@ def set_up_layers(model: str, dim_Omega: int) -> List[Module]:
 
 def main():  # noqa: C901
     """Execute training with the specified command line arguments."""
+    cmd = " ".join(["python"] + argv)
     args = parse_general_args(verbose=True)
 
     dev = device("cuda" if cuda.is_available() else "cpu")
@@ -233,7 +235,7 @@ def main():  # noqa: C901
     check_all_args_parsed()
 
     if args.wandb:
-        config = vars(args) | vars(optimizer_args)
+        config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
         wandb.init(config=config)
 
     logged_steps = {
