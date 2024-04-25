@@ -116,7 +116,7 @@ def autograd_gram_grads(
     X: Tensor,
     param_names: List[str],
     detach: bool = True,
-    loss_type: str = "interior",
+    loss_type: str = "poisson_interior",
 ) -> Tuple[Tensor]:
     """Compute the gradients used in the Gramian.
 
@@ -127,15 +127,22 @@ def autograd_gram_grads(
         param_names: List of unique parameter names forming the block.
         detach: Whether to detach the gradients from the computational graph.
             Default: `True`.
-        loss_type: The type of loss. Either `'interior'` or `'boundary'`.
-            For `'interior'`, the Laplacian's gradients are computed.
-            For `'boundary'`, the model's gradients are computed. Default: `'interior'`.
+        loss_type: The type of loss. Either `'poisson_interior'`, `'poisson_boundary'`,
+            `'heat_interior'`, or `'heat_boundary'`. Default: `'poisson_interior'`.
+            For `'poisson_interior'`, the Laplacian's gradients are computed.
+            For `'heat_interior'`, the gradients of the difference between the
+            temporal Jacobian and scaled spatial Laplacian are computed.
+            For `'poisson_boundary'` and `'heat_boundary'`, the model's gradients are
+            computed. Default: `'poisson_interior'`.
 
     Returns:
-        The Gramian's gradients `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` (if `loss_type='interior'`)
-        or `gᵢ = ∇_θ {f(xᵢ, θ)}` (if `loss_type='boundary'`) w.r.t. the specified
-        parameters in tuple format. For each parameter `p`, the Gram gradient has shape
-        `[batch_size, *p.shape]`.
+        The Gramian's gradients w.r.t. the specified parameters in tuple format:
+        - `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)]}` if `loss_type='poisson_interior'`
+        - `gᵢ = ∇_θ {∇_t f((tᵢ, xᵢ), θ) - Tr[∇ₓ²f((tᵢ, xᵢ), θ)] / 4}` if
+          `loss_type='heat_interior'`
+        - `gᵢ = ∇_θ {f(xᵢ, θ)}` if `loss_type='poisson_boundary'`
+        - `gᵢ = ∇_θ {f((tᵢ, xᵢ), θ)}` if `loss_type='heat_boundary'`
+        For each parameter `p`, the Gram gradient has shape `[batch_size, *p.shape]`.
     """
     frozen = {
         name: p for name, p in model.named_parameters() if name not in param_names
@@ -155,8 +162,8 @@ def autograd_gram_grads(
         variable = dict(zip(param_names, params))
         return functional_call(model, frozen | variable, x).squeeze()
 
-    def laplacian(x: Tensor, *params: Parameter) -> Tensor:
-        """Compute the Laplacian of the model for an un-batched input.
+    def poisson_pde_operator(x: Tensor, *params: Parameter) -> Tensor:
+        """Evaluate the Poisson equation's differential operator on an un-batched input.
 
         Args:
             x: Un-batched 1d input.
@@ -164,13 +171,42 @@ def autograd_gram_grads(
                 supplied in `param_names`.
 
         Returns:
-            The scalar-valued Laplacian, i.e. Tr[∇ₓ²f(x, θ)].
+            The scalar-valued Laplacian, i.e. `Tr[∇ₓ²f(x, θ)]`.
         """
-        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇ₓ²f(x, θ)
+        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇²ₓf(x, θ)
         return einsum(hess_f(x, *params), "d d ->")
 
+    def heat_pde_operator(x: Tensor, *params: Parameter) -> Tensor:
+        """Evaluate the heat equation's differential operator on an un-batched input.
+
+        Args:
+            x: Un-batched 1d input.
+            params: The parameters forming the block of the Gramian in same order as
+                supplied in `param_names`.
+
+        Returns:
+            The difference of time-Jacobian and spatial-Laplacian, i.e.
+            `∇_t f((t, x), θ) - Tr[∇ₓ²f((t, x), θ)] / 4`.
+        """
+        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇²_{(t, x)} f((t, x), θ)
+        jacobian_f = jacrev(f, argnums=0)  # (x, θ) → ∇_{(t,x)} f((t, x), θ)
+
+        # evaluate Hessian, remove temporal dimension and take Laplacian
+        hess = hess_f(x, *params)[1:][:, 1:]
+        laplacian = einsum(hess, "d d ->")
+
+        # evaluate Jacobian, remove spatial dimensions
+        jacobian = jacobian_f(x, *params)[0]
+
+        return jacobian - laplacian / 4
+
     # function that will be differentiated w.r.t. the parameters
-    func = {"interior": laplacian, "boundary": f}[loss_type]
+    func = {
+        "poisson_interior": poisson_pde_operator,
+        "heat_interior": heat_pde_operator,
+        "poisson_boundary": f,
+        "heat_boundary": f,
+    }[loss_type]
     argnums = tuple(range(1, len(param_names) + 1))
 
     gram_grads = vmap(grad(func, argnums=argnums))
@@ -194,7 +230,7 @@ def autograd_gramian(
     model: Module,
     X: Tensor,
     param_names: List[str],
-    loss_type: str = "interior",
+    loss_type: str = "poisson_interior",
     approximation: str = "full",
 ) -> Union[Tensor, List[Tensor]]:
     """Compute a block of the model's (or its Laplacian's) Gramian.
@@ -204,9 +240,13 @@ def autograd_gramian(
             scalars as output.
         X: The input to the model. First dimension is the batch dimension.
         param_names: List of unique parameter names forming the block.
-        loss_type: The type of loss. Either `'interior'` or `'boundary'`.
-            For `'interior'`, the Laplacian's Gramian is computed.
-            For `'boundary'`, the model's Gramian is computed. Default: `'interior'`.
+        loss_type: The type of loss. Either `'poisson_interior'`,
+            `'poisson_boundary'`, `'heat_interior'`, or `'heat_boundary'`.
+            For `'poisson_interior'`, the Laplacian's Gramian is computed.
+            For `'poisson_boundary'`, and `'heat_boundary`, the model's Gramian is
+            computed. For `'heat_interior'`, the Gramian of the difference of
+            time-Jacobian and spatial-Laplacian is computed.
+            Default: `'poisson_interior'`.
         approximation: The approximation to use for the Gramian. Either `'full'`,
             `'diagonal'`, or `'per_layer'`.
 
@@ -214,10 +254,15 @@ def autograd_gramian(
         The Gramian block of the model (or its Laplacian) w.r.t. the flattened and
         concatenated parameters. If `θ` is the flattened and concatenated parameter,
         its Gramian has shape `[*θ.shape, *θ.shape]`: `∑ᵢ gᵢ @ gᵢᵀ` where
-        `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)}` for `loss_type='interior'` and `gᵢ = ∇_θ f(xᵢ, θ)`
-        for `loss_type='boundary'`. If `approximation='diagonal'`, only the diagonal
-        of shape `[*θ.shape]` is returned. If `approximation='per_layer'`, a list of
-        Gramians is returned, one for each layer of the model.
+        - `gᵢ = ∇_θ {Tr[∇ₓ²f(xᵢ, θ)]}` for `loss_type='poisson_interior'`
+        - `gᵢ = ∇_θ f(xᵢ, θ)` for `loss_type='poisson_boundary'`
+        - `gᵢ = ∇_θ {∇_t f((tᵢ, xᵢ), θ) - Tr[∇ₓ²f((tᵢ, xᵢ), θ)] / 4}`
+          for `loss_type='heat_interior'`
+        - `gᵢ = ∇_θ f((tᵢ, xᵢ), θ)` for `loss_type='heat_boundary'`
+
+        If `approximation='diagonal'`, only the diagonal of shape `[*θ.shape]` is
+        returned. If `approximation='per_layer'`, a list of Gramians is returned,
+        one for each layer of the model.
 
     Raises:
         NotImplementedError: If the approximation is not implemented.

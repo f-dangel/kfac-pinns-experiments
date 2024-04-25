@@ -1,106 +1,72 @@
-"""Functionality for solving the Poisson equation."""
+"""Functionality for solving the heat equation."""
 
 from math import pi
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 from einops import einsum, rearrange, reduce
-from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
-from torch import sum as torch_sum
+from torch import Tensor, cat, rand, zeros
 from torch.autograd import grad
 from torch.nn import Module
 
-from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
+from kfac_pinns_exp.autodiff_utils import (
+    autograd_input_hessian,
+    autograd_input_jacobian,
+)
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.manual_differentiation import manual_forward
+from kfac_pinns_exp.poisson_equation import get_backpropagated_error, square_boundary
 from kfac_pinns_exp.utils import bias_augmentation
 
 
-def square_boundary(N: int, dim: int) -> Tensor:
-    """Returns quadrature points on the boundary of a square.
+def square_boundary_random_time(N: int, dim: int) -> Tensor:
+    """Draw points from the square boundary at random time.
 
     Args:
-        N: Number of quadrature points.
-        dim: Dimension of the Square.
+        N: The number of points to draw.
+        dim: The dimension of the square.
 
     Returns:
-        A tensor of shape (N, dim) that consists of uniformly drawn
-        quadrature points.
+        The points drawn from the square boundary at random time. Has shape
+        `(N, 1 + dim)`. First entry along the second axis is time.
     """
-    X = rand(N, dim)
-
-    dimensions = randint(0, dim, (N,))
-    sides = randint(0, 2, (N,))
-
-    for i in range(N):
-        X[i, dimensions[i]] = sides[i].float()
-
-    return X
+    times = rand(N, 1)
+    X_boundary = square_boundary(N, dim)
+    return cat([times, X_boundary], dim=1)
 
 
-def f_sin_product(X: Tensor) -> Tensor:
-    """The right-hand side of the Prod sine Poisson equation we aim to solve.
+def unit_square_at_start(N: int, dim: int) -> Tensor:
+    """Draw points from the unit square at time 0.
 
     Args:
-        X: Batched quadrature points of shape (N, d_Omega).
+        N: The number of points to draw.
+        dim: The dimension of the square.
 
     Returns:
-        The function values as tensor of shape (N, 1).
+        The points drawn from the unit square at time 0. Has shape
+        `(N, 1 + dim)`. First entry along the second axis is time.
     """
-    d = X.shape[1:].numel()
-
-    return d * pi**2 * prod(sin(pi * X), dim=1, keepdim=True)
+    times = zeros(N, 1)
+    X_square = rand(N, dim)
+    return cat([times, X_square], dim=1)
 
 
 def u_sin_product(X: Tensor) -> Tensor:
-    """Prod sine solution of the Poisson equation we aim to solve.
+    """Solution of the heat equation with sine product initial conditions.
+
+    (And zero boundary conditions.)
 
     Args:
-        X: Batched quadrature points of shape (N, d_Omega).
+        X: The points at which to evaluate the solution. First axis is batch dimension.
+            Second axis is time, followed by spatial dimensions.
 
     Returns:
-        The function values as tensor of shape (N, 1).
+        The value of the solution at the given points. Has shape `(X.shape[0], 1)`.
     """
-    return prod(sin(pi * X), dim=1, keepdim=True)
-
-
-def u_cos_sum(X: Tensor) -> Tensor:
-    """Sum cosine solution of the Poisson equation we aim to solve.
-
-    Args:
-        X: Batched quadrature points of shape (N, d_Omega).
-
-    Returns:
-        The function values as tensor of shape (N, 1).
-    """
-    return torch_sum(cos(pi * X), dim=1, keepdim=True)
-
-
-def f_cos_sum(X: Tensor) -> Tensor:
-    """Sum cosine solution of the Poisson equation we aim to solve.
-
-    Args:
-        X: Batched quadrature points of shape (N, d_Omega).
-
-    Returns:
-        The function values as tensor of shape (N, 1).
-    """
-    return (pi**2) * torch_sum(cos(pi * X), dim=1, keepdim=True)
-
-
-def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:
-    """Computes the L2 norm of the error = model - u on the domain Omega.
-
-    Args:
-        model: The model.
-        X: randomly drawn points in Omega.
-        u: Function to evaluate the manufactured solution.
-
-    Returns:
-        The L2 norm of the error.
-    """
-    y = (model(X) - u(X)) ** 2
-    return y.mean() ** (1 / 2)
+    dim_Omega = X.shape[-1] - 1
+    time, spatial = X.split([1, dim_Omega], dim=-1)
+    scale = -(pi**2) * dim_Omega / 4
+    return (scale * time).exp() * (pi * spatial).sin().prod(dim=-1, keepdim=True)
 
 
 def evaluate_interior_loss(
@@ -110,11 +76,11 @@ def evaluate_interior_loss(
 
     Args:
         model: The model or a list of layers that form the sequential model. If the
-            layers are supplied, the forward pass will use the more efficient forward
-            Laplacian framework and return a list of dictionaries containing the push-
-            forwards through all layers.
+            layers are supplied, the forward pass will use the forward Laplacian
+            framework to compute the derivatives and return a list of dictionaries
+            containing the push-forwards through all layers.
         X: Input for the interior loss.
-        y: Target for the interior loss.
+        y: Target for the interior loss (all-zeros tensor).
 
     Returns:
         The differentiable interior loss, differentiable residual, and intermediates
@@ -123,21 +89,30 @@ def evaluate_interior_loss(
     Raises:
         ValueError: If the model is not a Module or a list of Modules.
     """
-    # use autograd to compute the Laplacian
+    (_, d0) = X.shape
+    spatial = list(range(1, d0))
+
+    # use autograd to compute the Laplacian and time derivative
     if isinstance(model, Module):
         intermediates = None
-        input_hessian = autograd_input_hessian(model, X)
-        laplacian = einsum(input_hessian, "batch i i -> batch").unsqueeze(-1)
-    # use the forward Laplacian framework
+        # slice away the time dimension of the Hessian
+        spatial_hessian = autograd_input_hessian(model, X, coordinates=spatial)
+        spatial_laplacian = einsum(spatial_hessian, "batch i i -> batch").unsqueeze(1)
+        # slice away the spatial dimensions of the Jacobian
+        time_jacobian = autograd_input_jacobian(model, X).squeeze(1)[:, [0]]
+    # use forward Laplacian
     elif isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        intermediates = manual_forward_laplacian(model, X)
-        laplacian = intermediates[-1]["laplacian"]
+        intermediates = manual_forward_laplacian(model, X, coordinates=spatial)
+        spatial_laplacian = intermediates[-1]["laplacian"]
+        # slice away the spatial dimensions of the Jacobian
+        time_jacobian = intermediates[-1]["directional_gradients"][:, 0]
     else:
         raise ValueError(
             "Model must be a Module or a list of Modules that form a sequential model."
             f"Got: {model}."
         )
-    residual = laplacian + y
+
+    residual = time_jacobian - spatial_laplacian / 4 - y
     return 0.5 * (residual**2).mean(), residual, intermediates
 
 
@@ -205,7 +180,7 @@ def evaluate_interior_loss_and_kfac(
         )
     kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
-    # Compute the forward Laplacian and all the intermediates
+    # Compute the spatial Laplacian and time Jacobian and all the intermediates
     loss, residual, intermediates = evaluate_interior_loss(layers, X, y)
 
     ###############################################################################
@@ -367,25 +342,3 @@ def evaluate_boundary_loss_and_kfac(
         B.add_(grad_out.T @ grad_out, alpha=batch_size)
 
     return loss, kfacs
-
-
-def get_backpropagated_error(residual: Tensor, ggn_type: str) -> Tensor:
-    """Get the error which is backpropagated to compute the second KFAC factor.
-
-    Args:
-        residual: The residual tensor which is squared then averaged to compute
-            the loss.
-        ggn_type: The type of GGN approximation. Can be "type-2" or "empirical".
-
-    Returns:
-        The error tensor. Has same shape as `residual`.
-
-    Raises:
-        NotImplementedError: If the `ggn_type` is not supported.
-    """
-    batch_size = residual.shape[0]
-    if ggn_type == "type-2":
-        return ones_like(residual) / batch_size
-    elif ggn_type == "empirical":
-        return residual.clone().detach() / batch_size
-    raise NotImplementedError(f"GGN type {ggn_type} is not supported.")

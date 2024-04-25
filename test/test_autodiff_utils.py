@@ -9,7 +9,7 @@ from torch.nn import Linear, Module, Sequential, Tanh
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 
-LOSS_TYPES = ["boundary", "interior"]
+LOSS_TYPES = ["poisson_boundary", "poisson_interior", "heat_boundary", "heat_interior"]
 APPROXIMATIONS = ["full", "diagonal", "per_layer"]
 
 
@@ -20,12 +20,13 @@ def test_autograd_gramian(loss_type: str, approximation: str):
 
     Args:
         loss_type: The type of loss function whose Gramian
-            is tested. Can be either `'boundary'` or `'interior`.
+            is tested. Can be either `'poisson_boundary'`, `'poisson_interior`,
+            `'heat_boundary`, or `'heat_interior'`.
         approximation: The type of approximation to the Gramian.
             Can be either `'full'`, `'diagonal'`, or `'per_layer'`.
 
     Raises:
-        ValueError: If `loss_type` is not one of `'boundary'` or `'interior'`.
+        ValueError: If `loss_type` is not one of the allowed values.
         ValueError: If `approximation` is not one of `'full'` or `'diagonal'`.
     """
     manual_seed(0)
@@ -58,13 +59,13 @@ def test_autograd_gramian(loss_type: str, approximation: str):
     # compute the Gram gradient for sample n and add its contribution
     # to the Gramian
     for n in range(batch_size):
-        X_n = X[n].requires_grad_(loss_type == "interior")
+        X_n = X[n].requires_grad_(loss_type in {"poisson_interior", "heat_interior"})
         output = model(X_n)
 
-        if loss_type == "boundary":
+        if loss_type in {"poisson_boundary", "heat_boundary"}:
             gram_grad = grad(output, params)
 
-        elif loss_type == "interior":
+        elif loss_type == "poisson_interior":
             laplace = zeros(())
 
             for d in range(D_in):
@@ -79,6 +80,35 @@ def test_autograd_gramian(loss_type: str, approximation: str):
 
             gram_grad = grad(
                 laplace,
+                params,
+                retain_graph=True,
+                # set gradients of un-used parameters to zero
+                # (e.g. last layer bias does not affect Laplacian)
+                materialize_grads=True,
+            )
+        elif loss_type == "heat_interior":
+            laplace = zeros(())
+            jac = zeros(())
+
+            # spatial Laplacian
+            for d in range(1, D_in):
+                (grad_input,) = grad(output, X_n, create_graph=True)
+                e_d = zeros_like(X_n)
+                e_d[d] = 1.0
+
+                (hess_input_dd,) = grad(
+                    (e_d * grad_input).sum(), X_n, create_graph=True
+                )
+                laplace += hess_input_dd[d]
+
+            # temporal Jacobian
+            e_0 = zeros_like(X_n)
+            e_0[0] = 1.0
+            (grad_input,) = grad(output, X_n, create_graph=True)
+            jac += grad_input[0]
+
+            gram_grad = grad(
+                jac - laplace / 4,
                 params,
                 retain_graph=True,
                 # set gradients of un-used parameters to zero

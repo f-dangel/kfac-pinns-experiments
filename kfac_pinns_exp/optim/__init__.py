@@ -19,13 +19,14 @@ from kfac_pinns_exp.optim.sgd import parse_SGD_args
 
 
 def set_up_optimizer(
-    layers: List[Module], optimizer: str, verbose: bool = False
+    layers: List[Module], optimizer: str, equation: str, verbose: bool = False
 ) -> Tuple[Optimizer, Namespace]:
     """Parse arguments for the specified optimizer and construct it.
 
     Args:
         layers: The layers of the model.
         optimizer: The name of the optimizer to be used.
+        equation: The name of the equation to be solved.
         verbose: Whether to print the parsed arguments. Default: `False`.
 
     Returns:
@@ -40,17 +41,26 @@ def set_up_optimizer(
         "HessianFree": (HessianFree, parse_HessianFree_args),
     }[optimizer]
 
+    prefix = f"{optimizer}_"
+    args = parser_func(verbose=verbose, prefix=prefix)
+    args_dict = vars(args)  # each key has a prefix that needs to be removed
+    args_dict = {key.removeprefix(prefix): value for key, value in args_dict.items()}
+
+    # Some optimizers require passing the equation as argument. We parse this as general
+    # argument and overwrite the entry from the optimizer's parser.
+    if optimizer in {"KFAC", "ENGD"}:
+        if verbose:
+            print(
+                f"Overwriting {optimizer}_equation={args_dict['equation']!r}"
+                f" -> {equation!r} from general args."
+            )
+        args_dict["equation"] = equation
+
     if optimizer == "KFAC":
         param_representation = layers
     elif optimizer == "ENGD":
         param_representation = Sequential(*layers)
     else:
         param_representation = sum((list(layer.parameters()) for layer in layers), [])
-
-    prefix = f"{optimizer}_"
-
-    args = parser_func(verbose=verbose, prefix=prefix)
-    args_dict = vars(args)  # each key has a prefix that needs to be removed
-    args_dict = {key.removeprefix(prefix): value for key, value in args_dict.items()}
 
     return cls(param_representation, **args_dict), args
