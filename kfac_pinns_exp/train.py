@@ -269,19 +269,22 @@ def create_condition_data(
         condition.
 
     Raises:
-        NotImplementedError: If the equation is not supported.
+        NotImplementedError: If the combination of equation and condition is not
+            supported.
     """
-    if equation == "poisson":
+    if equation == "poisson" and condition in {"sin_product", "cos_sum"}:
         # boundary condition
         X_dOmega = square_boundary(num_data, dim_Omega)
-    elif equation == "heat":
+    elif equation == "heat" and condition == "sin_product":
         # boundary condition
         X_dOmega1 = heat_equation.square_boundary_random_time(num_data // 2, dim_Omega)
         # initial value condition
         X_dOmega2 = heat_equation.unit_square_at_start(num_data // 2, dim_Omega)
         X_dOmega = cat([X_dOmega1, X_dOmega2])
     else:
-        raise NotImplementedError(f"Equation {equation} is not supported.")
+        raise NotImplementedError(
+            f"Equation {equation} and condition {condition} not supported."
+        )
 
     u = SOLUTIONS[equation][condition]
     return X_dOmega, u(X_dOmega)
@@ -310,7 +313,7 @@ def main():  # noqa: C901
 
     # NEURAL NET
     manual_seed(args.model_seed)
-    layers = set_up_layers(args.model, args.equation, args.dim_Omega)
+    layers = set_up_layers(args.model, equation, dim_Omega)
     layers = [layer.to(dev, dt) for layer in layers]
     model = Sequential(*layers).to(dev)
     print(f"Model: {model}")
@@ -318,13 +321,13 @@ def main():  # noqa: C901
 
     # OPTIMIZER
     optimizer, optimizer_args = set_up_optimizer(
-        layers, args.optimizer, args.equation, verbose=True
+        layers, args.optimizer, equation, verbose=True
     )
     check_all_args_parsed()
 
     # check that the equation was correctly passed to PDE-aware optimizers
     if isinstance(optimizer, (KFAC, ENGD)):
-        assert optimizer.equation == args.equation
+        assert optimizer.equation == equation
 
     if args.wandb:
         cmd = " ".join(["python"] + argv)
@@ -336,9 +339,9 @@ def main():  # noqa: C901
     } | {0, args.num_steps - 1}
 
     # functions used to evaluate the interior and boundary/condition losses
-    evaluate_interior_loss, evaluate_boundary_loss = (
-        INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[args.equation]
-    )
+    eval_interior_loss, eval_boundary_loss = INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[
+        equation
+    ]
 
     # TRAINING
     start = time()
@@ -361,11 +364,11 @@ def main():  # noqa: C901
                 """
                 optimizer.zero_grad()
                 # compute the interior loss' gradient
-                loss_interior, _, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
+                loss_interior, _, _ = eval_interior_loss(layers, X_Omega, y_Omega)
                 loss_interior.backward()
 
                 # compute the boundary loss' gradient
-                loss_boundary, _, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
+                loss_boundary, _, _ = eval_boundary_loss(layers, X_dOmega, y_dOmega)
                 loss_boundary.backward()
 
                 # HOTFIX Append the interior and boundary loss as arguments
@@ -399,10 +402,10 @@ def main():  # noqa: C901
                 Returns:
                     The linearization point and the loss.
                 """
-                loss_interior, residual_interior, _ = evaluate_interior_loss(
+                loss_interior, residual_interior, _ = eval_interior_loss(
                     layers, X_Omega, y_Omega
                 )
-                loss_boundary, residual_boundary, _ = evaluate_boundary_loss(
+                loss_boundary, residual_boundary, _ = eval_boundary_loss(
                     layers, X_dOmega, y_dOmega
                 )
                 # we want to linearize residual w.r.t. the parameters to obtain
@@ -423,10 +426,10 @@ def main():  # noqa: C901
 
         else:
             # compute the interior loss' gradient
-            loss_interior, _, _ = evaluate_interior_loss(layers, X_Omega, y_Omega)
+            loss_interior, _, _ = eval_interior_loss(layers, X_Omega, y_Omega)
             loss_interior.backward()
             # compute the boundary loss' gradient
-            loss_boundary, _, _ = evaluate_boundary_loss(layers, X_dOmega, y_dOmega)
+            loss_boundary, _, _ = eval_boundary_loss(layers, X_dOmega, y_dOmega)
             loss_boundary.backward()
             optimizer.step()
 
