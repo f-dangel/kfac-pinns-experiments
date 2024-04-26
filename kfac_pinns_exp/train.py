@@ -40,6 +40,7 @@ from kfac_pinns_exp.parse_utils import (
     parse_known_args_and_remove_from_argv,
 )
 from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
+from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson", "heat"]
@@ -490,7 +491,10 @@ def main():  # noqa: C901
                     f"{equation}_{dim_Omega}d_{condition}_{args.model}"
                     + f"_{args.optimizer}_step{step:06g}.pdf",
                 )
-                fig_title = f"Step: {step}, Loss: {loss:.2e}, $L_2$ loss: {l2:.2e}"
+                fig_title = (
+                    f"Step: ${step}$, Loss: ${latex_float(loss)}$,"
+                    + f" $L_2$ loss: ${latex_float(l2.item())}$"
+                )
                 makedirs(args.plot_dir, exist_ok=True)
                 plot_fn = {
                     "poisson": poisson_equation.plot_solution,
