@@ -1,5 +1,6 @@
 """General utility functions."""
 
+from subprocess import CalledProcessError, CompletedProcess, run
 from typing import List
 
 from torch import Tensor, cat
@@ -91,3 +92,37 @@ def bias_augmentation(t: Tensor, augmentation: int, dim: int = -1) -> Tensor:
     augmentation_fn = {0: t.new_zeros, 1: t.new_ones}[augmentation]
     augmentation_shape = t.shape[:dim] + (1,) + t.shape[dim + 1 :]
     return cat([t, augmentation_fn(augmentation_shape)], dim=dim)
+
+
+def latex_float(number: float) -> str:
+    """Convert a floating point number to a LaTeX formatted string.
+
+    Args:
+        number: The number to convert.
+
+    Returns:
+        str: The LaTeX formatted string.
+    """
+    float_str = f"{number:.1e}"
+    base, exponent = float_str.split("e")
+    return r"{0} \cdot 10^{{{1}}}".format(base, int(exponent))
+
+
+def run_verbose(cmd: List[str]) -> CompletedProcess:
+    """Run a command and print stdout & stderr if it fails.
+
+    Args:
+        cmd: The command to run.
+
+    Returns:
+        CompletedProcess: The result of the command.
+
+    Raises:
+        CalledProcessError: If the command fails.
+    """
+    try:
+        return run(cmd, capture_output=True, text=True, check=True)
+    except CalledProcessError as e:
+        print("STDOUT:", e.stdout)
+        print("STDERR:", e.stderr)
+        raise e
