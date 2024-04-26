@@ -9,6 +9,7 @@ python train.py --help
 from argparse import ArgumentParser, Namespace
 from functools import partial
 from math import log10
+from os import makedirs, path
 from sys import argv
 from time import time
 from typing import List, Tuple
@@ -161,6 +162,25 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default=150,
         help="Maximum number of logs/prints.",
     )
+    # plotting-specific arguments
+    parser.add_argument(
+        "--plot_solution",
+        action="store_true",
+        help="Whether to plot the learned function and solution during training.",
+        default=False,
+    )
+    parser.add_argument(
+        "--plot_dir",
+        type=str,
+        default="visualize_solution",
+        help="Directory to save the plots (only relevant with `--plot_solution`).",
+    )
+    parser.add_argument(
+        "--disable_tex",
+        action="store_true",
+        default=False,
+        help="Disable TeX rendering in plots (only relevant with `--plot_solution`).",
+    )
     args = parse_known_args_and_remove_from_argv(parser)
 
     # overwrite dtype
@@ -295,6 +315,8 @@ def main():  # noqa: C901
     args = parse_general_args(verbose=True)
     dev, dt = device("cuda" if cuda.is_available() else "cpu"), args.dtype
     print(f"Running on device {str(dev)} in dtype {dt}.")
+    if args.plot_solution:
+        print(f"Saving visualizations of the solution in {args.plot_dir}.")
 
     # DATA
     manual_seed(args.data_seed)
@@ -461,6 +483,26 @@ def main():  # noqa: C901
                         "l2_error": l2,
                         "time": expired,
                     }
+                )
+            if args.plot_solution:
+                fig_path = path.join(
+                    args.plot_dir,
+                    f"{equation}_{dim_Omega}d_{condition}_{args.model}"
+                    + f"_{args.optimizer}_step{step:06g}.pdf",
+                )
+                fig_title = f"Step: {step}, Loss: {loss:.2e}, $L_2$ loss: {l2:.2e}"
+                makedirs(args.plot_dir, exist_ok=True)
+                plot_fn = {
+                    "poisson": poisson_equation.plot_solution,
+                    "heat": heat_equation.plot_solution,
+                }[equation]
+                plot_fn(
+                    condition,
+                    dim_Omega,
+                    model,
+                    fig_path,
+                    title=fig_title,
+                    usetex=not args.disable_tex,
                 )
 
 
