@@ -1,6 +1,7 @@
 """Functionality for solving the heat equation."""
 
 from math import pi
+from os import remove
 from typing import Dict, List, Optional, Tuple, Union
 
 from einops import einsum, rearrange, reduce
@@ -18,7 +19,7 @@ from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.manual_differentiation import manual_forward
 from kfac_pinns_exp.poisson_equation import get_backpropagated_error, square_boundary
-from kfac_pinns_exp.utils import bias_augmentation
+from kfac_pinns_exp.utils import bias_augmentation, run_verbose
 
 
 def square_boundary_random_time(N: int, dim: int) -> Tensor:
@@ -360,52 +361,116 @@ def plot_solution(
     Args:
         condition: String describing the boundary conditions of the PDE. Can be either
             `'sin_product'` or `'cos_sum'`.
-        dim_Omega: The dimension of the domain Omega. Can only be `1`.
+        dim_Omega: The dimension of the domain Omega. Can be `1` or `2`.
         model: The neural network model representing the learned solution.
         savepath: The path to save the plot.
         title: The title of the plot. Default: None.
         usetex: Whether to use LaTeX for rendering text. Default: `True`.
 
     Raises:
-        ValueError: If `dim_Omega` is not `1`.
+        ValueError: If `dim_Omega` is not `1` or `2`.
     """
     u = {"sin_product": u_sin_product}[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
-    if dim_Omega != 1:
-        raise ValueError(f"dim_Omega must be 1. Got {dim_Omega}.")
+    if dim_Omega == 1:
+        # set up grid, evaluate learned and true solution
+        x, y = linspace(0, 1, 50).to(dev, dt), linspace(0, 1, 50).to(dev, dt)
+        x_grid, y_grid = meshgrid(x, y, indexing="ij")
+        xy_flat = stack([x_grid.flatten(), y_grid.flatten()], dim=1)
+        u_learned = model(xy_flat).reshape(x_grid.shape)
+        u_true = u(xy_flat).reshape(x_grid.shape)
 
-    # set up grid, evaluate learned and true solution
-    x, y = linspace(0, 1, 50).to(dev, dt), linspace(0, 1, 50).to(dev, dt)
-    x_grid, y_grid = meshgrid(x, y, indexing="ij")
-    xy_flat = stack([x_grid.flatten(), y_grid.flatten()], dim=1)
-    u_learned = model(xy_flat).reshape(x_grid.shape)
-    u_true = u(xy_flat).reshape(x_grid.shape)
+        # normalize to [0; 1]
+        u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+        u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
 
-    # normalize to [0; 1]
-    u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
-    u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+        # plot
+        with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)):
+            fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
+            ax[0].set_title("Normalized learned solution")
+            ax[1].set_title("Normalized true solution")
+            ax[0].set_xlabel("$x$")
+            ax[1].set_xlabel("$x$")
+            ax[0].set_ylabel("$t$")
+            if title is not None:
+                fig.suptitle(title, y=0.975)
 
-    # plot
-    with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)):
-        fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
-        ax[0].set_title("Normalized learned solution")
-        ax[1].set_title("Normalized true solution")
-        ax[0].set_xlabel("$x$")
-        ax[1].set_xlabel("$x$")
-        ax[0].set_ylabel("$t$")
-        if title is not None:
-            fig.suptitle(title, y=0.975)
+            kwargs = {
+                "vmin": 0,
+                "vmax": 1,
+                "interpolation": "none",
+                "extent": [0, 1, 0, 1],
+                "origin": "lower",
+            }
+            ax[0].imshow(u_learned, **kwargs)
+            ax[1].imshow(u_true, **kwargs)
+            plt.savefig(savepath, bbox_inches="tight")
 
-        kwargs = {
-            "vmin": 0,
-            "vmax": 1,
-            "interpolation": "none",
-            "extent": [0, 1, 0, 1],
-            "origin": "lower",
-        }
-        ax[0].imshow(u_learned, **kwargs)
-        ax[1].imshow(u_true, **kwargs)
-        plt.savefig(savepath, bbox_inches="tight")
+        plt.close(fig=fig)
 
-    plt.close(fig=fig)
+    elif dim_Omega == 2:
+        ts = linspace(0, 1, 30).to(dev, dt)
+        xs, ys = linspace(0, 1, 50).to(dev, dt), linspace(0, 1, 50).to(dev, dt)
+        t_grid, x_grid, y_grid = meshgrid(ts, xs, ys, indexing="ij")
+        txy_flat = stack([t_grid.flatten(), x_grid.flatten(), y_grid.flatten()], dim=1)
+        u_true = u(txy_flat).reshape(*ts.shape, *xs.shape, *ys.shape)
+        u_learned = model(txy_flat).reshape(*ts.shape, *xs.shape, *ys.shape)
+
+        # normalize to [0; 1]
+        u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+        u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+
+        frames = []
+        for idx, t in enumerate(ts):
+            framepath = savepath.replace(".pdf", f"_frame_{idx:03g}.pdf")
+            frames.append(framepath)
+            # plot frame
+            with plt.rc_context(
+                bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)
+            ):
+                fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
+                ax[0].set_title("Normalized learned solution")
+                ax[1].set_title("Normalized true solution")
+                ax[0].set_xlabel("$x$")
+                ax[1].set_xlabel("$x$")
+                ax[0].set_ylabel("$t$")
+                if title is not None:
+                    fig.suptitle(title + f" ($t = {t:.2f})$", y=0.975)
+
+            kwargs = {
+                "vmin": 0,
+                "vmax": 1,
+                "interpolation": "none",
+                "extent": [0, 1, 0, 1],
+                "origin": "lower",
+            }
+            ax[0].imshow(u_learned[idx], **kwargs)
+            ax[1].imshow(u_true[idx], **kwargs)
+            plt.savefig(framepath, bbox_inches="tight")
+            plt.close(fig)
+
+        # unite the pdfs (NOTE: `pdfunite` requires `poppler` library)
+        cmd = ["pdfunite", *frames, savepath]
+        run_verbose(cmd)
+        # delete the individual frames
+        for f in frames:
+            remove(f)
+
+        # create the animation (NOTE: `convert` requires `imagemagick` library)
+        cmd = [
+            "convert",
+            "-verbose",
+            "-delay",
+            "20",
+            "-loop",
+            "0",
+            "-density",
+            "300",
+            savepath,
+            savepath.replace(".pdf", ".gif"),
+        ]
+        run_verbose(cmd)
+
+    else:
+        raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")
