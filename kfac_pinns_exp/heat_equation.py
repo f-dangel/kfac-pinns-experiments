@@ -1,12 +1,14 @@
 """Functionality for solving the heat equation."""
 
 from math import pi
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from einops import einsum, rearrange, reduce
-from torch import Tensor, cat, rand, zeros
+from matplotlib import pyplot as plt
+from torch import Tensor, cat, linspace, meshgrid, no_grad, rand, stack, zeros
 from torch.autograd import grad
 from torch.nn import Module
+from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import (
     autograd_input_hessian,
@@ -342,3 +344,68 @@ def evaluate_boundary_loss_and_kfac(
         B.add_(grad_out.T @ grad_out, alpha=batch_size)
 
     return loss, kfacs
+
+
+@no_grad()
+def plot_solution(
+    condition: str,
+    dim_Omega: int,
+    model: Module,
+    savepath: str,
+    title: Optional[str] = None,
+    usetex: bool = False,
+):
+    """Visualize the learned and true solution of the heat equation.
+
+    Args:
+        condition: String describing the boundary conditions of the PDE. Can be either
+            `'sin_product'` or `'cos_sum'`.
+        dim_Omega: The dimension of the domain Omega. Can only be `1`.
+        model: The neural network model representing the learned solution.
+        savepath: The path to save the plot.
+        title: The title of the plot. Default: None.
+        usetex: Whether to use LaTeX for rendering text. Default: `True`.
+
+    Raises:
+        ValueError: If `dim_Omega` is not `1`.
+    """
+    u = {"sin_product": u_sin_product}[condition]
+    ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
+
+    if dim_Omega != 1:
+        raise ValueError(f"dim_Omega must be 1. Got {dim_Omega}.")
+
+    # set up grid, evaluate learned and true solution
+    x, y = linspace(0, 1, 50).to(dev, dt), linspace(0, 1, 50).to(dev, dt)
+    x_grid, y_grid = meshgrid(x, y, indexing="ij")
+    xy_flat = stack([x_grid.flatten(), y_grid.flatten()], dim=1)
+    u_learned = model(xy_flat).reshape(x_grid.shape)
+    u_true = u(xy_flat).reshape(x_grid.shape)
+
+    # normalize to [0; 1]
+    u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+    u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+
+    # plot
+    with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)):
+        fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
+        ax[0].set_title("Normalized learned solution")
+        ax[1].set_title("Normalized true solution")
+        ax[0].set_xlabel("$x$")
+        ax[1].set_xlabel("$x$")
+        ax[0].set_ylabel("$t$")
+        if title is not None:
+            fig.suptitle(title, y=0.975)
+
+        kwargs = {
+            "vmin": 0,
+            "vmax": 1,
+            "interpolation": "none",
+            "extent": [0, 1, 0, 1],
+            "origin": "lower",
+        }
+        ax[0].imshow(u_learned, **kwargs)
+        ax[1].imshow(u_true, **kwargs)
+        plt.savefig(savepath, bbox_inches="tight")
+
+    plt.close(fig=fig)
