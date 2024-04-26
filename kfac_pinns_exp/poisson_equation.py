@@ -466,10 +466,10 @@ def plot_solution(
 
         # normalize to [0; 1]
         u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
-        u_true_flat = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+        u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
 
         # plot
-        with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=2, usetex=usetex)):
+        with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)):
             fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
             ax[0].set_title("Normalized learned solution")
             ax[1].set_title("Normalized true solution")
@@ -477,16 +477,17 @@ def plot_solution(
             ax[1].set_xlabel("$x_1$")
             ax[0].set_ylabel("$x_2$")
             if title is not None:
-                fig.suptitle(title, y=0.85)
+                fig.suptitle(title, y=0.975)
 
             kwargs = {
                 "vmin": 0,
                 "vmax": 1,
                 "interpolation": "none",
                 "extent": [0, 1, 0, 1],
+                "origin": "lower",
             }
             ax[0].imshow(u_learned, **kwargs)
-            ax[1].imshow(u_true_flat, **kwargs)
+            ax[1].imshow(u_true, **kwargs)
             plt.savefig(savepath, bbox_inches="tight")
     else:
         raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")

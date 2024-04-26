@@ -492,7 +492,10 @@ def main():  # noqa: C901
                 )
                 fig_title = f"Step: {step}, Loss: {loss:.2e}, $L_2$ loss: {l2:.2e}"
                 makedirs(args.plot_dir, exist_ok=True)
-                plot_fn = {"poisson": poisson_equation.plot_solution}[equation]
+                plot_fn = {
+                    "poisson": poisson_equation.plot_solution,
+                    "heat": heat_equation.plot_solution,
+                }[equation]
                 plot_fn(
                     condition,
                     dim_Omega,
