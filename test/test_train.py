@@ -1,30 +1,12 @@
 """Test the training script (integration test)."""
 
 from itertools import product
-from subprocess import CalledProcessError, run
 from typing import List
 
 from pytest import mark
 
 from kfac_pinns_exp import train
-
-
-def _run(cmd: List[str]):
-    """Run the command and print the output/stderr if it fails.
-
-    Args:
-        cmd: The command to run.
-
-    Raises:
-        CalledProcessError: If the command fails.
-    """
-    try:
-        run(cmd, capture_output=True, text=True, check=True)
-    except CalledProcessError as e:
-        print(f"STDOUT:\n{e.stdout}")
-        print(f"STDERR:\n{e.stderr}")
-        raise e
-
+from kfac_pinns_exp.utils import run_verbose
 
 ARGS = [
     # train with ENGD and on different equations
@@ -141,4 +123,4 @@ def test_train(arg: List[str]):
     Args:
         arg: The command-line arguments to pass to the script.
     """
-    _run(["python", train.__file__] + arg)
+    run_verbose(["python", train.__file__] + arg)

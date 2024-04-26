@@ -1,7 +1,8 @@
 """Create a shell script from the sweep .yaml configuration."""
 
 from argparse import ArgumentParser
-from subprocess import CalledProcessError, run
+
+from kfac_pinns_exp.utils import run_verbose
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -21,12 +22,7 @@ if __name__ == "__main__":
     ]
 
     # run the wandb command
-    try:
-        job = run(cmd, capture_output=True, text=True, check=True)
-    except CalledProcessError as e:
-        print("STDOUT:", e.stdout)
-        print("STDERR:", e.stderr)
-        raise e
+    job = run_verbose(cmd)
 
     # get the command from stderr
     trigger = "wandb: Run sweep agent with: wandb agent "
