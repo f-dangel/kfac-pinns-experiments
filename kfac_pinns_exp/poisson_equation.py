@@ -18,6 +18,8 @@ from torch import (
     randint,
     sin,
     stack,
+    vmap,
+    zeros,
 )
 from torch import sum as torch_sum
 from torch.autograd import grad
@@ -101,6 +103,42 @@ def f_cos_sum(X: Tensor) -> Tensor:
         The function values as tensor of shape (N, 1).
     """
     return (pi**2) * torch_sum(cos(pi * X), dim=1, keepdim=True)
+
+@vmap
+def u_weinan_prods(X: Tensor) -> Tensor:
+    """A harmonic mixed polynomial of second order. Weinan uses dim=10.
+
+    This example is taken from Weinans paper on the deep Ritz method:
+    https://arxiv.org/abs/1710.00211
+    It is a simple polynomial of degree two consisting of mixed products. It is
+    thus harmonic, i.e., its Laplacian is zero.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    # dimensionality inferred from input
+    d = len(X)
+
+    out = 0
+    for i in range(0, d // 2):
+        out += X[2 * i] * X[2 * i + 1]
+
+    return out.unsqueeze(0)
+
+
+def f_weinan_prods(X: Tensor) -> Tensor:
+    """The forcing corresponding to weinan_prods, identically zero.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        Zeros of the same shape (len(X), 1).
+    """
+    return zeros((len(X), 1))
 
 
 def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:

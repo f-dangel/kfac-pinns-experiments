@@ -45,12 +45,13 @@ from kfac_pinns_exp.utils import latex_float
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson", "heat"]
 SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
-SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum"]
+SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan"]
 
 SOLUTIONS = {
     "poisson": {
         "sin_product": poisson_equation.u_sin_product,
         "cos_sum": poisson_equation.u_cos_sum,
+        "u_weinan": poisson_equation.u_weinan_prods,
     },
     "heat": {
         "sin_product": heat_equation.u_sin_product,
@@ -256,10 +257,11 @@ def create_interior_data(
     """
     dim = {"poisson": dim_Omega, "heat": dim_Omega + 1}[equation]
     X = rand(num_data, dim)
-    if equation == "poisson" and condition in {"sin_product", "cos_sum"}:
+    if equation == "poisson" and condition in {"sin_product", "cos_sum", "u_weinan"}:
         f = {
             "sin_product": poisson_equation.f_sin_product,
             "cos_sum": poisson_equation.f_cos_sum,
+            "u_weinan": poisson_equation.f_weinan_prods,
         }[condition]
         y = f(X)
     elif equation == "heat" and condition == "sin_product":
@@ -293,7 +295,7 @@ def create_condition_data(
         NotImplementedError: If the combination of equation and condition is not
             supported.
     """
-    if equation == "poisson" and condition in {"sin_product", "cos_sum"}:
+    if equation == "poisson" and condition in {"sin_product", "cos_sum", "u_weinan"}:
         # boundary condition
         X_dOmega = square_boundary(num_data, dim_Omega)
     elif equation == "heat" and condition == "sin_product":
