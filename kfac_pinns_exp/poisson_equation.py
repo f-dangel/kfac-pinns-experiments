@@ -1,13 +1,28 @@
 """Functionality for solving the Poisson equation."""
 
 from math import pi
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from einops import einsum, rearrange, reduce
-from torch import Tensor, cat, cos, ones_like, prod, rand, randint, sin
+from matplotlib import pyplot as plt
+from torch import (
+    Tensor,
+    cat,
+    cos,
+    linspace,
+    meshgrid,
+    no_grad,
+    ones_like,
+    prod,
+    rand,
+    randint,
+    sin,
+    stack,
+)
 from torch import sum as torch_sum
 from torch.autograd import grad
 from torch.nn import Module
+from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
@@ -389,3 +404,91 @@ def get_backpropagated_error(residual: Tensor, ggn_type: str) -> Tensor:
     elif ggn_type == "empirical":
         return residual.clone().detach() / batch_size
     raise NotImplementedError(f"GGN type {ggn_type} is not supported.")
+
+
+@no_grad()
+def plot_solution(
+    condition: str,
+    dim_Omega: int,
+    model: Module,
+    savepath: str,
+    title: Optional[str] = None,
+    usetex: bool = False,
+):
+    """Visualize the learned and true solution of the Poisson equation.
+
+    Args:
+        condition: String describing the boundary conditions of the PDE. Can be either
+            `'sin_product'` or `'cos_sum'`.
+        dim_Omega: The dimension of the domain Omega. Can be either `1` or `2`.
+        model: The neural network model representing the learned solution.
+        savepath: The path to save the plot.
+        title: The title of the plot. Default: None.
+        usetex: Whether to use LaTeX for rendering text. Default: `True`.
+
+    Raises:
+        ValueError: If `dim_Omega` is not `1` or `2`.
+    """
+    u = {"sin_product": u_sin_product, "cos_sum": u_cos_sum}[condition]
+    ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
+
+    if dim_Omega == 1:
+        # set up grid, evaluate learned and true solution
+        x = linspace(0, 1, 50).to(dev, dt).unsqueeze(1)
+        u_learned = model(x).squeeze(1)
+        u_true = u(x).squeeze(1)
+        x.squeeze_(1)
+
+        # normalize to [0; 1]
+        u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+        u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+
+        # plot
+        with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)):
+            fig, ax = plt.subplots(1, 1)
+            ax.set_xlabel("$x$")
+            ax.set_ylabel("$u(x)$")
+            if title is not None:
+                ax.set_title(title)
+
+            ax.plot(x, u_learned, label="Normalized learned solution")
+            ax.plot(x, u_true, label="Normalized true solution", linestyle="--")
+            ax.legend()
+            plt.savefig(savepath, bbox_inches="tight")
+
+    elif dim_Omega == 2:
+        # set up grid, evaluate learned and true solution
+        x, y = linspace(0, 1, 50).to(dev, dt), linspace(0, 1, 50).to(dev, dt)
+        x_grid, y_grid = meshgrid(x, y, indexing="ij")
+        xy_flat = stack([x_grid.flatten(), y_grid.flatten()], dim=1)
+        u_learned = model(xy_flat).reshape(x_grid.shape)
+        u_true = u(xy_flat).reshape(x_grid.shape)
+
+        # normalize to [0; 1]
+        u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+        u_true_flat = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+
+        # plot
+        with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=2, usetex=usetex)):
+            fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
+            ax[0].set_title("Normalized learned solution")
+            ax[1].set_title("Normalized true solution")
+            ax[0].set_xlabel("$x_1$")
+            ax[1].set_xlabel("$x_1$")
+            ax[0].set_ylabel("$x_2$")
+            if title is not None:
+                fig.suptitle(title, y=0.85)
+
+            kwargs = {
+                "vmin": 0,
+                "vmax": 1,
+                "interpolation": "none",
+                "extent": [0, 1, 0, 1],
+            }
+            ax[0].imshow(u_learned, **kwargs)
+            ax[1].imshow(u_true_flat, **kwargs)
+            plt.savefig(savepath, bbox_inches="tight")
+    else:
+        raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")
+
+    plt.close(fig=fig)

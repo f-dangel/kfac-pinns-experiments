@@ -110,6 +110,25 @@ ARGS = [
         "--SGD_lr=0.1",
         "--boundary_condition=cos_sum",
     ],
+    # train and visualize the solutions for each logged step
+    *[
+        [
+            "--num_steps=3",
+            f"--dim_Omega={dim_Omega}",
+            f"--equation={equation}",
+            f"--boundary_condition={condition}",
+            "--optimizer=SGD",
+            "--SGD_lr=0.1",
+            "--plot_solution",
+            "--disable_tex",  # for Github actions (no LaTeX available)
+        ]
+        for dim_Omega, equation, condition in [
+            (1, "poisson", "sin_product"),
+            (2, "poisson", "sin_product"),
+            (1, "poisson", "cos_sum"),
+            (2, "poisson", "cos_sum"),
+        ]
+    ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 
