@@ -1,0 +1,2 @@
+config,name
+"{'cmd': 'python ../../train.py', 'dtype': 'torch.float64', 'model': 'mlp-tanh-64', 'wandb': True, 'SGD_lr': 0.06517164083731014, 'N_Omega': 900, 'N_dOmega': 120, 'equation': 'heat', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 2, 'num_steps': 50000, 'optimizer': 'SGD', 'model_seed': 1, 'SGD_momentum': 0.99, 'boundary_condition': 'sin_product'}",super-sweep-5
