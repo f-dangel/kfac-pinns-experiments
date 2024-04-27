@@ -474,7 +474,10 @@ class KFAC(Optimizer):
         # update KFAC matrices
         ema_factor = group["ema_factor"]
         for layer_idx in self.layer_idxs:
-            destinations = self.kfacs_boundary[layer_idx]
+            destinations = {
+                "boundary": self.kfacs_boundary,
+                "interior": self.kfacs_interior,
+            }[loss_type][layer_idx]
             updates = kfacs[layer_idx]
             for destination, update in zip(destinations, updates):
                 exponential_moving_average(destination, update, ema_factor)
