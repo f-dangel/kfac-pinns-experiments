@@ -1,9 +1,10 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
+from math import sqrt
 from typing import Dict, List, Tuple, Union
 
-from torch import Tensor, cat, dtype, eye, float64
+from torch import Tensor, arange, cat, dtype, float64
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -101,6 +102,13 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         help="The equation to solve.",
         default="poisson",
     )
+    parser.add_argument(
+        f"--{prefix}damping_heuristic",
+        type=str,
+        choices=KFAC.SUPPORTED_DAMPING_HEURISTICS,
+        help="How to distribute the damping onto the two Kronecker factors.",
+        default="same",
+    )
 
     args = parse_known_args_and_remove_from_argv(parser)
     # overwrite inv_dtype with value from dictionary
@@ -135,11 +143,16 @@ class KFAC(Optimizer):
             (ordered in descending computational cost and approximation quality).
         SUPPORTED_EQUATIONS: Available equations to solve. Currently supports the
             Poisson (`'poisson'`) and heat (`'heat'`) equations.
+        SUPPORTED_DAMPING_HEURISTICS: Available damping heuristics how to distribute
+            the damping onto the two Kronecker factors. Currently supports `'same'`
+            and `'trace-norm'` (from Martens et al. (2015), Section 6.3 in
+            https://arxiv.org/pdf/1503.05671).
     """
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
     SUPPORTED_EQUATIONS = {"poisson", "heat"}
+    SUPPORTED_DAMPING_HEURISTICS = {"same", "trace-norm"}
 
     def __init__(
         self,
@@ -155,6 +168,7 @@ class KFAC(Optimizer):
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
         equation: str = "poisson",
+        damping_heuristic: str = "same",
     ) -> None:
         """Set up the optimizer.
 
@@ -186,6 +200,8 @@ class KFAC(Optimizer):
                 identity matrix. Default is `False` (initialize with zero).
             equation: Equation to solve. Currently supports `'poisson'` and `'heat'`.
                 Default: `'poisson'`.
+            damping_heuristic: How to distribute the damping onto the two Kronecker
+                factors. Currently supports `'same'`. Default is `'same'`.
 
         Raises:
             ValueError: If the supplied equation is unsupported.
@@ -201,6 +217,7 @@ class KFAC(Optimizer):
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
             initialize_to_identity=initialize_to_identity,
+            damping_heuristic=damping_heuristic,
         )
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
@@ -270,12 +287,10 @@ class KFAC(Optimizer):
 
         inv_dtype = group["inv_dtype"]
         damping = group["damping"]
+        damping_heuristic = group["damping_heuristic"]
 
         # compute the KFAC inverse
         for layer_idx in self.layer_idxs:
-            weight_dtype = self.layers[layer_idx].weight.dtype
-            weight_device = self.layers[layer_idx].weight.device
-
             # NOTE that in the literature (column-stacking), KFAC w.r.t. the flattened
             # weights is A₁ ⊗ A₂ + B₁ ⊗ B₂. However, in code we use row-stacking
             # flattening. Effectively, we have to swap the Kronecker factors to obtain
@@ -283,12 +298,8 @@ class KFAC(Optimizer):
             A2, A1 = self.kfacs_interior[layer_idx]
             B2, B1 = self.kfacs_boundary[layer_idx]
 
-            # add the damping
-            kwargs = {"dtype": weight_dtype, "device": weight_device}
-            A1 = A1 + damping * eye(*A1.shape, **kwargs)
-            A2 = A2 + damping * eye(*A2.shape, **kwargs)
-            B1 = B1 + damping * eye(*B1.shape, **kwargs)
-            B2 = B2 + damping * eye(*B2.shape, **kwargs)
+            A2, A1 = self.add_damping(A2, A1, damping, damping_heuristic)
+            B2, B1 = self.add_damping(B2, B1, damping, damping_heuristic)
 
             self.inv[layer_idx] = InverseKroneckerSum(  # noqa: B909
                 A1, A2, B1, B2, inv_dtype=inv_dtype
@@ -368,6 +379,13 @@ class KFAC(Optimizer):
         inv_strategy = group["inv_strategy"]
         if inv_strategy != "invert kronecker sum":
             raise ValueError(f"Unsupported inversion strategy: {inv_strategy}.")
+
+        damping_heuristic = group["damping_heuristic"]
+        if damping_heuristic not in self.SUPPORTED_DAMPING_HEURISTICS:
+            raise ValueError(
+                f"Unsupported damping heuristic: {damping_heuristic}. "
+                + f"Supported: {self.SUPPORTED_DAMPING_HEURISTICS}."
+            )
 
     def _update_parameters(
         self,
@@ -483,3 +501,43 @@ class KFAC(Optimizer):
                 exponential_moving_average(destination, update, ema_factor)
 
         return loss
+
+    def add_damping(
+        self, A: Tensor, B: Tensor, damping: float, heuristic: str
+    ) -> Tuple[Tensor, Tensor]:
+        """Add damping to the KFAC factors.
+
+        Args:
+            A: The input-based Kronecker factor.
+            B: The output-gradient-based Kronecker factor.
+            damping: The damping factor.
+            heuristic: The damping heuristic.
+
+        Returns:
+            A tuple of the damped KFAC factors.
+
+        Raises:
+            ValueError: If the damping heuristic is not supported.
+        """
+        (dim_A,), (dim_B,) = set(A.shape), set(B.shape)
+
+        if heuristic == "same":
+            damping_A, damping_B = damping, damping
+        elif heuristic == "trace-norm":
+            # trace-norm heuristic from Martens et al. (2015),
+            # see https://arxiv.org/pdf/1503.05671, Sectin 6.3
+            pi = ((A.trace() * dim_B) / (B.trace() * dim_A)).sqrt()
+            damping_A = sqrt(damping) * pi
+            damping_B = sqrt(damping) / pi
+        else:
+            raise ValueError(f"Unsupported damping heuristic: {heuristic}.")
+
+        A_damped = A.clone()
+        idx_A = arange(dim_A, device=A.device)
+        A_damped[idx_A, idx_A] = A_damped.diag().add_(damping_A)
+
+        B_damped = B.clone()
+        idx_B = arange(dim_B, device=B.device)
+        B_damped[idx_B, idx_B] = B_damped.diag().add_(damping_B)
+
+        return A_damped, B_damped
