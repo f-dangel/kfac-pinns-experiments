@@ -18,10 +18,9 @@ from torch import (
     randint,
     sin,
     stack,
-    vmap,
-    zeros,
 )
 from torch import sum as torch_sum
+from torch import zeros
 from torch.autograd import grad
 from torch.nn import Module
 from tueplots import bundles
@@ -104,7 +103,7 @@ def f_cos_sum(X: Tensor) -> Tensor:
     """
     return (pi**2) * torch_sum(cos(pi * X), dim=1, keepdim=True)
 
-@vmap
+
 def u_weinan_prods(X: Tensor) -> Tensor:
     """A harmonic mixed polynomial of second order. Weinan uses dim=10.
 
@@ -119,14 +118,8 @@ def u_weinan_prods(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
-    # dimensionality inferred from input
-    d = len(X)
-
-    out = 0
-    for i in range(0, d // 2):
-        out += X[2 * i] * X[2 * i + 1]
-
-    return out.unsqueeze(0)
+    N, d = X.shape
+    return X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
 
 
 def f_weinan_prods(X: Tensor) -> Tensor:
