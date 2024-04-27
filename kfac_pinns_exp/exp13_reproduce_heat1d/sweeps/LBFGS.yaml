@@ -1,5 +1,5 @@
 entity: kfac-pinns
-project: heat2d
+project: heat1d
 name: LBFGS
 program: ../../train.py
 command:

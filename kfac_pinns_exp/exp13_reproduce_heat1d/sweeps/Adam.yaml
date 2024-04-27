@@ -1,13 +1,13 @@
 entity: kfac-pinns
-project: heat2d
-name: SGD
+project: heat1d
+name: Adam
 program: ../../train.py
 command:
     - ${env}
     - python
     - ${program}
     - "--wandb"
-    - "--optimizer=SGD"
+    - "--optimizer=Adam"
     - ${args}
 metric:
     goal: minimize
@@ -19,10 +19,7 @@ parameters:
         value: heat
     num_steps:
         value: 50_000
-    SGD_lr:
+    Adam_lr:
         distribution: log_uniform_values
-        min: 1e-3
+        min: 5e-4
         max: 1e-1
-    SGD_momentum:
-        distribution: categorical
-        values: [0.0, 0.3, 0.6, 0.9, 0.99]

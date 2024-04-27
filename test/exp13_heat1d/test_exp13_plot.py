@@ -1,6 +1,6 @@
 """Run the plotting script from exp13."""
 
-from kfac_pinns_exp.exp13_reproduce_heat2d import plot
+from kfac_pinns_exp.exp13_reproduce_heat1d import plot
 from kfac_pinns_exp.utils import run_verbose
 
 

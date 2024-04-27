@@ -1,5 +1,5 @@
 entity: kfac-pinns
-project: heat2d
+project: heat1d
 name: ENGD_per_layer
 program: ../../train.py
 command:

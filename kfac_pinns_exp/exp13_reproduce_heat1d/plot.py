@@ -10,7 +10,7 @@ from tueplots import bundles
 from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
-project = "heat2d"  # name from the 'Projects' tab on wandb
+project = "heat1d"  # name from the 'Projects' tab on wandb
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
