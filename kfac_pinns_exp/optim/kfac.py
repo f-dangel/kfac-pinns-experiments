@@ -3,7 +3,7 @@
 from argparse import ArgumentParser, Namespace
 from typing import Dict, List, Tuple, Union
 
-from torch import Tensor, cat, dtype, eye, float64
+from torch import Tensor, cat, dtype, eye, float64, zeros_like
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -101,6 +101,12 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         help="The equation to solve.",
         default="poisson",
     )
+    parser.add_argument(
+        f"--{prefix}momentum",
+        type=float,
+        help="Momentum on the update.",
+        default=0.0,
+    )
 
     args = parse_known_args_and_remove_from_argv(parser)
     # overwrite inv_dtype with value from dictionary
@@ -155,6 +161,7 @@ class KFAC(Optimizer):
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
         equation: str = "poisson",
+        momentum: float = 0.0,
     ) -> None:
         """Set up the optimizer.
 
@@ -186,6 +193,7 @@ class KFAC(Optimizer):
                 identity matrix. Default is `False` (initialize with zero).
             equation: Equation to solve. Currently supports `'poisson'` and `'heat'`.
                 Default: `'poisson'`.
+            momentum: Momentum on the update. Default: `0.0`.
 
         Raises:
             ValueError: If the supplied equation is unsupported.
@@ -201,6 +209,7 @@ class KFAC(Optimizer):
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
             initialize_to_identity=initialize_to_identity,
+            momentum=momentum,
         )
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
@@ -253,6 +262,7 @@ class KFAC(Optimizer):
         for layer_idx in self.layer_idxs:
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
+        self.add_momentum(directions)
 
         self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
 
@@ -369,6 +379,10 @@ class KFAC(Optimizer):
         if inv_strategy != "invert kronecker sum":
             raise ValueError(f"Unsupported inversion strategy: {inv_strategy}.")
 
+        momentum = group["momentum"]
+        if not 0 <= momentum < 1:
+            raise ValueError(f"Momentum must be in the range [0, 1). Got {momentum}.")
+
     def _update_parameters(
         self,
         directions: List[Tensor],
@@ -483,3 +497,22 @@ class KFAC(Optimizer):
                 exponential_moving_average(destination, update, ema_factor)
 
         return loss
+
+    def add_momentum(self, directions: List[Tensor]):
+        """Incorporate momentum into the update direction (in-place).
+
+        Args:
+            directions: Update directions in list format.
+        """
+        group = self.param_groups[0]
+        momentum = group["momentum"]
+        if momentum == 0.0:
+            return
+
+        for d, p in zip(directions, group["params"]):
+            if self.steps == 0:  # initialize momentum buffers
+                self.state[p]["momentum_buffer"] = d
+            else:  # update internal momentum buffer and direction
+                p_mom = self.state[p]["momentum_buffer"]
+                p_mom.mul_(momentum).add_(d)
+                d.copy_(p_mom)
