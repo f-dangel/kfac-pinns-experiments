@@ -94,7 +94,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("2d Heat")
+            ax.set_title("1d Heat")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():

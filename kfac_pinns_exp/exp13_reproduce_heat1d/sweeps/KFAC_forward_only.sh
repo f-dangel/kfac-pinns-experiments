@@ -9,4 +9,4 @@
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-wandb agent --count 1 kfac-pinns/heat1d/uhd51r9y
+wandb agent --count 1 kfac-pinns/heat1d/xq99i0yr

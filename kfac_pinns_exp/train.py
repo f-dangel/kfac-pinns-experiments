@@ -315,6 +315,8 @@ def create_condition_data(
 
 def main():  # noqa: C901
     """Execute training with the specified command line arguments."""
+    # NOTE Do not move this down as the parsers remove arguments from argv
+    cmd = " ".join(["python"] + argv)
     args = parse_general_args(verbose=True)
     dev, dt = device("cuda" if cuda.is_available() else "cpu"), args.dtype
     print(f"Running on device {str(dev)} in dtype {dt}.")
@@ -355,7 +357,6 @@ def main():  # noqa: C901
         assert optimizer.equation == equation
 
     if args.wandb:
-        cmd = " ".join(["python"] + argv)
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
         wandb.init(config=config)
 
