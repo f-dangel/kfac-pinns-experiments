@@ -116,6 +116,7 @@ ARGS = [
     [
         "--num_steps=3",
         "--optimizer=KFAC",
+        "--KFAC_damping=0.01",
         "--KFAC_momentum=0.1",
     ],
 ]
