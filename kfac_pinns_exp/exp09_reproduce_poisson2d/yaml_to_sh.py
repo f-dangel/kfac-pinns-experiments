@@ -13,6 +13,43 @@ QUEUE_TO_TIME = {
     "m5": "01:00:00",
 }
 
+
+def create_sbatch_script(
+    savepath: str,
+    cmd: str,
+    qos: str = "m4",
+    array: int = 64,
+    array_max_active: int = 16,
+    partition: str = "rtx6000",
+):
+    """Create an sbatch script containing the given command.
+
+    Args:
+        savepath: Path to save the sbatch script.
+        cmd: Command to run in the sbatch script.
+        qos: Slurm QOS for the job. Default is `"m4"`.
+        array: Size of the job array. Default: `64`.
+        array_max_active: Maximum number of active tasks in the array. Default: `16`.
+        partition: Slurm partition for the job. Default: `"rtx6000"`.
+    """
+    script = f"""#!/bin/bash
+#SBATCH --partition={partition}
+#SBATCH --qos={qos}
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=4
+#SBATCH --time={QUEUE_TO_TIME[qos]}
+#SBATCH --mem-per-cpu=8G
+#SBATCH --array=1-{array}%{min(array, array_max_active)}
+
+source  ~/anaconda3/etc/profile.d/conda.sh
+conda activate kfac_pinns_exp
+
+{cmd}"""
+
+    with open(savepath, "w") as f:
+        f.write(script)
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(
         description="Create shell script from sweep .yaml configuration."
@@ -45,21 +82,5 @@ if __name__ == "__main__":
     line = line.replace(trigger, "")
     line = f"wandb agent --count 1 {line}"
 
-    # create the .sh file
-    TEMPLATE = f"""#!/bin/bash
-#SBATCH --partition=rtx6000,t4v1,t4v2
-#SBATCH --qos={args.qos}
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=4
-#SBATCH --time={QUEUE_TO_TIME[args.qos]}
-#SBATCH --mem-per-cpu=8G
-#SBATCH --array=1-64%16
-
-source  ~/anaconda3/etc/profile.d/conda.sh
-conda activate kfac_pinns_exp
-
-{line}"""
-
     sh_file = args.yaml_file.replace(".yaml", ".sh")
-    with open(sh_file, "w") as f:
-        f.write(TEMPLATE)
+    create_sbatch_script(sh_file, line, args.qos)
