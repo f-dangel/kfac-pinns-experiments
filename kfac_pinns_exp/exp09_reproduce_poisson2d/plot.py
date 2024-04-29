@@ -25,9 +25,9 @@ sweep_ids = {  # ids from the wandb agent
     "2dyhpat8": "ENGD (full)",
     "s99lpfkr": "ENGD (layer-wise)",
     "lifmrlda": "ENGD (diagonal)",
-    "k38qh5u7": "KFAC",
-    "85oxf9bl": "KFAC (empirical)",
-    "euujavez": "KFAC (forward-only)",
+    "685m4syn": "KFAC",
+    "ctt2btd7": "KFAC (empirical)",
+    "jwjqotgc": "KFAC (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
