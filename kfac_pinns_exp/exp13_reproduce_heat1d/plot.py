@@ -25,9 +25,9 @@ sweep_ids = {  # ids from the wandb agent
     "u3m1vnkp": "ENGD (full)",
     "vdhpnhmi": "ENGD (layer-wise)",
     "nvjurwuk": "ENGD (diagonal)",
-    "835tybgo": "KFAC",
-    "ez4jw6tj": "KFAC (empirical)",
-    "m2dyj9t1": "KFAC (forward-only)",
+    "gx8t6cjo": "KFAC",
+    "x5g06gut": "KFAC (empirical)",
+    "uhd51r9y": "KFAC (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("2d Heat")
+            ax.set_title("1d Heat")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():

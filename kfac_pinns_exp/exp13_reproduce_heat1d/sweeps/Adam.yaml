@@ -15,6 +15,8 @@ metric:
 method: random
 run_cap: 50
 parameters:
+    dim_Omega:
+        value: 1
     equation:
         value: heat
     num_steps:
