@@ -116,5 +116,5 @@ if __name__ == "__main__":
 
             ax.legend()
             plt.savefig(
-                path.join(HEREDIR, f"poisson2d_{metric}.pdf"), bbox_inches="tight"
+                path.join(HEREDIR, f"{project}_{metric}.pdf"), bbox_inches="tight"
             )
