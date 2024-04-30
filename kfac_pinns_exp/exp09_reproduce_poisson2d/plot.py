@@ -14,21 +14,21 @@ entity = "kfac-pinns"  # team name on wandb
 project = "poisson2d"  # name from the 'Projects' tab on wandb
 
 # Useful to map sweep ids to human-readable names
-print_sweeps = True
+print_sweeps = False
 if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "t8chv2sj": "SGD",
-    "uaf280yd": "Adam",
-    "4oj5ix1m": "Hessian-free",
-    "b3atvsop": "LBFGS",
-    "vuz1whhx": "ENGD (full)",
-    # "fzrg3cyi": "ENGD (layer-wise)",
-    "evd2uh6q": "ENGD (diagonal)",
-    "685m4syn": "KFAC",
-    "ctt2btd7": "KFAC (empirical)",
-    "jwjqotgc": "KFAC (forward-only)",
+    "jbm3npeb": "SGD",
+    "go33jqg3": "Adam",
+    "t0z0cb0w": "Hessian-free",
+    "4wrqarzz": "LBFGS",
+    "48jvuiv0": "ENGD (full)",
+    "gpvffr7w": "ENGD (layer-wise)",
+    "mkin6ouu": "ENGD (diagonal)",
+    "eyie7x7p": "KFAC",
+    "me0h1w7f": "KFAC (empirical)",
+    "lmi1pnbh": "KFAC (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
