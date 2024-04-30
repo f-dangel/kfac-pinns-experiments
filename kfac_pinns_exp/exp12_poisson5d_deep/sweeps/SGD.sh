@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=1-64%16
+#SBATCH --array=1-64%17
 
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-wandb agent --count 1 kfac-pinns/poisson5d_deep/691ow5az
+wandb agent --count 1 kfac-pinns/poisson5d_deep/0w9egl2u
