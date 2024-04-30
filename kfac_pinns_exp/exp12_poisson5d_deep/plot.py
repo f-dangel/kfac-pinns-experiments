@@ -1,6 +1,7 @@
 """Plot the best runs from each tuned optimizer"""
 
 from argparse import ArgumentParser
+from itertools import product
 from os import makedirs, path
 
 from matplotlib import pyplot as plt
@@ -18,16 +19,16 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "691ow5az": "SGD",
-    "c1g6nlhq": "Adam",
-    "bi1wczb9": "Hessian-free",
-    "dwol35e0": "LBFGS",
-    "yi2cwxu9": "ENGD (full)",
-    "b6vvuw1e": "ENGD (layer-wise)",
-    "x85ru5jo": "ENGD (diagonal)",
-    "apxqkgac": "KFAC",
-    "ot1cjhmf": "KFAC (empirical)",
-    "m2ndsrcn": "KFAC (forward-only)",
+    "0w9egl2u": "SGD",
+    "gm45xw6w": "Adam",
+    "ceezms1x": "Hessian-free",
+    "8yyepuj4": "LBFGS",
+    "q4x3gd9x": "ENGD (full)",
+    "x4rr52g2": "ENGD (layer-wise)",
+    "60yjzuh1": "ENGD (diagonal)",
+    "rsjryuic": "KFAC",
+    "2rdhag2w": "KFAC (empirical)",
+    "gip15lzy": "KFAC (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -83,14 +84,15 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    metric_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
+    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
 
-    for metric, ylabel in metric_to_ylabel.items():
+    for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
         with plt.rc_context(
             bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
         ):
             fig, ax = plt.subplots(1, 1)
-            ax.set_xlabel("Iteration")
+            ax.set_xlabel(xlabel)
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
@@ -106,9 +108,13 @@ if __name__ == "__main__":
                     update=args.update,
                     savedir=DATADIR,
                 )
+                x_data = {
+                    "step": df_history["step"] + 1,
+                    "time": df_history["time"] - min(df_history["time"]),
+                }[x]
                 ax.plot(
-                    df_history["step"] + 1,
-                    df_history[metric],
+                    x_data,
+                    df_history[y],
                     label=label,
                     color=colors[label],
                     linestyle=linestyles[label],
@@ -116,5 +122,5 @@ if __name__ == "__main__":
 
             ax.legend()
             plt.savefig(
-                path.join(HEREDIR, f"{project}_{metric}.pdf"), bbox_inches="tight"
+                path.join(HEREDIR, f"{project}_{y}_over_{x}.pdf"), bbox_inches="tight"
             )
