@@ -16,7 +16,7 @@ method: random
 run_cap: 50
 parameters:
     boundary_condition:
-        value: poisson_cos_sum
+        value: cos_sum
     num_steps:
         value: 500_000
     dim_Omega:
