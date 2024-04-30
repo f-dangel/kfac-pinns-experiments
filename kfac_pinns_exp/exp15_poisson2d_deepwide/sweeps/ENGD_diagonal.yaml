@@ -1,0 +1,31 @@
+entity: kfac-pinns
+project: poisson2d_deepwide
+name: ENGD_diagonal
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=ENGD"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: loss
+method: grid
+parameters:
+    model:
+        value: mlp-tanh-64-64-48-48
+    num_seconds:
+        value: 1_000
+    ENGD_approximation:
+        value: diagonal
+    ENGD_damping:
+        distribution: categorical
+        values: [1e-4, 1e-5, 1e-6, 1e-8, 0.0]
+    ENGD_ema_factor:
+        distribution: categorical
+        values: [0.0, 0.3, 0.6, 0.9, 0.99]
+    ENGD_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]
