@@ -446,12 +446,7 @@ def main():  # noqa: C901
 
     if args.wandb:
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
-        wandb.init(
-            config=config,
-            project=args.wandb_project,
-            entity=args.wandb_entity,
-            id=args.wandb_id,
-        )
+        wandb.init(config=config)
 
     # functions used to evaluate the interior and boundary/condition losses
     eval_interior_loss, eval_boundary_loss = INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[
