@@ -8,6 +8,7 @@ python train.py --help
 
 from argparse import ArgumentParser, Namespace
 from functools import partial
+from itertools import count
 from math import log10
 from os import makedirs, path
 from sys import argv
@@ -154,6 +155,13 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Number of training steps.",
     )
     parser.add_argument(
+        "--num_seconds",
+        type=float,
+        default=0.0,
+        help="Number of seconds to train. Ignored if `0.0`,"
+        + " otherwise disables `num_steps`.",
+    )
+    parser.add_argument(
         "--wandb",
         action="store_true",
         help="Whether to use Weights & Biases for logging.",
@@ -162,7 +170,7 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         "--max_logs",
         type=int,
         default=150,
-        help="Maximum number of logs/prints.",
+        help="Maximum number of logs/prints. Ignored if `num_seconds` is non-zero.",
     )
     # plotting-specific arguments
     parser.add_argument(
@@ -313,6 +321,86 @@ def create_condition_data(
     return X_dOmega, u(X_dOmega)
 
 
+class LoggingTrigger:
+    """Class to trigger logging."""
+
+    def __init__(self, num_steps: int, max_logs: int, num_seconds: float):
+        """Initialize the trigger.
+
+        Args:
+            num_steps: The number of steps to train.
+            max_logs: The maximum number of logs to create.
+            num_seconds: The number of seconds to train. If non-zero, `num_steps` and
+                `max_logs` are ignored.
+        """
+        if num_seconds == 0.0:
+            logged_steps = {
+                int(s) for s in logspace(0, log10(num_steps - 1), max_logs - 1).int()
+            } | {0, num_steps - 1}
+
+            def should_log(step: int) -> bool:
+                """Function to determine whether to log a step given a step limit.
+
+                Args:
+                    step: Current training step.
+
+                Returns:
+                    Whether to log the step.
+                """
+                return step in logged_steps
+
+        else:
+            self.next_log = 1
+
+            def should_log(step: int) -> bool:
+                """Function to determine whether to log a step given a time limit.
+
+                Args:
+                    step: Current training step.
+
+                Returns:
+                    Whether to log the step.
+                """
+                if step in {0, 1}:
+                    return True
+                elif step >= self.next_log:
+                    self.next_log *= 1.1
+                    return True
+                return False
+
+        self.should_log = should_log
+
+
+class KillTrigger:
+    """Class to kill training."""
+
+    def __init__(self, num_steps: int, num_seconds: float):
+        """Initialize the trigger.
+
+        Args:
+            num_steps: The number of steps to train.
+            num_seconds: The number of seconds to train. If `0`, train for `num_steps`,
+                otherwise ignore `num_steps` and train for `num_seconds` seconds.
+        """
+
+        def should_kill(step: int, seconds_elapsed: float) -> bool:
+            """Function to determine whether training should be killed.
+
+            Args:
+                step: Current training step.
+                seconds_elapsed: Time elapsed in seconds since training started.
+
+            Returns:
+                Whether to kill training.
+            """
+            if num_seconds == 0.0:
+                return step >= num_steps - 1
+            else:
+                return seconds_elapsed >= num_seconds
+
+        self.should_kill = should_kill
+
+
 def main():  # noqa: C901
     """Execute training with the specified command line arguments."""
     # NOTE Do not move this down as the parsers remove arguments from argv
@@ -358,11 +446,12 @@ def main():  # noqa: C901
 
     if args.wandb:
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
-        wandb.init(config=config)
-
-    logged_steps = {
-        int(s) for s in logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
-    } | {0, args.num_steps - 1}
+        wandb.init(
+            config=config,
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            id=args.wandb_id,
+        )
 
     # functions used to evaluate the interior and boundary/condition losses
     eval_interior_loss, eval_boundary_loss = INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[
@@ -370,9 +459,11 @@ def main():  # noqa: C901
     ]
 
     # TRAINING
+    logging_trigger = LoggingTrigger(args.num_steps, args.max_logs, args.num_seconds)
+    kill_trigger = KillTrigger(args.num_steps, args.num_seconds)
     start = time()
 
-    for step in range(args.num_steps):
+    for step in count():
         optimizer.zero_grad()
 
         if isinstance(optimizer, (KFAC, ENGD)):
@@ -460,21 +551,21 @@ def main():  # noqa: C901
             optimizer.step()
 
         now = time()
-        expired = now - start
+        elapsed = now - start
         loss_boundary, loss_interior = loss_boundary.item(), loss_interior.item()
         loss = loss_interior + loss_boundary
 
-        if step in logged_steps:
+        if logging_trigger.should_log(step) or kill_trigger.should_kill(step, elapsed):
             # function to evaluate the known solution
             u = SOLUTIONS[equation][condition]
             l2 = l2_error(model, X_Omega_eval, u)
             print(
-                f"Step: {step:06g}/{args.num_steps:06g},"
+                f"Step: {step:07g},"
                 + f" Loss: {loss},"
                 + f" L2 Error: {l2},"
                 + f" Interior: {loss_interior},"
                 + f" Boundary: {loss_boundary},"
-                + f" Time: {expired:.1f}s",
+                + f" Time: {elapsed:.1f}s",
                 flush=True,
             )
             if args.wandb:
@@ -485,14 +576,14 @@ def main():  # noqa: C901
                         "loss_interior": loss_interior,
                         "loss_boundary": loss_boundary,
                         "l2_error": l2,
-                        "time": expired,
+                        "time": elapsed,
                     }
                 )
             if args.plot_solution:
                 fig_path = path.join(
                     args.plot_dir,
                     f"{equation}_{dim_Omega}d_{condition}_{args.model}"
-                    + f"_{args.optimizer}_step{step:06g}.pdf",
+                    + f"_{args.optimizer}_step{step:07g}.pdf",
                 )
                 fig_title = (
                     f"Step: ${step}$, Loss: ${latex_float(loss)}$,"
@@ -511,6 +602,9 @@ def main():  # noqa: C901
                     title=fig_title,
                     usetex=not args.disable_tex,
                 )
+
+        if kill_trigger.should_kill(step, elapsed):
+            return
 
 
 if __name__ == "__main__":

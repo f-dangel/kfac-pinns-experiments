@@ -14,8 +14,8 @@ metric:
     name: loss
 method: grid
 parameters:
-    num_steps:
-        value: 10_000
+    num_seconds:
+        value: 1_000
     ENGD_approximation:
         value: full
     ENGD_damping:

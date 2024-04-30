@@ -19,7 +19,7 @@ def create_sbatch_script(
     cmd: str,
     qos: str = "m4",
     array: int = 64,
-    array_max_active: int = 16,
+    array_max_active: int = 17,
     partition: str = "rtx6000",
 ):
     """Create an sbatch script containing the given command.
