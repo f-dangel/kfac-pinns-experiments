@@ -8,7 +8,7 @@ command:
     - ${program}
     - "--wandb"
     - "--optimizer=ENGD"
-    - ${args}
+    - ${args_no_boolean_flags}
 metric:
     goal: minimize
     name: loss
