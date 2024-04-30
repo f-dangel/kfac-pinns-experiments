@@ -45,7 +45,7 @@ from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson", "heat"]
-SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
+SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16", "mlp-tanh-64-64-48-48"]
 SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan"]
 
 SOLUTIONS = {
@@ -234,6 +234,18 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
             Linear(32, 16),
             Tanh(),
             Linear(16, 1),
+        ]
+    elif model == "mlp-tanh-64-64-48-48":
+        layers = [
+            Linear(in_dim, 64),
+            Tanh(),
+            Linear(64, 64),
+            Tanh(),
+            Linear(64, 48),
+            Tanh(),
+            Linear(48, 48),
+            Tanh(),
+            Linear(48, 1),
         ]
     else:
         raise ValueError(
