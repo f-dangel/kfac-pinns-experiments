@@ -19,8 +19,8 @@ parameters:
         value: 1
     equation:
         value: heat
-    num_steps:
-        value: 50_000
+    num_seconds:
+        value: 1_000
     SGD_lr:
         distribution: log_uniform_values
         min: 1e-3
