@@ -18,13 +18,13 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "lbbpybzv": "SGD",
-    "3fyoofbh": "Adam",
-    "4nml4taz": "Hessian-free",
-    "jytjr3ih": "LBFGS",
-    "4eikh376": "ENGD (full)",
-    "in7aq9o4": "ENGD (layer-wise)",
-    "tosqfoxn": "ENGD (diagonal)",
+    "pwszwjdz": "SGD",
+    "f06dhx7x": "Adam",
+    "da1pav76": "Hessian-free",
+    "faziacl6": "LBFGS",
+    "5dp21gpl": "ENGD (full)",
+    "g9u6qtor": "ENGD (layer-wise)",
+    "8f8vs9jp": "ENGD (diagonal)",
     "k4uf81nx": "KFAC",
     "6a8ekod4": "KFAC (empirical)",
     "x0yxdfk7": "KFAC (forward-only)",
