@@ -53,13 +53,13 @@ To compute not the full Hessian but only the Laplacian, we can simplify the forw
     %\partial_i\partial_j
     \Delta_\vx\vz^{(l)}
 \end{pmatrix}\in \mathbb R^{(d+2)h^{(l)}}$ with $\mZ^{(0)}=  \begin{pmatrix}
-    x
+    \vx
     &
-    \mathrm e_1
+    \ve_1
     &
     \dots
     &
-    \mathrm e_d
+    \ve_d
     &
     0
 \end{pmatrix}\in \mathbb R^{(d+2)d}$ and summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ we obtain the Laplacian forward pass for linear layers by
@@ -190,48 +190,14 @@ $\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n$ we obtain
     \sum_{s=1}^S \left( \mZ
     ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
 \end{equation}
+Now we can use any Kronecker-factored approximation for feedforward networks with weight sharing, where we choose to work with the following. 
 
 %
 %\paragraph{Kronecker approximation of the PDE Gramian}
 
-\paragraph{The reduce approximation}
-Approximating the sum of Kronecker products (running over $s$) by the Kronecker product of the sum, simplifying and again approximating for the outer sum (running over $n$) we obtain
-\begin{align}
-    \hat{\mG}_\Omega^{\textup{red}}(\mW^{(l)})
-    \coloneqq
-    \frac{1}{N^2 S^2} \left[\sum_{n=1}^N \left( \sum_{s=1}^S \mZ^{(l-1)}_{n,s} \right) \left(\sum_{s=1}^S {\mZ^{(l-1)}_{n,s}}\right)^\top\right]
-    \otimes
-    \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right]
-\end{align}
-Up to normalization factors, this approximation agrees with the \emph{reduce} setting described by~\citet{eschenhagen2023kroneckerfactored}.
-\todo{I don't understand why Eschenhagen et al divide by $S$, or even by $S^2$ in the reduce setting. To me that seems weird (unless I miss sth) and we can try to see what the performance is when not doing it.}
-
-\paragraph{Individual steps} Can be moved to the appendix or deleted:
-
-\begin{align*}
-    &\; \sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \sum_{s=1}^S \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
-    \\ \approx & \;
-    \sum_{n=1}^N
-    \frac{1}{S^2}\left[\left(\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)\otimes \left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)\right)
-    \cdot
-    \left(\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)^\top\otimes \left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)^\top\right)\right]
-    \\ = & \;
-    \frac{1}{S^2}\sum_{n=1}^N
-    \left[\left(\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)\left( \sum_{s=1}^S\mZ^{(l-1)}_{n,s}\right)^\top \right)\otimes \left(\left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)\left(\sum_{s=1}^S\vg_{n,s}^{(l)}\right)^\top\right)
-     \right]
-    \\ \approx & \;
-    \frac{1}{N S^2}\left[\sum_{n=1}^N \left( \sum_{s=1}^S \mZ^{(l-1)}_{n,s} \right) \left(\sum_{s=1}^S {\mZ^{(l-1)}_{n,s}}\right)^\top\right]
-    \otimes
-    \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right]
-\end{align*}
-
 
 \paragraph{The expand approximation}
-Alternatively, approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain
+Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain
 \begin{align}
     \hat{\mG}_\Omega^{\textup{exp}}(\mW^{(l)})
     \coloneqq \frac{1}{N^2 S}
@@ -239,46 +205,48 @@ Alternatively, approximating the inner matrix product of sums in equation~\eqref
     \otimes
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top   \right].
 \end{align}
-which coincides -- again up to normalization constants --
-with the \emph{expand} setting of \cite{eschenhagen2023kroneckerfactored}.
+This approximation corresponds to the \emph{expand} setting described by~\citet{eschenhagen2023kroneckerfactored}. 
+%\todo{@Felix. Here it would be natural to comment on forward and empirical, right? To my understanding we do not really use the reduce approximation, correct?} 
 
-\paragraph{Individual steps} Can be moved to the appendix or deleted:
-
-\begin{align*}
-    & \sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \sum_{s=1}^S \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
-    \\ \approx & \;
-    \frac{1}{S?}\sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
-    \\ = & \;
-    \frac{1}{S}\sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}{\mZ
-    ^{(l-1)}_{n,s}}^\top\otimes \vg_{n,s}^{(l)}{\vg_{n,s}^{(l)}}^\top \right)
-    \right]
-    \\ \approx & \;
-    \frac{1}{NS}\left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
+\paragraph{Forward KFAC}
+One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to compute the grad-output-based Kronecker factors. 
+To speed up computation, we can neglect the quantities in the approximation $\hat{\mG}_\Omega^{\textup{exp}}$ that require a backward pass. 
+We call the corresponding approximation \emph{forward KFAC}, which is given by 
+\begin{align}
+    \hat{\mG}_\Omega^{\textup{for}}(\mW^{(l)})
+    \coloneqq \frac{1}{N^2 S}
+    \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top \right]
-\end{align*}
+    \mI.
+\end{align}
+Some works find that if setting this factor to $\mI$, the resulting input-based KFAC still yields good performance~\cite{benzing2022gradient,petersen2023isaac}. 
+%\paragraph{Input-based Kronecker approximation:} 
+
+\paragraph{Empirical KFAC}
+... how does this look? ... 
+probably move to appendix or simply say it can be done in the future... 
+
+
+%\paragraph{The reduce approximation}
+%Alternatively, approximating the sum of Kronecker products (running over $s$) by the Kronecker product of the sum, simplifying and again approximating for the outer sum (running over $n$) we obtain
+%\begin{align}
+%    \hat{\mG}_\Omega^{\textup{red}}(\mW^{(l)})
+%    \coloneqq
+%    \frac{1}{N^2 S^2} \left[\sum_{n=1}^N \left( \sum_{s=1}^S \mZ^{(l-1)}_{n,s} \right) \left(\sum_{s=1}^S {\mZ^{(l-1)}_{n,s}}\right)^\top\right]
+%    \otimes
+%    \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right]
+%\end{align}
+%This approximation coincide with the \emph{reduce} setting described in \cite{eschenhagen2023kroneckerfactored}.
 
 
 
-\paragraph{Empirical and non empirical Gramians}
+
+%\paragraph{Empirical and non empirical Gramians}
 
 \paragraph{Combining PDE and boundary Gramian}
-One way is to keep the both Kronecker approximations separate, but then we need to invert a sum of two Kronecker products.
+One way is to keep both Kronecker approximations separate, but then we need to invert a sum of two Kronecker products. 
 This can be done, see \Cref{sec:inverse_kronecker_sum}, but adds twice the memory overhead compared to having a single Kronecker approximation.
-Also, the Kronecker sum's inversion requires solving a generalized eigenvalue problem, for which there is currently no API in PyTorch.
-Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
-Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance.
-\todo{combine with appendix}
-\todo{which one do we use?}
+
 
 
 % expand approximation treats the shared axis like a batch axis
@@ -346,29 +314,12 @@ It treats the shared axis like a batch axis,
 \end{align}
 We can express this in matrix notation as $\mF(\mW^{(l)}) \approx \nicefrac{1}{S} \mZ^{(l)} {\mZ^{(l)}}^{\top} \otimes \mG^{(l)} {\mG^{(l)}}^{\top}$.
 \end{comment}
-\subsection{Discussion and generalizations}
+%\subsection{Discussion and generalizations}
 
-
-\paragraph{Input-based Kronecker approximation:} One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to be able to compute the grad-output-based Kronecker factors.
-Some works find that if setting this factor to $\mI$, the resulting input-based KFAC still yields good performance~\cite{benzing2022gradient,petersen2023isaac}
-
-\paragraph{Possible extensions:} Our KFAC implementation requires matrix (eigen-)decompositions and uses dense pre-conditioner matrices.
-This can cause numerical instabilities and large memory consumption.
-Both issues can be addressed by using an inverse-free KFAC update~\cite{lin2023simplifying} and structured Kronecker factors~\cite{lin2023structured}.
-We leave this additions to future work.
-One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done in \cite{dangel2020backpack}.
-However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
-
-\todo[inline]{should we provide a pseudo code?}
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "../main"
-%%% End:
-
-\section{General PDEs}
+\subsection{General preconditioned PDE methods}
 %\paragraph{Setting}
-We consider the general second-order PDE
+We consider the general %second-order 
+PDE
 \begin{equation}
     %\Psi(u, \nabla u, \nabla^{2} u) = 0,
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
@@ -398,16 +349,19 @@ Note, however, that in contrast to a regression problem, the residual $r_\vtheta
 If we have a forward iteration for $r_\vtheta$, we can apply existing KFAC approximations.
 We obtain this via higher-order forward mode automatic differentiation.
 
-Writing $v_\vtheta(\vx)\coloneqq (u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))$
+Writing $v_\vtheta(\vx)\coloneqq (%u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx)
+u(\vx), \partial u(\vx), \dots, \partial^{(k)} u(\vx))$
 we can express the Gauß-Newton matrix as
 \begin{align}
-    \mG(\vtheta) & = \frac1N\sum_{n=1}^N \jac_\vtheta v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mH(\vtheta, \vx)}  \jac_\vtheta v_\vtheta(\vx_n),
+    \mG(\vtheta) & = \frac1N\sum_{n=1}^N \jac_\vtheta v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mH(\vtheta, \vx_n)}  \jac_\vtheta v_\vtheta(\vx_n), 
 \end{align}
 and $v_\vtheta$ is a forward network with shared weights.
 The reduce approximation is then given by
 \begin{align}
     \hat{\mG}(\mW^{(l)}) \coloneqq \left(\sum_{n=1}^N \left( \sum_{s=1}^S \vz^{(l)}_{n,s} \right) \left(\sum_{s=1}^S {\vz^{(l)}_{n,s}}^\top\right)\right)\otimes\left(\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \mH(\vtheta, \vx_n) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}}^\top \right) \right)?
 \end{align}
+
+\todo[inline]{striking remark how that this can be applied for any Gramian involving PDE terms}
 
 %There are some challenges we need to overcome to define a Kronecker-factored approximation of the Gramian from \Cref{eq:gramian}:
 %\begin{itemize}
@@ -421,6 +375,19 @@ The reduce approximation is then given by
   %Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
   %Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance.
 %\end{itemize}
+
+
+\begin{comment}
+    \subsection{Computational complexity}
+\todo[inline]{what can we say? probably better to move to the respective approximations}
+\begin{itemize}
+    \item GN: $O(p^3+Np^2)$
+    \item BFGS: $O(p^2+?)$ 
+    \item L-BFGS: $O(mp+?)$?
+    \item KFAC: $O(?)$ 
+    \item  
+\end{itemize}
+\end{comment}
 
 %%% Local Variables:
 %%% mode: latex
