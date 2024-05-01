@@ -1,0 +1,75 @@
+\begin{figure}
+  \centering
+\begin{algorithmic}
+  \Require \\
+  Neural network $u_{\vtheta}$ with parameters $\vtheta = (\mW^{(1)}, \vb^{(1)}, \dots, \mW^{(L)}, \vb^{(L)}) $, \\
+  interior data $\{(\vx^{\Omega}_n, \vy^{\Omega}_n) \}_{n=1}^{N_{\Omega}}$, \\
+  boundary data $\{(\vx^{\partial\Omega}_n, \vy^{\partial\Omega}_n) \}_{n=1}^{N_{\partial\Omega}}$ \\
+  exponential moving average $\beta$, momentum $\mu$, Damping $\delta$
+
+  \\
+  \State \textbf{0) Initialization}
+  \For {$l=1, \dots, L$}
+  \State $\vtheta^{(l)} = \mathrm{vec}( \mW^{(l)}, \vb^{(l)})$ \Comment Combine and flatten layer parameters
+  \State $\mA_{\Omega}^{(l)}, \mB_{\Omega}^{(l)}, \mA_{\partial\Omega}^{(l)}, \mB_{\partial\Omega}^{(l)} \gets \vzero \text{ or } \mI$ \Comment Initialize Kronecker factors
+  \EndFor
+  \\
+  \For {$t = 0, \dots, T-1$}
+  \\
+  \State \textbf{1) Compute the interior loss and update its approximate curvature}
+  \State $(\mZ_n^{(0)}\dots, \mZ_n^{(L)}, \Delta u_n) \gets \Delta u_{\vtheta}(\vx_n^{\Omega})\quad n=1, \dots, N_{\Omega}$  \Comment Forward Laplacian w/ intermediates
+
+  \State $(\partial\mZ_n^{(1)}\dots, \partial\mZ_n^{(L)}) \gets \partial \Delta u_{\vtheta}(\vx_n^{\Omega})\quad n=1, \dots, N_{\Omega}$ \Comment Layer output gradients w/ autodiff
+
+  \ForAll{l=1, \dots, L} \Comment Update Kronecker factors of the interior loss
+  \State $\mA_{\Omega}^{(l)} \gets \beta \mA_{\Omega}^{(l)} + (1-\beta) \frac1{N_{\Omega}} \sum_{n=1}^{N_{\Omega}} \mZ_n^{(l-1)} \mZ_n^{(l-1)\top}$
+
+  \State $\mB_{\Omega}^{(l)} \gets \beta \mB_{\Omega}^{(l)} + (1-\beta) \frac1{N_{\Omega}} \sum_{n=1}^{N_{\Omega}} \partial\mZ_n^{(l)} \partial\mZ_n^{(l)\top}$
+  \EndFor
+
+  \State $\mL_{\Omega}(\vtheta) \gets \frac{1}{2 N_{\Omega}}\sum_{n=1}^{N_{\Omega}} (\Delta u_n - y_n^{\Omega})^2$ \Comment Compute interior loss
+
+  \\
+  \State \textbf{2) Compute the boundary loss and update its approximate curvature}
+  \State $(\vz_n^{(0)}\dots, \vz_n^{(L)}, u_n) \gets u_{\vtheta}(\vx_n^{\partial\Omega})\quad n=1, \dots, N_{\partial\Omega}$ \Comment Forward pass w/ intermediates
+
+  \State $(\partial\vz_n^{(1)}\dots, \partial\vz_n^{(L)}) \gets \partial u_{\vtheta}(\vx_n^{\partial\Omega})\quad n=1, \dots, N_{\partial\Omega}$ \Comment Layer output gradients w/ autodiff
+
+  \ForAll{l=1, \dots, L} \Comment Update Kronecker factors of the boundary loss
+  \State $\mA_{\partial\Omega}^{(l)} \gets \beta \mA_{\partial\Omega}^{(l)} + (1-\beta) \frac1{N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}} \vz_n^{(l-1)} \vz_n^{(l-1)\top}$ \Comment Augment $\vz_n$ with 1 for the bias
+
+  \State $\mB_{\partial\Omega}^{(l)} \gets \beta \mB_{\partial\Omega}^{(l)} + (1-\beta) \frac1{N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}} \partial\vz_n^{(l)} \partial\vz_n^{(l)\top}$
+  \EndFor
+
+  \State $\mL_{\partial\Omega}(\vtheta) \gets \frac{1}{2 N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} (u_n - y^{\partial \Omega}_n)^2$ \Comment Compute boundary loss
+
+  \\
+  \State \textbf{3) Update the pre-conditioner (use inverse of Kronecker sum relation)}
+  \State $ {\mC^{(l)}}^{-1} \gets \left[(\mA_{\Omega}^{(l)} + \delta \mI) \otimes (\mB_{\Omega}^{(l)} + \delta \mI) + (\mA_{\partial\Omega}^{(l)} + \delta \mI) \otimes (\mB_{\partial\Omega}^{(l)} + \delta \mI)  \right]^{-1}$
+
+  \\
+  \State \textbf{4) Compute the gradient using autodiff, pre-condition the gradient}
+  \State $(\vg^{(1)}, \dots, \vg^{(L)}) \gets \partial_{\vtheta} ( \gL_{\Omega}(\vtheta) + \gL_{\partial\Omega}(\vtheta))$ \Comment Gradient w/ autodiff
+
+  \ForAll{l=1, \dots, L}
+  \Comment Pre-condition gradient using damping
+  \State $\vg^{(l)} \gets  \vg^{(l)}$
+
+  \State $\vm^{(l)} \gets \mu \vm^{(l)} + \vg^{(l)} \text{ if $t=0$ else } \vg^{(l)}$ \Comment Add momentum
+  \State $\vd^{(l)} \gets \vm^{(l)}$
+  \EndFor
+
+  \\
+  \State \textbf{5) Given the direction $-\vd^{(1)}, \dots, -\vd^{(L)}$, choose learning rate $\alpha$ by line search \& update}
+  \For {$l=1, \dots, L$} \Comment Parameter update
+  \State $\vtheta^{(l)} \gets \vtheta^{(l)} - \alpha \vd^{(l)}$
+  \EndFor
+  \EndFor
+\end{algorithmic}
+\caption{KFAC for the Poisson equation.
+  For simplicity, we omitted additional logic to update the Kronecker factors and the pre-conditioner less frequently, and the augmentation of the intermediates to account for the bias.}
+\end{figure}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:
