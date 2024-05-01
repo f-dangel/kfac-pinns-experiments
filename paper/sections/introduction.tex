@@ -8,15 +8,23 @@ Various approaches have been suggested to improve the optimization including ada
 However, none of this yields approximations of an accuracy comparable to the approximation error of the network. 
 Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful proconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning}. 
 Whereas these methods greatly improve the accuracy of PINNs they come with a significant computational cost for every iteration as one needs to solve a linear system of the size of the parameter space of the network. 
-Hence, this is only feasible for networks of small to moderate size when done naively. 
+Hence, this is only feasible for networks of small to moderate size when done naively.
 
 
-\paragraph{Contributions} \todo{Discussion Point: Make clear that with the KFAC we build our main target are big networks where only (? How big can L-BFGS scale in practice?) first order methods are feasible.}
+\paragraph{Contributions} \todo{Discussion Point: Make clear that with the KFAC we build our main target are big networks where only (? How big can L-BFGS scale in practice?) first-order methods are feasible.}
 We build on the idea of Kronecker-factored approximations known as KFAC proposed in the context of supervised learning to provide an efficient implementation of energy natural gradients. 
-Since, the preconditioner of ENGD involves PDE terms absent in regression problems, the existing KFAC machinery can not be used off the shelve. 
+Since, the preconditioner of ENGD involves PDE terms absent in regression problems, the existing KFAC approximations can not be used directly. 
 More precisely, we summarize our contributions as follows: 
 \begin{itemize}
-    \item We develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG) (or KFAGN / K-FAGN?), see~\Cref{?}.\todo{Discussion point: write the Gramian out? Stress that this matrix is of interest also outside of PINNs}
+    \item We develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG), see~\Cref{sec:kfac_pinns}. For the important example of the Laplace operator the Gramian takes the form
+    \begin{equation*}
+        G(\theta)_{ij}
+        =
+        \int_\Omega \Delta \partial_{\theta_i} u_\theta \Delta \partial_{\theta_j} u_\theta \, \mathrm dx 
+    \end{equation*}
+    
+    
+    \todo{I put the Gramian and a tiny explanation of KFAC as many PINN people will not know this.}
     \item We provide an efficient implementation of KFAG and demonstrate experimentally that it provides a good approximation of the true Gramian, see~\Cref{?}. 
     \item We show that KFAG can be used to efficiently train PINNs of considerable size..., see~\Cref{?}. 
 \end{itemize}
