@@ -22,7 +22,7 @@ More precisely, we summarize our contributions as follows:
         =
         \int_\Omega \Delta \partial_{\theta_i} u_\theta \Delta \partial_{\theta_j} u_\theta \, \mathrm dx, 
     \end{equation*}
-    where $u_\theta$ denotes the neural network ansatz
+    where $u_\theta$ denotes the neural network ansatz and $\Omega\subset\mathbb R^d$ is the computational domain. Following the KFAC literature \cite{martens2015optimizing}, $G$ is approximated by a matrix of the form $\operatorname{diag}(\mA_1\otimes\mB_1, \dots, \mA_L\otimes\mB_L)$ which, due to the comparatively small size of the factors $\mA_i$ and $\mB_i$ and the identity $(\mA \otimes \mB)^{-1} = \mA^{-1} \otimes \mB^{-1}$ is \emph{much} faster to invert than $G$.
     
     
     \todo{I put the Gramian and a tiny explanation of KFAC as many PINN people will not know this.}
