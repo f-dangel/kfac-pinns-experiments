@@ -1,4 +1,4 @@
-"""Create a pretty plot that groups together the results for 2d Poisson."""
+"""Create a pretty plot that groups together the results for 5d Poisson."""
 
 from argparse import ArgumentParser
 from itertools import product
@@ -7,7 +7,7 @@ from os import path
 from matplotlib import pyplot as plt
 from tueplots import bundles
 
-from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import (
+from kfac_pinns_exp.exp10_reproduce_poisson5d.plot import (
     DATADIR,
     colors,
     entity,
@@ -15,12 +15,12 @@ from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import (
     project,
     sweep_ids,
 )
-from kfac_pinns_exp.exp11_poisson2d_deep.plot import DATADIR as deep_DATADIR
-from kfac_pinns_exp.exp11_poisson2d_deep.plot import project as deep_project
-from kfac_pinns_exp.exp11_poisson2d_deep.plot import sweep_ids as deep_sweep_ids
-from kfac_pinns_exp.exp15_poisson2d_deepwide.plot import DATADIR as deepwide_DATADIR
-from kfac_pinns_exp.exp15_poisson2d_deepwide.plot import project as deepwide_project
-from kfac_pinns_exp.exp15_poisson2d_deepwide.plot import sweep_ids as deepwide_sweep_ids
+from kfac_pinns_exp.exp12_poisson5d_deep.plot import DATADIR as deep_DATADIR
+from kfac_pinns_exp.exp12_poisson5d_deep.plot import project as deep_project
+from kfac_pinns_exp.exp12_poisson5d_deep.plot import sweep_ids as deep_sweep_ids
+from kfac_pinns_exp.exp16_poisson5d_deepwide.plot import DATADIR as deepwide_DATADIR
+from kfac_pinns_exp.exp16_poisson5d_deepwide.plot import project as deepwide_project
+from kfac_pinns_exp.exp16_poisson5d_deepwide.plot import sweep_ids as deepwide_sweep_ids
 from kfac_pinns_exp.wandb_utils import load_best_run
 
 if __name__ == "__main__":
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         "ENGD (diagonal)",
     }
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    APPENDIX = [False, True]  # show all optimizers in the appendix
+    APPENDIX = [False]  # show all optimizers in the appendix
 
     for appendix, (y, ylabel) in product(APPENDIX, y_to_ylabel.items()):
         # NOTE Use `nrows` and `ncols` to tweak the subplot size, because `tueplots`
@@ -74,9 +74,9 @@ if __name__ == "__main__":
                 col_project = [project, deep_project, deepwide_project][col]
                 col_DATADIR = [DATADIR, deep_DATADIR, deepwide_DATADIR][col]
                 col_title = (
-                    ["$D=257$", "$D=5425$", "$D=9873$"]
+                    ["$D=449$", "$D=5617$", "$D=10065$"]
                     if args.disable_tex
-                    else [r"$D=\num{257}$", r"$D=\num{5425}$", r"$D=\num{9873}$"]
+                    else [r"$D=\num{449}$", r"$D=\num{5617}$", r"$D=\num{10065}$"]
                 )
 
                 for sweep_id, name in col_sweep_ids.items():

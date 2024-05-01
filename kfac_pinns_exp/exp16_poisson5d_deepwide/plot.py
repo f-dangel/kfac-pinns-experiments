@@ -21,7 +21,7 @@ if print_sweeps:
 sweep_ids = {  # ids from the wandb agent
     "qc3k9utg": "SGD",
     "19jsvv1o": "Adam",
-    "iortzbl8": "Hessian-free",
+    "2h5y0xv2": "Hessian-free",
     "w4ubaixs": "LBFGS",
     "5yfh1ilf": "ENGD (full)",
     "6wxk3pta": "ENGD (layer-wise)",
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("5d Poisson (deep net)")
+            ax.set_title("5d Poisson (deep+wide net)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
@@ -121,6 +121,4 @@ if __name__ == "__main__":
                 )
 
             ax.legend()
-            plt.savefig(
-                path.join(HEREDIR, f"{project}_{y}_over_{x}.pdf"), bbox_inches="tight"
-            )
+            plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")

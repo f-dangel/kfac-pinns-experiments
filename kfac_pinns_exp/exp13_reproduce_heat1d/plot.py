@@ -121,6 +121,4 @@ if __name__ == "__main__":
                 )
 
             ax.legend()
-            plt.savefig(
-                path.join(HEREDIR, f"{project}_{y}_over{x}.pdf"), bbox_inches="tight"
-            )
+            plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
