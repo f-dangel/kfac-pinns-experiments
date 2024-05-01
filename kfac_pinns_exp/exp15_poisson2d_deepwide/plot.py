@@ -84,7 +84,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    metric_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
+    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
     x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
 
     for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("5d Poisson (deep net)")
+            ax.set_title("2d Poisson (deep+wide net)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
