@@ -12,14 +12,15 @@ command:
 metric:
     goal: minimize
     name: loss
-method: grid
+method: random
+run_cap: 50
 parameters:
     boundary_condition:
         value: cos_sum
     model:
         value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 50_000
+    num_seconds:
+        value: 3_000
     dim_Omega:
         value: 5
     N_Omega:
@@ -29,11 +30,17 @@ parameters:
     KFAC_ggn_type:
         value: forward-only
     KFAC_ema_factor:
-        distribution: categorical
-        values: [0., 0.5, 0.95, 0.99]
+        distribution: uniform
+        min: 0
+        max: 0.99
+    KFAC_momentum:
+        distribution: uniform
+        min: 0
+        max: 0.99
     KFAC_damping:
-        distribution: categorical
-        values: [100, 10, 1e0, 1e-1, 1e-2, 1e-4]
+        distribution: log_uniform_values
+        min: 1e-13
+        max: 1e-7
     KFAC_initialize_to_identity:
         distribution: categorical
         values: [false, true]

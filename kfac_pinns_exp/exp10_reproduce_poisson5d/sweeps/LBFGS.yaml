@@ -15,9 +15,9 @@ metric:
 method: grid
 parameters:
     boundary_condition:
-        value: poisson_cos_sum
-    num_steps:
-        value: 50_000
+        value: cos_sum
+    num_seconds:
+        value: 3_000
     dim_Omega:
         value: 5
     N_Omega:
