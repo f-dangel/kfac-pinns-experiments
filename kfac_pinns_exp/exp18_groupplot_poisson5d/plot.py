@@ -40,7 +40,7 @@ if __name__ == "__main__":
         "ENGD (diagonal)",
     }
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    APPENDIX = [False]  # show all optimizers in the appendix
+    APPENDIX = [True]  # False]  # show all optimizers in the appendix
 
     for appendix, (y, ylabel) in product(APPENDIX, y_to_ylabel.items()):
         # NOTE Use `nrows` and `ncols` to tweak the subplot size, because `tueplots`
