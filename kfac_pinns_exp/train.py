@@ -9,11 +9,10 @@ python train.py --help
 from argparse import ArgumentParser, Namespace
 from functools import partial
 from itertools import count
-from math import log10
 from os import makedirs, path
 from sys import argv
 from time import time
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
 import wandb
 from hessianfree.optimizer import HessianFree
@@ -22,9 +21,9 @@ from torch import (
     cat,
     cuda,
     device,
+    dtype,
     float32,
     float64,
-    logspace,
     manual_seed,
     rand,
     zeros,
@@ -41,6 +40,7 @@ from kfac_pinns_exp.parse_utils import (
     parse_known_args_and_remove_from_argv,
 )
 from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
+from kfac_pinns_exp.train_utils import FrozenDataLoader, KillTrigger, LoggingTrigger
 from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
@@ -345,84 +345,35 @@ def create_condition_data(
     return X_dOmega, u(X_dOmega)
 
 
-class LoggingTrigger:
-    """Class to trigger logging."""
+def create_data_loader(
+    loss_type: str,
+    equation: str,
+    condition: str,
+    dim_Omega: int,
+    num_data: int,
+    dev: device,
+    dt: dtype,
+) -> Iterable[Tuple[Tensor, Tensor]]:
+    """Create a data loader for one of the losses.
 
-    def __init__(self, num_steps: int, max_logs: int, num_seconds: float):
-        """Initialize the trigger.
+    Args:
+        loss_type: For which type of loss to generate data. Can be either `'interior'`
+            or `'condition'`.
+        equation: The name of the equation.
+        condition: The name of the boundary/initial condition.
+        dim_Omega: The spatial dimension of the PDE's spatial domain Ω.
+        num_data: The number of data points to generate.
+        dev: The device on which the tensors returned by the data loader live on.
+        dt: The data type of the tensors returned by the data loader.
 
-        Args:
-            num_steps: The number of steps to train.
-            max_logs: The maximum number of logs to create.
-            num_seconds: The number of seconds to train. If non-zero, `num_steps` and
-                `max_logs` are ignored.
-        """
-        if num_seconds == 0.0:
-            logged_steps = {
-                int(s) for s in logspace(0, log10(num_steps - 1), max_logs - 1).int()
-            } | {0, num_steps - 1}
-
-            def should_log(step: int) -> bool:
-                """Function to determine whether to log a step given a step limit.
-
-                Args:
-                    step: Current training step.
-
-                Returns:
-                    Whether to log the step.
-                """
-                return step in logged_steps
-
-        else:
-            self.next_log = 1
-
-            def should_log(step: int) -> bool:
-                """Function to determine whether to log a step given a time limit.
-
-                Args:
-                    step: Current training step.
-
-                Returns:
-                    Whether to log the step.
-                """
-                if step in {0, 1}:
-                    return True
-                elif step >= self.next_log:
-                    self.next_log *= 1.1
-                    return True
-                return False
-
-        self.should_log = should_log
-
-
-class KillTrigger:
-    """Class to kill training."""
-
-    def __init__(self, num_steps: int, num_seconds: float):
-        """Initialize the trigger.
-
-        Args:
-            num_steps: The number of steps to train.
-            num_seconds: The number of seconds to train. If `0`, train for `num_steps`,
-                otherwise ignore `num_steps` and train for `num_seconds` seconds.
-        """
-
-        def should_kill(step: int, seconds_elapsed: float) -> bool:
-            """Function to determine whether training should be killed.
-
-            Args:
-                step: Current training step.
-                seconds_elapsed: Time elapsed in seconds since training started.
-
-            Returns:
-                Whether to kill training.
-            """
-            if num_seconds == 0.0:
-                return step >= num_steps - 1
-            else:
-                return seconds_elapsed >= num_seconds
-
-        self.should_kill = should_kill
+    Returns:
+        A data loader for the specified loss which generates batched `(X, y)` pairs.
+    """
+    data_func = {"interior": create_interior_data, "condition": create_condition_data}[
+        loss_type
+    ]
+    data_func = partial(data_func, equation, condition, dim_Omega, num_data)
+    return FrozenDataLoader(data_func, dev, dt)
 
 
 def main():  # noqa: C901
@@ -435,20 +386,26 @@ def main():  # noqa: C901
     if args.plot_solution:
         print(f"Saving visualizations of the solution in {args.plot_dir}.")
 
-    # DATA
+    # DATA LOADERS
     manual_seed(args.data_seed)
     equation, condition = args.equation, args.boundary_condition
     dim_Omega, N_Omega, N_dOmega = args.dim_Omega, args.N_Omega, args.N_dOmega
 
     # for satisfying the PDE on the domain
-    X_Omega, y_Omega = create_interior_data(equation, condition, dim_Omega, N_Omega)
-    X_Omega, y_Omega = X_Omega.to(dev, dt), y_Omega.to(dev, dt)
-    X_Omega_eval, _ = create_interior_data(equation, condition, dim_Omega, 10 * N_Omega)
-    X_Omega_eval = X_Omega_eval.to(dev, dt)
-
+    interior_train_data_loader = iter(
+        create_data_loader("interior", equation, condition, dim_Omega, N_Omega, dev, dt)
+    )
+    interior_eval_data_loader = iter(
+        create_data_loader(
+            "interior", equation, condition, dim_Omega, 10 * N_Omega, dev, dt
+        )
+    )
     # for satisfying boundary and (maybe) initial conditions
-    X_dOmega, y_dOmega = create_condition_data(equation, condition, dim_Omega, N_dOmega)
-    X_dOmega, y_dOmega = X_dOmega.to(dev, dt), y_dOmega.to(dev, dt)
+    condition_train_data_loader = iter(
+        create_data_loader(
+            "condition", equation, condition, dim_Omega, N_dOmega, dev, dt
+        )
+    )
 
     # NEURAL NET
     manual_seed(args.model_seed)
@@ -483,6 +440,10 @@ def main():  # noqa: C901
     start = time()
 
     for step in count():
+        # load next batch of data
+        X_Omega, y_Omega = next(interior_train_data_loader)
+        X_dOmega, y_dOmega = next(condition_train_data_loader)
+
         optimizer.zero_grad()
 
         if isinstance(optimizer, (KFAC, ENGD)):
@@ -495,16 +456,30 @@ def main():  # noqa: C901
             def closure() -> Tensor:
                 """Evaluate the loss on the current data and model parameters.
 
+                Note:
+                    It is okay to ignore the flake8 warning B023 that this function
+                    will change if we change the loop variables
+                    `X_Omega, y_Omega, X_dOmega, y_dOmega` as we only use the closure
+                    within one iteration of the loop.
+
                 Returns:
                     The loss.
                 """
                 optimizer.zero_grad()
                 # compute the interior loss' gradient
-                loss_interior, _, _ = eval_interior_loss(layers, X_Omega, y_Omega)
+                loss_interior, _, _ = eval_interior_loss(
+                    layers,
+                    X_Omega,  # noqa: B023, see note above
+                    y_Omega,  # noqa: B023, see note above
+                )
                 loss_interior.backward()
 
                 # compute the boundary loss' gradient
-                loss_boundary, _, _ = eval_boundary_loss(layers, X_dOmega, y_dOmega)
+                loss_boundary, _, _ = eval_boundary_loss(
+                    layers,
+                    X_dOmega,  # noqa: B023, see note above
+                    y_dOmega,  # noqa: B023, see note above
+                )
                 loss_boundary.backward()
 
                 # HOTFIX Append the interior and boundary loss as arguments
@@ -535,14 +510,24 @@ def main():  # noqa: C901
                 Args:
                     loss_storage: A list to append the the interior and boundary loss.
 
+                Note:
+                    It is okay to ignore the flake8 warning B023 that this function
+                    will change if we change the loop variables
+                    `X_Omega, y_Omega, X_dOmega, y_dOmega` as we only use the closure
+                    within one iteration of the loop.
+
                 Returns:
                     The linearization point and the loss.
                 """
                 loss_interior, residual_interior, _ = eval_interior_loss(
-                    layers, X_Omega, y_Omega
+                    layers,
+                    X_Omega,  # noqa: B023, see note above
+                    y_Omega,  # noqa: B023, see note above
                 )
                 loss_boundary, residual_boundary, _ = eval_boundary_loss(
-                    layers, X_dOmega, y_dOmega
+                    layers,
+                    X_dOmega,  # noqa: B023, see note above
+                    y_dOmega,  # noqa: B023, see note above
                 )
                 # we want to linearize residual w.r.t. the parameters to obtain
                 # the GGN. This established the connection between the loss and
@@ -575,6 +560,8 @@ def main():  # noqa: C901
         loss = loss_interior + loss_boundary
 
         if logging_trigger.should_log(step) or kill_trigger.should_kill(step, elapsed):
+            # load next batch of evaluation data
+            X_Omega_eval, _ = next(interior_eval_data_loader)
             # function to evaluate the known solution
             u = SOLUTIONS[equation][condition]
             l2 = l2_error(model, X_Omega_eval, u)
