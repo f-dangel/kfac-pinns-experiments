@@ -1,40 +1,37 @@
 
 %Physics-informed neural networks (PINNs) are among the most popular networks based approaches to the numerical solution of partial differential equations (PDEs). 
-The field of neural network based approaches to the numerical solution of partial differential equations (PDEs) is growing at an unprecedented speed and one of the most active subfields of scientific machine learning~\cite{?}. 
+The field of neural network based approaches to the numerical solution of partial differential equations (PDEs) is growing at an unprecedented speed.% and one of the most active subfields of scientific machine learning~\cite{?}. 
 Whereas the idea of training the parameters of a neural network to minimize the residual of a PDE can be traced back at least to the works of~\cite{dissanayake1994neural, lagaris1998artificial} this approach was only recently popularized under the name \emph{deep Galerkin method} (DGM) and \emph{Physics-informed neural networks} (PINNs) through the works of~\cite{sirignano2018dgm, raissi2019physics}, respectively.  
 Now it constitutes one of the most popular networks based approaches to the numerical solution of partial differential equations as it is easy to implement, can seamlessly incorporate data and is commonly attributed with the promise of being able to work well in high dimensions. 
-Despite their immense popularity, PINNs are known to be difficult to optimize and fail to provide satisfactory accuracy when trained with first-order methods even for simple problems~\cite{?}. 
+Despite their immense popularity, PINNs are notoriously difficult and resource demanding to optimize \cite{wang2021understanding} and fail to provide satisfactory accuracy when trained with first-order methods even for simple problems~\cite{zeng2022competitive, muller2023achieving}. Recently, second-order methods that use the function space geometry to design preconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator} have shown remarkable promise to address the training difficulties of PINNs. For example, \emph{energy natural gradient descent} (ENGD) as proposed in \cite{muller2023achieving} emulates Newton's method \emph{in function space} and is able to achieve highly accurate PINN solutions in few iterations. However, as second-order methods, they come with a significant computational cost for every iteration as they require to solve a dense linear system of the size of the parameter space of the network. Hence, this is only feasible for networks of small size when done naively.
+
+
+\paragraph{Contributions} %\todo{Discussion Point: Make clear that with the KFAC we build our main target are big networks where only (? How big can L-BFGS scale in practice?) first-order methods are feasible.}
+
+We build on the idea of Kronecker-factored approximations (KFAC) to provide an approximate version of ENGD that scales to large neural network sizes but still remains highly effective. 
+%Since, the preconditioner of ENGD involves PDE terms absent in regression problems, the existing KFAC approximations can not be used directly. 
+More precisely, we summarize our contributions as follows: 
+\begin{itemize}
+    \item We develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG), see~\Cref{sec:kfac_pinns}. For the important example of the Laplace operator the Gramian takes the form
+    \begin{equation*}
+        \mG_{ij}
+        =
+        \int_\Omega \Delta \partial_{\theta_i} u_\theta \Delta \partial_{\theta_j} u_\theta \, \mathrm dx, 
+    \end{equation*}
+    where $u_\theta$ denotes the neural network ansatz and $\Omega\subset\mathbb R^d$ is the computational domain. Following the KFAC literature \cite{martens2015optimizing}, $G$ is approximated by a matrix of the form $\operatorname{diag}(\mA_1\otimes\mB_1, \dots, \mA_L\otimes\mB_L)$ which, due to the comparatively small size of the factors $\mA_i$ and $\mB_i$ and the identity $(\mA \otimes \mB)^{-1} = \mA^{-1} \otimes \mB^{-1}$, is \emph{much} faster to invert than $\mG$. Note that differential operators like the Laplacian complicate the computational graph considerably, which precludes the direct application of the existing KFAC approximations.
+    %\todo{I put the Gramian and a tiny explanation of KFAC as many PINN people will not know this.}
+    \item We provide an efficient implementation of KFAG and demonstrate experimentally that it can efficiently train PINNs of considerable size for high-dimensional PDE applications, including the Poisson and the heat equation in up to 100 spatial dimensions, see~\Cref{sec:experiments}.  
+\end{itemize}
+
+\paragraph{Related work}
 Various approaches have been suggested to improve the optimization including adaptive reweighting of the individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for the discretization of the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, curriculum learning~\citep{wang2022respecting, krishnapriyan2021characterizing}, and the use of quasi-Newton methods like L-BFGS~\citep{markidis2021old}. 
 However, none of this yields approximations of an accuracy comparable to the approximation error of the network. 
 Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful proconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning}. 
 Whereas these methods greatly improve the accuracy of PINNs they come with a significant computational cost for every iteration as one needs to solve a linear system of the size of the parameter space of the network. 
 Hence, this is only feasible for networks of small to moderate size when done naively.
-
-
-\paragraph{Contributions} \todo{Discussion Point: Make clear that with the KFAC we build our main target are big networks where only (? How big can L-BFGS scale in practice?) first-order methods are feasible.}
-We build on the idea of Kronecker-factored approximations known as KFAC proposed in the context of supervised learning to provide an efficient implementation of energy natural gradients. 
-Since, the preconditioner of ENGD involves PDE terms absent in regression problems, the existing KFAC approximations can not be used directly. 
-More precisely, we summarize our contributions as follows: 
 \begin{itemize}
-    \item We develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG), see~\Cref{sec:kfac_pinns}. For the important example of the Laplace operator the Gramian takes the form
-    \begin{equation*}
-        G(\theta)_{ij}
-        =
-        \int_\Omega \Delta \partial_{\theta_i} u_\theta \Delta \partial_{\theta_j} u_\theta \, \mathrm dx, 
-    \end{equation*}
-    where $u_\theta$ denotes the neural network ansatz and $\Omega\subset\mathbb R^d$ is the computational domain. Following the KFAC literature \cite{martens2015optimizing}, $G$ is approximated by a matrix of the form $\operatorname{diag}(\mA_1\otimes\mB_1, \dots, \mA_L\otimes\mB_L)$ which, due to the comparatively small size of the factors $\mA_i$ and $\mB_i$ and the identity $(\mA \otimes \mB)^{-1} = \mA^{-1} \otimes \mB^{-1}$ is \emph{much} faster to invert than $G$.
-    
-    
-    \todo{I put the Gramian and a tiny explanation of KFAC as many PINN people will not know this.}
-    \item We provide an efficient implementation of KFAG and demonstrate experimentally that it provides a good approximation of the true Gramian, see~\Cref{?}. 
-    \item We show that KFAG can be used to efficiently train PINNs of considerable size..., see~\Cref{?}. 
-\end{itemize}
-
-\paragraph{Related work}
-\begin{itemize}
-    \item Optimization in PINNs: loss weighting, sampling strategies, not super successful though
-    \item Preconditioning / second-order methods for PINNs: recent trend, second-order optimizers work better, e.g., BFGS, but function-space inspired methods tend to perform the best; downside: don't scale 
     \item OG KFAC papers: \cite{martens2015optimizing}, \cite{martens2018kroneckerfactored}, double check similarities to RNNs
+    \item Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)
     \item KFAC for Rayleigh quotients:
 \end{itemize}
 
