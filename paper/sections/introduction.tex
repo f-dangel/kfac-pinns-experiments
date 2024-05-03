@@ -26,7 +26,7 @@ More precisely, we summarize our contributions as follows:
 \paragraph{Related work}
 Various approaches have been suggested to improve the optimization including adaptive reweighting of the individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for the discretization of the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, curriculum learning~\citep{wang2022respecting, krishnapriyan2021characterizing}, and the use of quasi-Newton methods like L-BFGS~\citep{markidis2021old}. 
 However, none of this yields approximations of an accuracy comparable to the approximation error of the network. 
-Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful proconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning}. 
+Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful preconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning}. 
 Whereas these methods greatly improve the accuracy of PINNs they come with a significant computational cost for every iteration as one needs to solve a linear system of the size of the parameter space of the network. 
 Hence, this is only feasible for networks of small to moderate size when done naively.
 \begin{itemize}
