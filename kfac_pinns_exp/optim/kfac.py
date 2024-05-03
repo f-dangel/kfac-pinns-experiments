@@ -116,7 +116,7 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         action="store_true",
         help="Whether to use adaptive Levenberg-Marquardt damping.",
         default=False,
-        )
+    )
     parser.add_argument(
         f"--{prefix}momentum",
         type=float,
@@ -650,7 +650,7 @@ class KFAC(Optimizer):
 
         # print(f"Update {loss_type} damping {damping:2e} -> {new_damping:2e}.")
         group[damping_key] = new_damping
-=======
+
     def add_momentum(self, directions: List[Tensor]):
         """Incorporate momentum into the update direction (in-place).
 
@@ -669,4 +669,3 @@ class KFAC(Optimizer):
                 p_mom = self.state[p]["momentum_buffer"]
                 p_mom.mul_(momentum).add_(d)
                 d.copy_(p_mom)
->>>>>>> master
