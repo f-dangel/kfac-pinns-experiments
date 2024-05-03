@@ -18,8 +18,8 @@ parameters:
         value: cos_sum
     model:
         value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 50_000
+    num_seconds:
+        value: 3_000
     dim_Omega:
         value: 5
     N_Omega:

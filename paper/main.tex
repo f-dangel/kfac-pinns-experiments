@@ -28,7 +28,12 @@
 \maketitle
 
 \begin{abstract}
-  Physics-Informed Neural Networks are hard to train with first-order methods. Recently, second-order methods like natural gradients and Gauß-Newton methods in the residual have shown promising performance. However, they come with a high computational cost per iteration. Using higher-order forward mode differentiation, we propose a Kronecker-Factored approximation of the Gauß-Newton matrix that involves PDE-specific terms. We provide an efficient implementation and an experimental evaluation. 
+  Physics-Informed Neural Networks are hard to train with first-order methods. 
+  Recently, second-order methods like natural gradients and Gauß-Newton methods %in the residual
+  have shown promising performance. 
+  However, they come with a high computational cost per iteration. 
+  Using higher-order forward mode differentiation, we propose a Kronecker-Factored approximation of the Gauß-Newton matrix that involves PDE-specific terms. 
+  We provide an efficient implementation and an experimental evaluation targeting large neural networks and PDEs posed in high spatial dimensions. 
   %To train PINNs efficiently, it has been observed that taking the geometry implied by the PDE operator.
   %Existing methods that consider this geometry compute and invert the full Gramian.
   %However, these ENGD-based methods do not scale well to architectures with many parameters due to the quadratic memory and cubic time complexity of storing and inverting the Gramian.
@@ -44,12 +49,12 @@
 \input{sections/background_engd.tex}
 \input{sections/background_kfac.tex}
 
-\section{Kronecker-factored Approximate Gauß-Newton Methods for PINNs}
+\section{Kronecker-factored Approximate Gauß-Newton Methods for PINNs}\label{sec:kfac_pinns}
 
 
 \input{sections/contribution.tex}
 
-\section{Experiments}
+\section{Experiments}\label{sec:experiments}
 
 \input{sections/experiments.tex}
 

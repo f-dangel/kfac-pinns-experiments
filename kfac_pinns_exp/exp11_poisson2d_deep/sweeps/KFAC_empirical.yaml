@@ -12,20 +12,27 @@ command:
 metric:
     goal: minimize
     name: loss
-method: grid
+method: random
+run_cap: 50
 parameters:
     model:
         value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 10_000
+    num_seconds:
+        value: 1_000
     KFAC_ggn_type:
         value: empirical
     KFAC_ema_factor:
-        distribution: categorical
-        values: [0., 0.5, 0.95, 0.99]
+        distribution: uniform
+        min: 0
+        max: 0.99
+    KFAC_momentum:
+        distribution: uniform
+        min: 0
+        max: 0.99
     KFAC_damping:
-        distribution: categorical
-        values: [1e-4, 1e-6, 1e-8, 1e-10, 1e-12, 0.0]
+        distribution: log_uniform_values
+        min: 1e-13
+        max: 1e-7
     KFAC_initialize_to_identity:
         distribution: categorical
         values: [false, true]

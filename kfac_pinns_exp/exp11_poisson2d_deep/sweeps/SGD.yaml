@@ -17,8 +17,8 @@ run_cap: 50
 parameters:
     model:
         value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 50_000
+    num_seconds:
+        value: 1_000
     SGD_lr:
         distribution: log_uniform_values
         min: 1e-3

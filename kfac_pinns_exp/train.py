@@ -8,11 +8,11 @@ python train.py --help
 
 from argparse import ArgumentParser, Namespace
 from functools import partial
-from math import log10
+from itertools import count
 from os import makedirs, path
 from sys import argv
 from time import time
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
 import wandb
 from hessianfree.optimizer import HessianFree
@@ -21,9 +21,9 @@ from torch import (
     cat,
     cuda,
     device,
+    dtype,
     float32,
     float64,
-    logspace,
     manual_seed,
     rand,
     zeros,
@@ -40,18 +40,26 @@ from kfac_pinns_exp.parse_utils import (
     parse_known_args_and_remove_from_argv,
 )
 from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
+from kfac_pinns_exp.train_utils import (
+    FrozenDataLoader,
+    GenerativeDataLoader,
+    KillTrigger,
+    LoggingTrigger,
+)
 from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson", "heat"]
-SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16"]
-SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan"]
+SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16", "mlp-tanh-64-64-48-48"]
+SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan", "u_weinan_norm"]
+SUPPORTED_DATALOADERS = ["FrozenDataLoader", "GenerativeDataLoader"]
 
 SOLUTIONS = {
     "poisson": {
         "sin_product": poisson_equation.u_sin_product,
         "cos_sum": poisson_equation.u_cos_sum,
         "u_weinan": poisson_equation.u_weinan_prods,
+        "u_weinan_norm": poisson_equation.u_weinan_norm,
     },
     "heat": {
         "sin_product": heat_equation.u_sin_product,
@@ -104,6 +112,13 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Which boundary condition will be used.",
     )
     parser.add_argument(
+        "--data_loader",
+        type=str,
+        default="FrozenDataLoader",
+        choices=SUPPORTED_DATALOADERS,
+        help="Which data loader will be used.",
+    )
+    parser.add_argument(
         "--dim_Omega",
         type=int,
         default=2,
@@ -154,6 +169,13 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Number of training steps.",
     )
     parser.add_argument(
+        "--num_seconds",
+        type=float,
+        default=0.0,
+        help="Number of seconds to train. Ignored if `0.0`,"
+        + " otherwise disables `num_steps`.",
+    )
+    parser.add_argument(
         "--wandb",
         action="store_true",
         help="Whether to use Weights & Biases for logging.",
@@ -162,7 +184,7 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         "--max_logs",
         type=int,
         default=150,
-        help="Maximum number of logs/prints.",
+        help="Maximum number of logs/prints. Ignored if `num_seconds` is non-zero.",
     )
     # plotting-specific arguments
     parser.add_argument(
@@ -227,6 +249,18 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
             Tanh(),
             Linear(16, 1),
         ]
+    elif model == "mlp-tanh-64-64-48-48":
+        layers = [
+            Linear(in_dim, 64),
+            Tanh(),
+            Linear(64, 64),
+            Tanh(),
+            Linear(64, 48),
+            Tanh(),
+            Linear(48, 48),
+            Tanh(),
+            Linear(48, 1),
+        ]
     else:
         raise ValueError(
             f"Unsupported model: {model}. Supported models: {SUPPORTED_MODELS}"
@@ -257,11 +291,17 @@ def create_interior_data(
     """
     dim = {"poisson": dim_Omega, "heat": dim_Omega + 1}[equation]
     X = rand(num_data, dim)
-    if equation == "poisson" and condition in {"sin_product", "cos_sum", "u_weinan"}:
+    if equation == "poisson" and condition in {
+        "sin_product",
+        "cos_sum",
+        "u_weinan",
+        "u_weinan_norm",
+    }:
         f = {
             "sin_product": poisson_equation.f_sin_product,
             "cos_sum": poisson_equation.f_cos_sum,
             "u_weinan": poisson_equation.f_weinan_prods,
+            "u_weinan_norm": poisson_equation.f_weinan_norm,
         }[condition]
         y = f(X)
     elif equation == "heat" and condition == "sin_product":
@@ -295,7 +335,12 @@ def create_condition_data(
         NotImplementedError: If the combination of equation and condition is not
             supported.
     """
-    if equation == "poisson" and condition in {"sin_product", "cos_sum", "u_weinan"}:
+    if equation == "poisson" and condition in {
+        "sin_product",
+        "cos_sum",
+        "u_weinan",
+        "u_weinan_norm",
+    }:
         # boundary condition
         X_dOmega = square_boundary(num_data, dim_Omega)
     elif equation == "heat" and condition == "sin_product":
@@ -313,28 +358,100 @@ def create_condition_data(
     return X_dOmega, u(X_dOmega)
 
 
+def create_data_loader(
+    data_loader: str,
+    loss_type: str,
+    equation: str,
+    condition: str,
+    dim_Omega: int,
+    num_data: int,
+    dev: device,
+    dt: dtype,
+) -> Iterable[Tuple[Tensor, Tensor]]:
+    """Create a data loader for one of the losses.
+
+    Args:
+        data_loader: what kind of data loader to use.
+        loss_type: For which type of loss to generate data. Can be either `'interior'`
+            or `'condition'`.
+        equation: The name of the equation.
+        condition: The name of the boundary/initial condition.
+        dim_Omega: The spatial dimension of the PDE's spatial domain Ω.
+        num_data: The number of data points to generate.
+        dev: The device on which the tensors returned by the data loader live on.
+        dt: The data type of the tensors returned by the data loader.
+
+    Returns:
+        A data loader for the specified loss which generates batched `(X, y)` pairs.
+
+    Raises:
+        NotImplementedError: If the data loader is not supported.
+    """
+    data_func = {"interior": create_interior_data, "condition": create_condition_data}[
+        loss_type
+    ]
+    data_func = partial(data_func, equation, condition, dim_Omega, num_data)
+    if data_loader == "FrozenDataLoader":
+        return FrozenDataLoader(data_func, dev, dt)
+    elif data_loader == "GenerativeDataLoader":
+        return GenerativeDataLoader(data_func, dev, dt)
+    else:
+        raise NotImplementedError(f"Data loader {data_loader} not supported.")
+
+
 def main():  # noqa: C901
     """Execute training with the specified command line arguments."""
+    # NOTE Do not move this down as the parsers remove arguments from argv
+    cmd = " ".join(["python"] + argv)
     args = parse_general_args(verbose=True)
     dev, dt = device("cuda" if cuda.is_available() else "cpu"), args.dtype
     print(f"Running on device {str(dev)} in dtype {dt}.")
     if args.plot_solution:
         print(f"Saving visualizations of the solution in {args.plot_dir}.")
 
-    # DATA
+    # DATA LOADERS
     manual_seed(args.data_seed)
     equation, condition = args.equation, args.boundary_condition
     dim_Omega, N_Omega, N_dOmega = args.dim_Omega, args.N_Omega, args.N_dOmega
 
     # for satisfying the PDE on the domain
-    X_Omega, y_Omega = create_interior_data(equation, condition, dim_Omega, N_Omega)
-    X_Omega, y_Omega = X_Omega.to(dev, dt), y_Omega.to(dev, dt)
-    X_Omega_eval, _ = create_interior_data(equation, condition, dim_Omega, 10 * N_Omega)
-    X_Omega_eval = X_Omega_eval.to(dev, dt)
-
+    interior_train_data_loader = iter(
+        create_data_loader(
+            args.data_loader,
+            "interior",
+            equation,
+            condition,
+            dim_Omega,
+            N_Omega,
+            dev,
+            dt,
+        )
+    )
+    interior_eval_data_loader = iter(
+        create_data_loader(
+            args.data_loader,
+            "interior",
+            equation,
+            condition,
+            dim_Omega,
+            10 * N_Omega,
+            dev,
+            dt,
+        )
+    )
     # for satisfying boundary and (maybe) initial conditions
-    X_dOmega, y_dOmega = create_condition_data(equation, condition, dim_Omega, N_dOmega)
-    X_dOmega, y_dOmega = X_dOmega.to(dev, dt), y_dOmega.to(dev, dt)
+    condition_train_data_loader = iter(
+        create_data_loader(
+            args.data_loader,
+            "condition",
+            equation,
+            condition,
+            dim_Omega,
+            N_dOmega,
+            dev,
+            dt,
+        )
+    )
 
     # NEURAL NET
     manual_seed(args.model_seed)
@@ -355,13 +472,8 @@ def main():  # noqa: C901
         assert optimizer.equation == equation
 
     if args.wandb:
-        cmd = " ".join(["python"] + argv)
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
         wandb.init(config=config)
-
-    logged_steps = {
-        int(s) for s in logspace(0, log10(args.num_steps - 1), args.max_logs - 1).int()
-    } | {0, args.num_steps - 1}
 
     # functions used to evaluate the interior and boundary/condition losses
     eval_interior_loss, eval_boundary_loss = INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[
@@ -369,9 +481,15 @@ def main():  # noqa: C901
     ]
 
     # TRAINING
+    logging_trigger = LoggingTrigger(args.num_steps, args.max_logs, args.num_seconds)
+    kill_trigger = KillTrigger(args.num_steps, args.num_seconds)
     start = time()
 
-    for step in range(args.num_steps):
+    for step in count():
+        # load next batch of data
+        X_Omega, y_Omega = next(interior_train_data_loader)
+        X_dOmega, y_dOmega = next(condition_train_data_loader)
+
         optimizer.zero_grad()
 
         if isinstance(optimizer, (KFAC, ENGD)):
@@ -384,16 +502,30 @@ def main():  # noqa: C901
             def closure() -> Tensor:
                 """Evaluate the loss on the current data and model parameters.
 
+                Note:
+                    It is okay to ignore the flake8 warning B023 that this function
+                    will change if we change the loop variables
+                    `X_Omega, y_Omega, X_dOmega, y_dOmega` as we only use the closure
+                    within one iteration of the loop.
+
                 Returns:
                     The loss.
                 """
                 optimizer.zero_grad()
                 # compute the interior loss' gradient
-                loss_interior, _, _ = eval_interior_loss(layers, X_Omega, y_Omega)
+                loss_interior, _, _ = eval_interior_loss(
+                    layers,
+                    X_Omega,  # noqa: B023, see note above
+                    y_Omega,  # noqa: B023, see note above
+                )
                 loss_interior.backward()
 
                 # compute the boundary loss' gradient
-                loss_boundary, _, _ = eval_boundary_loss(layers, X_dOmega, y_dOmega)
+                loss_boundary, _, _ = eval_boundary_loss(
+                    layers,
+                    X_dOmega,  # noqa: B023, see note above
+                    y_dOmega,  # noqa: B023, see note above
+                )
                 loss_boundary.backward()
 
                 # HOTFIX Append the interior and boundary loss as arguments
@@ -424,14 +556,24 @@ def main():  # noqa: C901
                 Args:
                     loss_storage: A list to append the the interior and boundary loss.
 
+                Note:
+                    It is okay to ignore the flake8 warning B023 that this function
+                    will change if we change the loop variables
+                    `X_Omega, y_Omega, X_dOmega, y_dOmega` as we only use the closure
+                    within one iteration of the loop.
+
                 Returns:
                     The linearization point and the loss.
                 """
                 loss_interior, residual_interior, _ = eval_interior_loss(
-                    layers, X_Omega, y_Omega
+                    layers,
+                    X_Omega,  # noqa: B023, see note above
+                    y_Omega,  # noqa: B023, see note above
                 )
                 loss_boundary, residual_boundary, _ = eval_boundary_loss(
-                    layers, X_dOmega, y_dOmega
+                    layers,
+                    X_dOmega,  # noqa: B023, see note above
+                    y_dOmega,  # noqa: B023, see note above
                 )
                 # we want to linearize residual w.r.t. the parameters to obtain
                 # the GGN. This established the connection between the loss and
@@ -459,21 +601,23 @@ def main():  # noqa: C901
             optimizer.step()
 
         now = time()
-        expired = now - start
+        elapsed = now - start
         loss_boundary, loss_interior = loss_boundary.item(), loss_interior.item()
         loss = loss_interior + loss_boundary
 
-        if step in logged_steps:
+        if logging_trigger.should_log(step) or kill_trigger.should_kill(step, elapsed):
+            # load next batch of evaluation data
+            X_Omega_eval, _ = next(interior_eval_data_loader)
             # function to evaluate the known solution
             u = SOLUTIONS[equation][condition]
             l2 = l2_error(model, X_Omega_eval, u)
             print(
-                f"Step: {step:06g}/{args.num_steps:06g},"
+                f"Step: {step:07g},"
                 + f" Loss: {loss},"
                 + f" L2 Error: {l2},"
                 + f" Interior: {loss_interior},"
                 + f" Boundary: {loss_boundary},"
-                + f" Time: {expired:.1f}s",
+                + f" Time: {elapsed:.1f}s",
                 flush=True,
             )
             if args.wandb:
@@ -484,14 +628,14 @@ def main():  # noqa: C901
                         "loss_interior": loss_interior,
                         "loss_boundary": loss_boundary,
                         "l2_error": l2,
-                        "time": expired,
+                        "time": elapsed,
                     }
                 )
             if args.plot_solution:
                 fig_path = path.join(
                     args.plot_dir,
                     f"{equation}_{dim_Omega}d_{condition}_{args.model}"
-                    + f"_{args.optimizer}_step{step:06g}.pdf",
+                    + f"_{args.optimizer}_step{step:07g}.pdf",
                 )
                 fig_title = (
                     f"Step: ${step}$, Loss: ${latex_float(loss)}$,"
@@ -510,6 +654,9 @@ def main():  # noqa: C901
                     title=fig_title,
                     usetex=not args.disable_tex,
                 )
+
+        if kill_trigger.should_kill(step, elapsed):
+            return
 
 
 if __name__ == "__main__":

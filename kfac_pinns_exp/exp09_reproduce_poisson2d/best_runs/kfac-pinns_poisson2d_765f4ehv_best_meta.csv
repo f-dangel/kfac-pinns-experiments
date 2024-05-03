@@ -1,2 +1,0 @@
-config,name
-"{'dtype': 'torch.float64', 'model': 'mlp-tanh-64', 'wandb': True, 'N_Omega': 900, 'LBFGS_lr': 0.2, 'N_dOmega': 120, 'equation': 'poisson', 'max_logs': 150, 'data_seed': 0, 'dim_Omega': 2, 'num_steps': 10000, 'optimizer': 'LBFGS', 'model_seed': 1, 'LBFGS_max_iter': 20, 'LBFGS_history_size': 200}",sleek-sweep-32

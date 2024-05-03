@@ -2,7 +2,7 @@
 
 %\toodoo{F.D.  Get to the point more quickly. Make notation  consistent.}
 
-We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{?, martens2015optimizing, ?} as an approximation of the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction. 
+We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} as an approximation of the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction. 
 %We review the general principle here. 
 %This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here. 
 %Later, we will expand this to Gramian matrices with PDE terms. 
@@ -47,7 +47,7 @@ By the chain rule, we have
 %\begin{align}
 %    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.  
 %\end{align}
-Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ we obtain 
+Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$~\citep{martens2015optimizing} we obtain 
 \begin{equation}
     \mF(\mW^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top 
     \approx \frac1N\left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N\nabla_{\vz^{(l)}}  \vu_n\nabla_{\vz^{(l)}}  \vu_n^\top\right),

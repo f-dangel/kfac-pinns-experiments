@@ -12,6 +12,7 @@ from torch import (
     linspace,
     meshgrid,
     no_grad,
+    ones,
     ones_like,
     prod,
     rand,
@@ -132,6 +133,35 @@ def f_weinan_prods(X: Tensor) -> Tensor:
         Zeros of the same shape (len(X), 1).
     """
     return zeros((len(X), 1))
+
+
+def u_weinan_norm(X: Tensor) -> Tensor:
+    """The squared norm. Weinan uses dim=100.
+
+    This example is taken from Weinans paper on the deep Ritz method:
+    https://arxiv.org/abs/1710.00211
+    It is simply |x|^2 in 100d. The Laplacian is constant with value 200.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    return (X**2.0).sum(dim=1, keepdim=True)
+
+
+def f_weinan_norm(X: Tensor) -> Tensor:
+    """The forcing corresponding to weinan_norm, identically 2 * dim_Omega.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega).
+
+    Returns:
+        2 * dim_Omega of the shape (len(X), 1).
+    """
+    N, d = X.shape
+    return -2 * d * ones(N, 1)
 
 
 def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:

@@ -116,6 +116,12 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         action="store_true",
         help="Whether to use adaptive Levenberg-Marquardt damping.",
         default=False,
+        )
+    parser.add_argument(
+        f"--{prefix}momentum",
+        type=float,
+        help="Momentum on the update.",
+        default=0.0,
     )
 
     args = parse_known_args_and_remove_from_argv(parser)
@@ -178,6 +184,7 @@ class KFAC(Optimizer):
         equation: str = "poisson",
         damping_heuristic: str = "same",
         adaptive_damping: bool = False,
+        momentum: float = 0.0,
     ) -> None:
         """Set up the optimizer.
 
@@ -214,6 +221,7 @@ class KFAC(Optimizer):
                 of https://arxiv.org/pdf/1503.05671). Default is `'same'`.
             adaptive_damping: Whether to use adaptive damping with LM heuristic.
                 Default is `False`. See Section 6.5 of https://arxiv.org/pdf/1503.05671.
+            momentum: Momentum on the update. Default: `0.0`.
 
         Raises:
             ValueError: If the supplied equation is unsupported.
@@ -231,6 +239,7 @@ class KFAC(Optimizer):
             inv_dtype=inv_dtype,
             initialize_to_identity=initialize_to_identity,
             damping_heuristic=damping_heuristic,
+            momentum=momentum,
         )
         params = sum((list(layer.parameters()) for layer in layers), [])
         super().__init__(params, defaults)
@@ -284,6 +293,7 @@ class KFAC(Optimizer):
         for layer_idx in self.layer_idxs:
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
+        self.add_momentum(directions)
 
         if self.adaptive_damping and self.steps % 5 == 0:
             before = sum(
@@ -412,6 +422,10 @@ class KFAC(Optimizer):
                 f"Unsupported damping heuristic: {damping_heuristic}. "
                 + f"Supported: {self.SUPPORTED_DAMPING_HEURISTICS}."
             )
+
+        momentum = group["momentum"]
+        if not 0 <= momentum < 1:
+            raise ValueError(f"Momentum must be in the range [0, 1). Got {momentum}.")
 
     def _update_parameters(
         self,
@@ -636,3 +650,23 @@ class KFAC(Optimizer):
 
         # print(f"Update {loss_type} damping {damping:2e} -> {new_damping:2e}.")
         group[damping_key] = new_damping
+=======
+    def add_momentum(self, directions: List[Tensor]):
+        """Incorporate momentum into the update direction (in-place).
+
+        Args:
+            directions: Update directions in list format.
+        """
+        group = self.param_groups[0]
+        momentum = group["momentum"]
+        if momentum == 0.0:
+            return
+
+        for d, p in zip(directions, group["params"]):
+            if self.steps == 0:  # initialize momentum buffers
+                self.state[p]["momentum_buffer"] = d
+            else:  # update internal momentum buffer and direction
+                p_mom = self.state[p]["momentum_buffer"]
+                p_mom.mul_(momentum).add_(d)
+                d.copy_(p_mom)
+>>>>>>> master
