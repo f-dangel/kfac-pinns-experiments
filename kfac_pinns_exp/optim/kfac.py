@@ -219,8 +219,7 @@ class KFAC(Optimizer):
         """
         defaults = dict(
             lr=lr,
-            damping_interior=damping,
-            damping_boundary=damping,
+            damping=damping,
             T_kfac=T_kfac,
             T_inv=T_inv,
             ema_factor=ema_factor,
@@ -300,8 +299,7 @@ class KFAC(Optimizer):
             return
 
         inv_dtype = group["inv_dtype"]
-        damping_interior = group["damping_interior"]
-        damping_boundary = group["damping_boundary"]
+        damping = group["damping"]
         damping_heuristic = group["damping_heuristic"]
 
         # compute the KFAC inverse
@@ -313,8 +311,8 @@ class KFAC(Optimizer):
             A2, A1 = self.kfacs_interior[layer_idx]
             B2, B1 = self.kfacs_boundary[layer_idx]
 
-            A2, A1 = self.add_damping(A2, A1, damping_interior, damping_heuristic)
-            B2, B1 = self.add_damping(B2, B1, damping_boundary, damping_heuristic)
+            A2, A1 = self.add_damping(A2, A1, damping, damping_heuristic)
+            B2, B1 = self.add_damping(B2, B1, damping, damping_heuristic)
 
             self.inv[layer_idx] = InverseKroneckerSum(  # noqa: B909
                 A1, A2, B1, B2, inv_dtype=inv_dtype
@@ -387,9 +385,9 @@ class KFAC(Optimizer):
         elif lr[0] != "grid_line_search":
             raise ValueError(f"Unsupported line search: {lr[0]}.")
 
-        for damping in [group["damping_interior"], group["damping_boundary"]]:
-            if damping < 0.0:
-                raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
+        damping = group["damping"]
+        if damping < 0.0:
+            raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
 
         inv_strategy = group["inv_strategy"]
         if inv_strategy != "invert kronecker sum":
