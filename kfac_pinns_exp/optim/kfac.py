@@ -4,9 +4,7 @@ from argparse import ArgumentParser, Namespace
 from math import sqrt
 from typing import Dict, List, Tuple, Union
 
-from backpack.hessianfree.ggnvp import ggn_vector_product_from_plist
-from torch import Tensor, arange, cat, dtype, float64, no_grad
-from torch.autograd import grad
+from torch import Tensor, arange, cat, dtype, float64
 from torch.nn import Module
 from torch.optim import Optimizer
 
