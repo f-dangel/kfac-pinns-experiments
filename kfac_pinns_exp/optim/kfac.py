@@ -112,12 +112,6 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         default="same",
     )
     parser.add_argument(
-        f"--{prefix}adaptive_damping",
-        action="store_true",
-        help="Whether to use adaptive Levenberg-Marquardt damping.",
-        default=False,
-    )
-    parser.add_argument(
         f"--{prefix}momentum",
         type=float,
         help="Momentum on the update.",
@@ -183,7 +177,6 @@ class KFAC(Optimizer):
         initialize_to_identity: bool = False,
         equation: str = "poisson",
         damping_heuristic: str = "same",
-        adaptive_damping: bool = False,
         momentum: float = 0.0,
     ) -> None:
         """Set up the optimizer.
@@ -219,8 +212,6 @@ class KFAC(Optimizer):
             damping_heuristic: How to distribute the damping onto the two Kronecker
                 factors. Currently supports `'same'` and `'trace-norm` (see Section 6.3
                 of https://arxiv.org/pdf/1503.05671). Default is `'same'`.
-            adaptive_damping: Whether to use adaptive damping with LM heuristic.
-                Default is `False`. See Section 6.5 of https://arxiv.org/pdf/1503.05671.
             momentum: Momentum on the update. Default: `0.0`.
 
         Raises:
@@ -251,7 +242,6 @@ class KFAC(Optimizer):
                 f" Supported are: {self.SUPPORTED_EQUATIONS}."
             )
         self.equation = equation
-        self.adaptive_damping = adaptive_damping
 
         # initialize KFAC matrices for the interior and boundary term
         self.kfacs_interior = check_layers_and_initialize_kfac(
@@ -295,18 +285,7 @@ class KFAC(Optimizer):
             directions.extend([-nat_grad_weight, -nat_grad_bias])
         self.add_momentum(directions)
 
-        if self.adaptive_damping and self.steps % 5 == 0:
-            before = sum(
-                ([p.clone() for p in mod.parameters()] for mod in self.layers), []
-            )
-
         self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
-
-        if self.adaptive_damping and self.steps % 5 == 0:
-            now = sum((list(mod.parameters()) for mod in self.layers), [])
-            step = [n - b for n, b in zip(now, before)]
-            self.update_damping(step, X_Omega, y_Omega, "interior")
-            self.update_damping(step, X_dOmega, y_dOmega, "boundary")
 
         self.steps += 1
 
@@ -581,75 +560,6 @@ class KFAC(Optimizer):
         B_damped[idx_B, idx_B] = B_damped.diag().add_(damping_B)
 
         return A_damped, B_damped
-
-    def update_damping(
-        self,
-        step: List[Tensor],
-        X: Tensor,
-        y: Tensor,
-        loss_type: str,
-    ):
-        """Update the damping factor.
-
-        Args:
-            step: The update step.
-            X: Input data to the loss.
-            y: Target data to the loss.
-            loss_type: Type of the loss function. Can be `'interior'` or `'boundary'`.
-        """
-        group = self.param_groups[0]
-        damping_key = f"damping_{loss_type}"
-        damping = group[damping_key]
-
-        params = sum((list(layer.parameters()) for layer in self.layers), [])
-        # reset parameters to before step
-        for p, s in zip(params, step):
-            p.data.sub_(s)
-
-        # compute the reduction according to the quadratic model anchored at the
-        # parameter before the update
-        loss_evaluator = {
-            "poisson": {
-                "interior": poisson_equation.evaluate_interior_loss,
-                "boundary": poisson_equation.evaluate_boundary_loss,
-            },
-            "heat": {
-                "interior": heat_equation.evaluate_interior_loss,
-                "boundary": heat_equation.evaluate_boundary_loss,
-            },
-        }[self.equation][loss_type]
-        loss, residual, _ = loss_evaluator(self.layers, X, y)
-
-        # second-order term: 0.5 * s^T G s with Gramian G and step s
-        G_s = ggn_vector_product_from_plist(loss, residual, params, step)
-        s_T_G_s = sum(s.flatten().dot(Gs.flatten()) for s, Gs in zip(step, G_s))
-
-        # first-order term: s^T g with step s and gradient g
-        gradient = grad(loss, params, allow_unused=True, materialize_grads=True)
-        gradient_T_s = sum(g.flatten().dot(s.flatten()) for g, s in zip(gradient, step))
-
-        model_reduction = 0.5 * s_T_G_s + gradient_T_s
-
-        # set parameters to after step
-        for p, s in zip(params, step):
-            p.data.add_(s)
-
-        with no_grad():
-            loss_after = self.eval_loss(X, y, loss_type)
-        real_reduction = loss_after - loss
-
-        # adapt damping
-        rho = real_reduction / model_reduction
-        w1 = (19 / 20) ** 5
-        if rho < 0.25:
-            new_damping = damping / w1
-        elif rho > 0.75:
-            new_damping = damping * w1
-        else:
-            new_damping = damping
-
-        # print(f"Update {loss_type} damping {damping:2e} -> {new_damping:2e}.")
-        group[damping_key] = new_damping
 
     def add_momentum(self, directions: List[Tensor]):
         """Incorporate momentum into the update direction (in-place).
