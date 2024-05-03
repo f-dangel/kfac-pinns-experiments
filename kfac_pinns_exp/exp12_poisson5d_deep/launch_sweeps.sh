@@ -13,3 +13,5 @@ sbatch ENGD_diagonal.sh
 sbatch ENGD_full.sh
 sbatch ENGD_per_layer.sh
 sbatch KFAC_auto.sh
+sbatch KFAC_empirical_auto.sh
+sbatch KFAC_forward_only_auto.sh

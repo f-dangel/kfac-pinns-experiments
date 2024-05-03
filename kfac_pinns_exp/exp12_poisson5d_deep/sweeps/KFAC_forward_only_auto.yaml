@@ -1,6 +1,6 @@
 entity: kfac-pinns
 project: poisson5d_deep
-name: KFAC-auto
+name: KFAC-forward-only
 program: ../../train.py
 command:
     - ${env}
@@ -27,6 +27,8 @@ parameters:
         value: 3_000
     N_dOmega:
         value: 500
+    KFAC_ggn_type:
+        value: forward-only
     KFAC_ema_factor:
         distribution: uniform
         min: 0
