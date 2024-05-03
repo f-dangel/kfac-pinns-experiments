@@ -119,6 +119,13 @@ ARGS = [
         "--KFAC_damping=0.01",
         "--KFAC_momentum=0.1",
     ],
+    # train with KFAC+automatic learning rate and momentum
+    [
+        "--num_steps=3",
+        "--optimizer=KFAC",
+        "--KFAC_damping=0.01",
+        "--KFAC_lr=auto",
+    ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 

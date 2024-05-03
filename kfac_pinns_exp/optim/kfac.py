@@ -3,7 +3,8 @@
 from argparse import ArgumentParser, Namespace
 from typing import Dict, List, Tuple, Union
 
-from torch import Tensor, cat, dtype, eye, float64
+from backpack.hessianfree.ggnvp import ggn_vector_product_from_plist
+from torch import Tensor, cat, dtype, eye, float64, tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -123,6 +124,10 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         # `lr` entry with a tuple containing the grid
         grid = parse_grid_line_search_args(verbose=verbose)
         setattr(args, lr, (getattr(args, lr), grid))
+    if getattr(args, lr) == "auto":
+        # use a small learning rate for the first step
+        lr_init = 1e-6
+        setattr(args, lr, (getattr(args, lr), lr_init))
 
     if verbose:
         print("Parsed arguments for KFAC: ", args)
@@ -151,7 +156,7 @@ class KFAC(Optimizer):
         self,
         layers: List[Module],
         damping: float,
-        lr: Union[float, Tuple[str, List[float]]] = ENGD_DEFAULT_LR,
+        lr: Union[float, Tuple[str, Union[List[float], float]]] = ENGD_DEFAULT_LR,
         T_kfac: int = 1,
         T_inv: int = 1,
         ema_factor: float = 0.95,
@@ -171,8 +176,16 @@ class KFAC(Optimizer):
         Args:
             layers: List of layers of the neural network.
             damping: Damping factor. Must be positive.
-            lr: Positive learning rate or tuple specifying the line search. By default
-                uses the same line search as the ENGD optimizer.
+            lr: The learning rate, line search or momentum strategy:
+                - If a float, this will be used as constant learning rate.
+                - If a tuple of the form `('grid_line_search', grid)` with grid a list
+                  of step size candidates, the optimizer will perform a grid search
+                  along the update direction and choose the best candidate.
+                - If a tuple of the form `('auto', init_lr)`, the optimizer will auto-
+                  matically determine the learning rate and momentum at each iteration
+                  and use the initial learning rate for the first step, as the
+                  heuristic depends on the previous update. See Section 7 of the KFAC
+                  paper (https://arxiv.org/pdf/1503.05671) for details.
             T_kfac: Positive integer specifying the update frequency for
                 the boundary and the interior terms' KFACs. Default is `1`.
             T_inv: Positive integer specifying the pre-conditioner update
@@ -262,7 +275,6 @@ class KFAC(Optimizer):
         for layer_idx in self.layer_idxs:
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
-        self.add_momentum(directions)
 
         self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
 
@@ -368,7 +380,20 @@ class KFAC(Optimizer):
         if isinstance(lr, float):
             if lr <= 0.0:
                 raise ValueError(f"Learning rate must be positive. Got {lr}.")
-        elif lr[0] != "grid_line_search":
+        elif lr[0] in {"grid_line_search", "auto"}:
+            if lr[0] == "auto":
+                lr_init = lr[1]
+                if lr_init <= 0:
+                    raise ValueError(
+                        f"Initial learning rate must be positive. Got {lr_init}."
+                    )
+                momentum = group["momentum"]
+                if momentum != 0.0:
+                    raise ValueError(
+                        f"Momentum was specified to non-zero value {momentum}"
+                        + "although automatic learning rate and momentum is enabled."
+                    )
+        else:
             raise ValueError(f"Unsupported line search: {lr[0]}.")
 
         damping = group["damping"]
@@ -403,14 +428,17 @@ class KFAC(Optimizer):
         Raises:
             ValueError: If the chosen line search is not supported.
         """
-        lr = self.param_groups[0]["lr"]
-        params = self.param_groups[0]["params"]
+        group = self.param_groups[0]
+        lr = group["lr"]
+        params = group["params"]
 
         if isinstance(lr, float):
+            self.add_momentum(directions)
             for param, direction in zip(params, directions):
                 param.data.add_(direction, alpha=lr)
         else:
             if lr[0] == "grid_line_search":
+                self.add_momentum(directions)
 
                 def f() -> Tensor:
                     """Closure to evaluate the loss.
@@ -424,6 +452,23 @@ class KFAC(Optimizer):
 
                 grid = lr[1]
                 grid_line_search(f, params, directions, grid)
+
+            elif lr[0] == "auto":  # KFAC heuristic for auto learning rate & momentum
+                if self.steps == 0:  # use the second value as initial learning rate
+                    alpha = lr[1]
+                    updates = [d.mul_(alpha) for d in directions]
+                else:  # use heuristic
+                    previous = [self.state[p]["previous_update"] for p in params]
+                    alpha, mu = self.auto_lr_and_momentum(
+                        directions, previous, X_Omega, y_Omega, X_dOmega, y_dOmega
+                    )
+                    updates = [
+                        d.mul_(alpha).add_(prev.mul_(mu))
+                        for d, prev in zip(directions, previous)
+                    ]
+                for p, u in zip(params, updates):
+                    self.state[p]["previous_update"] = u
+                    p.data.add_(u)
 
             else:
                 raise ValueError(f"Unsupported line search: {lr[0]}.")
@@ -516,3 +561,90 @@ class KFAC(Optimizer):
                 p_mom = self.state[p]["momentum_buffer"]
                 p_mom.mul_(momentum).add_(d)
                 d.copy_(p_mom)
+
+    def auto_lr_and_momentum(
+        self,
+        direction: List[Tensor],
+        previous: List[Tensor],
+        X_Omega: Tensor,
+        y_Omega: Tensor,
+        X_dOmega: Tensor,
+        y_dOmega: Tensor,
+    ) -> Tuple[float, float]:
+        """Automatically choose learning rate and momentum for the current step.
+
+        See KFAC paper (https://arxiv.org/pdf/1503.05671), Section 7. Minimizes the
+        two-dimensional quadratic model with the true Gramian along the current update
+        direction and the previous update step.
+
+        Args:
+            direction: The update direction from multiplying the inverse KFAC onto the
+                negative gradient.
+            previous: The parameter update from the previous iteration.
+            X_Omega: Input data to the interior loss.
+            y_Omega: Target data to the interior loss.
+            X_dOmega: Input data to the boundary loss.
+            y_dOmega: Target data to the boundary loss.
+
+        Returns:
+            The learning rate and momentum for the current step.
+        """
+        group = self.param_groups[0]
+        damping = group["damping"]  # = λ + η in the KFAC paper
+        params = sum((list(layer.parameters()) for layer in self.layers), [])
+        d, D = previous, direction  # = δ, Δ in the KFAC paper
+        g = [p.grad for p in params]  # = ∇h in the KFAC paper
+
+        DD = sum((D_**2).sum() for D_ in D)  # = ||Δ||₂²
+        dd = sum((d_**2).sum() for d_ in d)  # = ||δ||₂²
+        dD = sum((d_ * D_).sum() for d_, D_ in zip(d, D))  # = δᵀΔ
+        gd = sum((g_ * d_).sum() for g_, d_ in zip(g, d))  # = ∇hᵀδ
+        gD = sum((g_ * D_).sum() for g_, D_ in zip(g, D))  # = ∇hᵀΔ
+
+        # compute Gramian-vector products along δ and Δ
+        eval_interior_loss, eval_boundary_loss = {
+            "poisson": (
+                poisson_equation.evaluate_interior_loss,
+                poisson_equation.evaluate_boundary_loss,
+            ),
+            "heat": (
+                heat_equation.evaluate_interior_loss,
+                heat_equation.evaluate_boundary_loss,
+            ),
+        }[self.equation]
+
+        # multiply with the interior loss Gramian
+        loss, residual, _ = eval_interior_loss(self.layers, X_Omega, y_Omega)
+        Gd = ggn_vector_product_from_plist(loss, residual, params, d)  # = G_Ω δ
+        GD = ggn_vector_product_from_plist(loss, residual, params, D)  # = G_Ω Δ
+
+        # multiply with the boundary Gramian and add
+        loss, residual, _ = eval_boundary_loss(self.layers, X_dOmega, y_dOmega)
+        Gd = [
+            Gd1.add_(Gd2)
+            for Gd1, Gd2 in zip(
+                Gd, ggn_vector_product_from_plist(loss, residual, params, d)
+            )
+        ]  # = (G_Ω + G_∂Ω) δ
+        GD = [
+            GD1.add_(GD2)
+            for GD1, GD2 in zip(
+                GD, ggn_vector_product_from_plist(loss, residual, params, D)
+            )
+        ]  # = (G_Ω + G_∂Ω) Δ = F Δ
+        DGD = sum((D_ * GD_).sum() for D_, GD_ in zip(D, GD))  # = Δᵀ F Δ
+        dGd = sum((d_ * Gd_).sum() for d_, Gd_ in zip(d, Gd))  # = δᵀ F δ
+        dGD = sum((d_ * GD_).sum() for d_, GD_ in zip(d, GD))  # = δᵀ F Δ
+
+        # solve the 2x2 linear system from page 28 (https://arxiv.org/pdf/1503.05671)
+        # for the learning rate and momentum
+        A = tensor(
+            [
+                [DGD + damping * DD, dGD + damping * dD],
+                [dGD + damping * dD, dGd + damping * dd],
+            ]
+        )
+        b = tensor([gD, gd])
+        (lr, momentum) = -(A.inverse() @ b)
+
+        return lr.item(), momentum.item()
