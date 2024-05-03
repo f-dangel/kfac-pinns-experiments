@@ -1,7 +1,7 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from torch import Tensor, cat, dtype, eye, float64
 from torch.nn import Module
@@ -12,7 +12,9 @@ from kfac_pinns_exp.inverse_kronecker_sum import InverseKroneckerSum
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.optim.engd import ENGD_DEFAULT_LR
 from kfac_pinns_exp.optim.line_search import (
+    backtracking_line_search,
     grid_line_search,
+    parse_backtracking_line_search_args,
     parse_grid_line_search_args,
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
@@ -123,6 +125,9 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         # `lr` entry with a tuple containing the grid
         grid = parse_grid_line_search_args(verbose=verbose)
         setattr(args, lr, (getattr(args, lr), grid))
+    elif getattr(args, lr) == "backtracking_line_search":
+        kwargs = parse_backtracking_line_search_args(verbose=verbose)
+        setattr(args, lr, (getattr(args, lr), kwargs))
 
     if verbose:
         print("Parsed arguments for KFAC: ", args)
@@ -151,7 +156,9 @@ class KFAC(Optimizer):
         self,
         layers: List[Module],
         damping: float,
-        lr: Union[float, Tuple[str, List[float]]] = ENGD_DEFAULT_LR,
+        lr: Union[
+            float, Tuple[str, Union[List[float], Dict[str, Any]]]
+        ] = ENGD_DEFAULT_LR,
         T_kfac: int = 1,
         T_inv: int = 1,
         ema_factor: float = 0.95,
@@ -172,7 +179,8 @@ class KFAC(Optimizer):
             layers: List of layers of the neural network.
             damping: Damping factor. Must be positive.
             lr: Positive learning rate or tuple specifying the line search. By default
-                uses the same line search as the ENGD optimizer.
+                uses the same grid line search as the ENGD optimizer. Also supports
+                using a backtracking line search.
             T_kfac: Positive integer specifying the update frequency for
                 the boundary and the interior terms' KFACs. Default is `1`.
             T_inv: Positive integer specifying the pre-conditioner update
@@ -368,7 +376,7 @@ class KFAC(Optimizer):
         if isinstance(lr, float):
             if lr <= 0.0:
                 raise ValueError(f"Learning rate must be positive. Got {lr}.")
-        elif lr[0] != "grid_line_search":
+        elif lr[0] not in {"grid_line_search", "backtracking_line_search"}:
             raise ValueError(f"Unsupported line search: {lr[0]}.")
 
         damping = group["damping"]
@@ -410,21 +418,23 @@ class KFAC(Optimizer):
             for param, direction in zip(params, directions):
                 param.data.add_(direction, alpha=lr)
         else:
+
+            def f() -> Tensor:
+                """Closure to evaluate the loss.
+
+                Returns:
+                    Loss value.
+                """
+                interior_loss = self.eval_loss(X_Omega, y_Omega, "interior")
+                boundary_loss = self.eval_loss(X_dOmega, y_dOmega, "boundary")
+                return interior_loss + boundary_loss
+
             if lr[0] == "grid_line_search":
-
-                def f() -> Tensor:
-                    """Closure to evaluate the loss.
-
-                    Returns:
-                        Loss value.
-                    """
-                    interior_loss = self.eval_loss(X_Omega, y_Omega, "interior")
-                    boundary_loss = self.eval_loss(X_dOmega, y_dOmega, "boundary")
-                    return interior_loss + boundary_loss
-
                 grid = lr[1]
                 grid_line_search(f, params, directions, grid)
-
+            elif lr[0] == "backtracking_line_search":
+                kwargs = lr[1]
+                backtracking_line_search(f, params, directions, **kwargs)
             else:
                 raise ValueError(f"Unsupported line search: {lr[0]}.")
 
