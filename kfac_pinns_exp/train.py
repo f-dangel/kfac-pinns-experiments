@@ -371,7 +371,7 @@ def create_data_loader(
     """Create a data loader for one of the losses.
 
     Args:
-        data_loader: what kind of data loader to use. Default FrozenDataLoader.
+        data_loader: what kind of data loader to use.
         loss_type: For which type of loss to generate data. Can be either `'interior'`
             or `'condition'`.
         equation: The name of the equation.
