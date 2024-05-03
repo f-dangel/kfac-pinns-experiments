@@ -453,7 +453,7 @@ class KFAC(Optimizer):
                 grid = lr[1]
                 grid_line_search(f, params, directions, grid)
 
-            if lr[0] == "auto":  # KFAC heuristic for automatic learning rate & momentum
+            elif lr[0] == "auto":  # KFAC heuristic for auto learning rate & momentum
                 if self.steps == 0:  # use the second value as initial learning rate
                     alpha = lr[1]
                     updates = [d.mul_(alpha) for d in directions]
