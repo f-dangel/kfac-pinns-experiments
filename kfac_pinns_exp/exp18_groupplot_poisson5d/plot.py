@@ -37,10 +37,12 @@ if __name__ == "__main__":
     IGNORE = {  # ignore the following optimizers for the plots in the main text
         "KFAC (empirical)",
         "KFAC (forward-only)",
+        "KFAC* (empirical)",
+        "KFAC* (forward-only)",
         "ENGD (diagonal)",
     }
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    APPENDIX = [True]  # False]  # show all optimizers in the appendix
+    APPENDIX = [True, False]  # show all optimizers in the appendix
 
     for appendix, (y, ylabel) in product(APPENDIX, y_to_ylabel.items()):
         # NOTE Use `nrows` and `ncols` to tweak the subplot size, because `tueplots`
@@ -96,7 +98,7 @@ if __name__ == "__main__":
                         0: df_history["step"] + 1,
                         1: df_history["time"] - min(df_history["time"]),
                     }[row]
-                    label = name if col == row == 0 else None
+                    label = name if (col == row == 0 and "*" not in name) else None
                     ax[row, col].plot(
                         x_data,
                         df_history[y],
@@ -116,7 +118,7 @@ if __name__ == "__main__":
                 bbox_to_anchor=(0.5, -0.15 if appendix else -0.1),
                 # shorter lines so legend fits into a single line in the main text
                 handlelength=1.2,
-                ncols=6 if appendix else 7,
+                ncols=5 if appendix else 7,
             )
             suffix = "_all" if appendix else ""
             plt.savefig(path.join(HEREDIR, f"{y}{suffix}.pdf"), bbox_inches="tight")
