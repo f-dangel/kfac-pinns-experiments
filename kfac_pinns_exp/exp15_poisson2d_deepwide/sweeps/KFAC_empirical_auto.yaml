@@ -1,0 +1,36 @@
+entity: kfac-pinns
+project: poisson2d_deepwide
+name: KFAC-empirical-auto
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFAC"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: loss
+method: random
+run_cap: 50
+parameters:
+    model:
+        value: mlp-tanh-64-64-48-48
+    num_seconds:
+        value: 1_000
+    KFAC_ggn_type:
+        value: empirical
+    KFAC_ema_factor:
+        distribution: uniform
+        min: 0
+        max: 0.99
+    KFAC_damping:
+        distribution: log_uniform_values
+        min: 1e-13
+        max: 1e-7
+    KFAC_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]
+    KFAC_lr:
+        value: auto
