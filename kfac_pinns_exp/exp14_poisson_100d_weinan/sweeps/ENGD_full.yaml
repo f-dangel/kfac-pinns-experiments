@@ -18,14 +18,16 @@ parameters:
         value: u_weinan_norm
     model:
         value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 50_000
+    num_seconds:
+        value: 3_000
+    data_loader:
+        value: GenerativeDataLoader
     dim_Omega:
-        value: 10
+        value: 100
     N_Omega:
-        value: 10_000
+        value: 3_000
     N_dOmega:
-        value: 5_000
+        value: 1_000
     ENGD_approximation:
         value: full
     ENGD_damping:
