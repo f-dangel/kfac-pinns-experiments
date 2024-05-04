@@ -26,9 +26,14 @@ sweep_ids = {  # ids from the wandb agent
     "inhbp3ep": "ENGD (full)",
     "jca19oi9": "ENGD (layer-wise)",
     "x92rxkv9": "ENGD (diagonal)",
+    # KFACs with grid line search and tuned momentum
     "pah7fvat": "KFAC",
     "f9zvzrtw": "KFAC (empirical)",
     "89bxstzc": "KFAC (forward-only)",
+    # auto-tuned KFACs
+    "aj8t9umm": "KFAC*",
+    "3i3d2xu3": "KFAC* (empirical)",
+    "q36tkalj": "KFAC* (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -43,6 +48,9 @@ colors = {
     "KFAC": "black",
     "KFAC (empirical)": "gray",
     "KFAC (forward-only)": "lightgray",
+    "KFAC*": "black",
+    "KFAC* (empirical)": "gray",
+    "KFAC* (forward-only)": "lightgray",
 }
 
 linestyles = {
@@ -56,6 +64,9 @@ linestyles = {
     "KFAC": "-",
     "KFAC (empirical)": "-",
     "KFAC (forward-only)": "-",
+    "KFAC*": "dashed",
+    "KFAC* (empirical)": "dashed",
+    "KFAC* (forward-only)": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
@@ -115,7 +126,7 @@ if __name__ == "__main__":
                 ax.plot(
                     x_data,
                     df_history[y],
-                    label=label,
+                    label=None if "*" in label else label,
                     color=colors[label],
                     linestyle=linestyles[label],
                 )

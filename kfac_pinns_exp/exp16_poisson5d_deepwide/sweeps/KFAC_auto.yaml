@@ -1,0 +1,42 @@
+entity: kfac-pinns
+project: poisson5d_deepwide
+name: KFAC-auto
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFAC"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: loss
+method: random
+run_cap: 50
+parameters:
+    boundary_condition:
+        value: cos_sum
+    model:
+        value: mlp-tanh-64-64-48-48
+    num_seconds:
+        value: 3_000
+    dim_Omega:
+        value: 5
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 500
+    KFAC_ema_factor:
+        distribution: uniform
+        min: 0
+        max: 0.99
+    KFAC_damping:
+        distribution: log_uniform_values
+        min: 1e-13
+        max: 1e-7
+    KFAC_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]
+    KFAC_lr:
+        value: auto
