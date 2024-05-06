@@ -1,3 +1,4 @@
+
 \begin{figure}[tb]
   \centering
   \includegraphics{../kfac_pinns_exp/exp18_groupplot_poisson5d/loss.pdf}
@@ -7,122 +8,115 @@
 \end{figure}
 
 \subsection{Setup}
-\subsection{Implementation and experimental setup}
-
-\paragraph{Implementation details}
-\begin{itemize}
-    \item how do we combine the interior and boundary approximations?
-    \item damping
-    \item exponential moving average
-    \item line search
-    \item combination of interior and boundary approximations and linear solver: Also, the Kronecker sum's inversion requires solving a generalized eigenvalue problem, for which there is currently no API in PyTorch.
-    Hence we need to fall back to SciPy, which costs communication overhead because everything needs to be off-loaded to CPU.
-    Alternatively, we could summarize the two Kronecker approximations into a single one at the risk of losing downstream performance.
-    \todo{which one do we use?}
-    \item \paragraph{Stability and memory considerations}
-    Our KFAC implementation requires matrix (eigen-)decompositions and uses dense pre-conditioner matrices.
-    This can cause numerical instabilities and large memory consumption.
-    Both issues can be addressed by using an inverse-free KFAC update~\citep{lin2023simplifying} and structured Kronecker factors~\citep{lin2023structured}.
-    We leave this additions to future work.
-    One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done by~\cite{dangel2020backpack}.
-    However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
-\end{itemize}
-
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "../main"
-%%% End:
-
-
+We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and full-Gramian ENGD in PyTorch~\cite{paszke2019pytorch}.
+As a matrix-free version of ENGD, we use the HessianFree optimizer~\cite{martens2010} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
+We chose this because there is a fully-featured implementation from~\citet{tatzel2022late} which offers many additional heuristics such as adaptive damping, CG backtracking, and backtracking line search, which allow this algorithm to be operated with very little hyperparameter searching.
+We also use SGD with tuned learning rate and momentum, as well as Adam with tuned learning rate.
+Experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 \paragraph{Experimental setup}
 \begin{itemize}
-    \item Tested optimizers: Adam, GD with LS?, Newton's method / (L-)BFGS, Full ENGD, (Block)-Diagonal approximation for ENGD?, KFAC-exp, KFAC-for, KFAC-emp? %, other KFACs: for the l2-GN, empirical Fisher, Quantum KFAC
-    \item hyper-parameter search
-    %\item try without line search with learning rate schedules
+\item hyper-parameter search
 \end{itemize}
 
 \subsection{A high dimensional Poisson equation}
 
 \begin{itemize}
-    \item 100D from deep Ritz paper~\citep{yu2018deep}, i.e.,
-    \begin{align*}
-        -\Delta u(x) & = -200 \quad \text{for } x\in [0,1]^{100} \\
-        u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{100}
-    \end{align*}
-    where the solution is given by $u^\star(x) = \lVert x \rVert_2^2$
-    \item around $10^5$ to $10^6$ parameters
-    \item no ENGD, ENGD matrix-free?, only KFACs, L-BFGS, HF, and first-order methods
+\item 100D from deep Ritz paper~\citep{yu2018deep}, i.e.,
+  \begin{align*}
+    -\Delta u(x) & = -200 \quad \text{for } x\in [0,1]^{100} \\
+    u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{100}
+  \end{align*}
+  where the solution is given by $u^\star(x) = \lVert x \rVert_2^2$
+\item around $10^5$ to $10^6$ parameters
+\item no ENGD, ENGD matrix-free?, only KFACs, L-BFGS, HF, and first-order methods
 \end{itemize}
 
 \subsection{A pedagogical example}
 
 \begin{itemize}
-    \item pretty much our current 2D / 5D Poisson example
-    \item meant as an illustration of how the approximation of KFAC compares to ENGD and ENGD block-diagonal
-    \item plot parameters vs iteration time
+\item pretty much our current 2D / 5D Poisson example
+\item meant as an illustration of how the approximation of KFAC compares to ENGD and ENGD block-diagonal
+\item plot parameters vs iteration time
 \end{itemize}
 
 \subsection{Heat equation}
 
 \begin{itemize}
-    \item again 100D
-    \item sum of cosinuts with exponential trash in time? I.e.,
-    time-space domain $[0,1]\times[0,1]^{100}$ %and
-    %\begin{align*}
-    %    \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } x\in [0,1]^{100} \\
-    %    u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
-    %    x\in [0,1]^{100}
-    %    \\
-    %    u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in\partial[0,1]^{100}
-    %\end{align*}
-    %\item an alternative would be
-    \todo{rhs not equal zero I think, double check before implementing}
-    \begin{align*}
-        \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } x\in [0,1]^{100} \\
-        u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
-        x\in [0,1]^{100}
-        \\
-        u(t,x) & = e^{-\pi^2 t}\sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for } t\in[0,1], x\in\partial[0,1]^{100}
-    \end{align*}
-    for which the solution should be given by
-    \begin{align*}
-        u^\star(t,x) = e^{-\pi^2 t} \sum_{i=1}^{100} \sin(\pi x_i)?
-    \end{align*}
-    %we can also scale in time because $e^{-4\pi^2}\approx e^{-40}$
-    \item around $10^5-10^6$ parameters
+\item again 100D
+\item sum of cosinuts with exponential trash in time? I.e.,
+  time-space domain $[0,1]\times[0,1]^{100}$ %and
+  % \begin{align*}
+  %   \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } x\in [0,1]^{100} \\
+      %       u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
+  %   x\in [0,1]^{100}
+  %   \\
+  %   u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in\partial[0,1]^{100}
+  % \end{align*}
+  % \item an alternative would be
+  \todo{rhs not equal zero I think, double check before implementing}
+  \begin{align*}
+    \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } x\in [0,1]^{100} \\
+    u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
+             x\in [0,1]^{100}
+    \\
+    u(t,x) & = e^{-\pi^2 t}\sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for } t\in[0,1], x\in\partial[0,1]^{100}
+  \end{align*}
+  for which the solution should be given by
+  \begin{align*}
+    u^\star(t,x) = e^{-\pi^2 t} \sum_{i=1}^{100} \sin(\pi x_i)?
+  \end{align*}
+  % we can also scale in time because $e^{-4\pi^2}\approx e^{-40}$
+\item around $10^5-10^6$ parameters
 \end{itemize}
+
+\subsection{Limitations and Future Work}
+
+\paragraph{Studying further KFAC heuristics} The original KFAC optimizer introduces many additional techniques to improve performance and stability, e.g.\,adaptive damping and heuristics for splitting up the damping onto the different Kronecker factors.
+Our algorithms borrow components, but we did not explore all bells and whistles.
+We believe they can help to either reduce the number of hyper-parameters that need to be tuned, or improve performance.
+We use an independent Kronecker product for each of the losses and dit not look into further condensing this representation into a single Kronecker product.
+Doing so would allow to further reduce memory cost for storing the pre-conditioner, as well as computational cost to invert it.
+We did not play around with updating the KFAC matrices or inverting the pre-conditioner less frequently.
+We did not try lower precision than float64 because this is the standard setup for PINNs (??).
+
+\paragraph{Performance improvements} The generalized eigenvalue that we currently need to solve to invert the Kronecker sum is currently computed through SciPy as there is no PyTorch API for doing so. This has the downside that we need to sync the Kronecker factors with CPU each time we want to invert the curvature approximation. Our results could be further improved by using a fully GPU-compatible implementation.
+As pointed out in \citep{martens2015optimizing}, the requested Gramian projections can be computed at the cost of two forward passes; however, we are currently using a non-specialized implementation which does not take into account the Gramian's matrix square root factorization.
+One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done by~\cite{dangel2020backpack}.
+However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
+
+\paragraph{Future work}
+Inverse-free KFAC update~\citep{lin2023simplifying} and structured Kronecker factors~\citep{lin2023structured}.
 
 \begin{comment}
-    We want to show the following things:
-\begin{itemize}
-\item We can safely discard the Gramian's off-diagonal blocks without harming
-  training performance. This reduces the Gramian's size, but still imposes
-  strong constraints on scalability.
-
-\item Our proposed Kronecker approximation works roughly as well as the
-  full/block diagonal Gramian, while being much cheaper to compute, store, and
-  invert.
-
-\item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitively expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
-\end{itemize}
-
-Todos:
-\begin{itemize}
-\item concrete example ground truth: 2d Poisson on unit square with sine target
-\end{itemize}
-
-Ideas:
-\begin{itemize}
-\item try out different approximations
+  We want to show the following things:
   \begin{itemize}
-  \item Ground truth
-  \item Block diagonal exact
-  \item Diagonal
-  \item Block diagonal with different approximations
+  \item We can safely discard the Gramian's off-diagonal blocks without harming
+    training performance. This reduces the Gramian's size, but still imposes
+    strong constraints on scalability.
+
+  \item Our proposed Kronecker approximation works roughly as well as the
+    full/block diagonal Gramian, while being much cheaper to compute, store, and
+    invert.
+
+  \item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitively expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
   \end{itemize}
-\end{itemize}
+
+  Todos:
+  \begin{itemize}
+  \item concrete example ground truth: 2d Poisson on unit square with sine target
+  \end{itemize}
+
+  Ideas:
+  \begin{itemize}
+  \item try out different approximations
+    \begin{itemize}
+    \item Ground truth
+    \item Block diagonal exact
+    \item Diagonal
+    \item Block diagonal with different approximations
+    \end{itemize}
+  \end{itemize}
 \end{comment}
 
 %%% Local Variables:
