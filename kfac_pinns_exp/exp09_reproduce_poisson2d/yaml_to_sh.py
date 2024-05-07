@@ -63,6 +63,12 @@ if __name__ == "__main__":
         default="m4",
         help="Slurm QOS for the job.",
     )
+    parser.add_argument(
+        "--array_max_active",
+        type=int,
+        default=17,
+        help="Maximum number of active tasks in the array.",
+    )
     args = parser.parse_args()
 
     cmd = [
@@ -83,4 +89,6 @@ if __name__ == "__main__":
     line = f"wandb agent --count 1 {line}"
 
     sh_file = args.yaml_file.replace(".yaml", ".sh")
-    create_sbatch_script(sh_file, line, args.qos)
+    create_sbatch_script(
+        sh_file, line, args.qos, array_max_active=args.array_max_active
+    )
