@@ -1,9 +1,10 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
+from math import sqrt
 from typing import Dict, List, Tuple, Union
 
-from backpack.hessianfree.ggnvp import ggn_vector_product_from_plist
+from backpack.hessianfree.rop import jacobian_vector_product
 from torch import Tensor, cat, dtype, eye, float64, tensor
 from torch.nn import Module
 from torch.optim import Optimizer
@@ -613,28 +614,24 @@ class KFAC(Optimizer):
             ),
         }[self.equation]
 
-        # multiply with the interior loss Gramian
-        loss, residual, _ = eval_interior_loss(self.layers, X_Omega, y_Omega)
-        Gd = ggn_vector_product_from_plist(loss, residual, params, d)  # = G_Ω δ
-        GD = ggn_vector_product_from_plist(loss, residual, params, D)  # = G_Ω Δ
-
         # multiply with the boundary Gramian and add
-        loss, residual, _ = eval_boundary_loss(self.layers, X_dOmega, y_dOmega)
-        Gd = [
-            Gd1.add_(Gd2)
-            for Gd1, Gd2 in zip(
-                Gd, ggn_vector_product_from_plist(loss, residual, params, d)
-            )
-        ]  # = (G_Ω + G_∂Ω) δ
-        GD = [
-            GD1.add_(GD2)
-            for GD1, GD2 in zip(
-                GD, ggn_vector_product_from_plist(loss, residual, params, D)
-            )
-        ]  # = (G_Ω + G_∂Ω) Δ = F Δ
-        DGD = sum((D_ * GD_).sum() for D_, GD_ in zip(D, GD))  # = Δᵀ F Δ
-        dGd = sum((d_ * Gd_).sum() for d_, Gd_ in zip(d, Gd))  # = δᵀ F δ
-        dGD = sum((d_ * GD_).sum() for d_, GD_ in zip(d, GD))  # = δᵀ F Δ
+        _, residual, _ = eval_interior_loss(self.layers, X_Omega, y_Omega)
+        # correct for batch size reduction factor
+        residual /= sqrt(residual.shape[0])
+        (Jd,) = jacobian_vector_product(residual, params, d, retain_graph=True)
+        (JD,) = jacobian_vector_product(residual, params, D, retain_graph=False)
+        DGD = (JD**2).sum()  # = Δᵀ G_Ω Δ
+        dGd = (Jd**2).sum()  # = δᵀ G_Ω δ
+        dGD = (Jd * JD).sum()  # = δᵀ G_Ω Δ
+
+        _, residual, _ = eval_boundary_loss(self.layers, X_dOmega, y_dOmega)
+        # correct for batch size reduction factor
+        residual /= sqrt(residual.shape[0])
+        (Jd,) = jacobian_vector_product(residual, params, d, retain_graph=True)
+        (JD,) = jacobian_vector_product(residual, params, D, retain_graph=False)
+        DGD += (JD**2).sum()  # Δᵀ (G_Ω + G_∂Ω) Δ
+        dGd += (Jd**2).sum()  # δᵀ (G_Ω + G_∂Ω) δ
+        dGD += (Jd * JD).sum()  # δᵀ (G_Ω + G_∂Ω) Δ
 
         # solve the 2x2 linear system from page 28 (https://arxiv.org/pdf/1503.05671)
         # for the learning rate and momentum
