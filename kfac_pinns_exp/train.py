@@ -50,7 +50,12 @@ from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson", "heat"]
-SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16", "mlp-tanh-64-64-48-48"]
+SUPPORTED_MODELS = [
+    "mlp-tanh-64",
+    "mlp-tanh-64-48-32-16",
+    "mlp-tanh-64-64-48-48",
+    "mlp-tanh-256-256-128-128",
+]
 SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan", "u_weinan_norm"]
 SUPPORTED_DATALOADERS = ["FrozenDataLoader", "GenerativeDataLoader"]
 
@@ -260,6 +265,18 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
             Linear(48, 48),
             Tanh(),
             Linear(48, 1),
+        ]
+    elif model == "mlp-tanh-256-256-128-128":
+        layers = [
+            Linear(in_dim, 256),
+            Tanh(),
+            Linear(256, 256),
+            Tanh(),
+            Linear(256, 128),
+            Tanh(),
+            Linear(128, 128),
+            Tanh(),
+            Linear(128, 1),
         ]
     else:
         raise ValueError(

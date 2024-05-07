@@ -79,11 +79,18 @@ ARGS = [
         for equation in ["poisson", "heat"]
     ],
     # train with a deeper net
-    [
-        "--num_steps=3",
-        "--optimizer=SGD",
-        "--SGD_lr=0.1",
-        "--model=mlp-tanh-64-48-32-16",
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=SGD",
+            "--SGD_lr=0.1",
+            f"--model={model}",
+        ]
+        for model in [
+            "mlp-tanh-64-48-32-16",
+            "mlp-tanh-64-64-48-48",
+            "mlp-tanh-256-256-128-128",
+        ]
     ],
     # train with different boundary conditions
     [
