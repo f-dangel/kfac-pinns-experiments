@@ -191,6 +191,12 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default=150,
         help="Maximum number of logs/prints. Ignored if `num_seconds` is non-zero.",
     )
+    parser.add_argument(
+        "--N_eval",
+        type=int,
+        default=None,
+        help="Number of evaluation points (default: 10 * N_Omega).",
+    )
     # plotting-specific arguments
     parser.add_argument(
         "--plot_solution",
@@ -214,6 +220,10 @@ def parse_general_args(verbose: bool = False) -> Namespace:
 
     # overwrite dtype
     args.dtype = DTYPES[args.dtype]
+
+    # set default value for N_eval if not supplied
+    if args.N_eval is None:
+        args.N_eval = 10 * args.N_Omega
 
     if verbose:
         print(f"General arguments for the PINN problem: {args}")
@@ -446,12 +456,12 @@ def main():  # noqa: C901
     )
     interior_eval_data_loader = iter(
         create_data_loader(
-            args.data_loader,
+            "FrozenDataLoader",
             "interior",
             equation,
             condition,
             dim_Omega,
-            10 * N_Omega,
+            args.N_eval,
             dev,
             dt,
         )
