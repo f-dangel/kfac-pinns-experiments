@@ -40,12 +40,7 @@ from kfac_pinns_exp.parse_utils import (
     parse_known_args_and_remove_from_argv,
 )
 from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
-from kfac_pinns_exp.train_utils import (
-    FrozenDataLoader,
-    GenerativeDataLoader,
-    KillTrigger,
-    LoggingTrigger,
-)
+from kfac_pinns_exp.train_utils import DataLoader, KillTrigger, LoggingTrigger
 from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
@@ -57,7 +52,6 @@ SUPPORTED_MODELS = [
     "mlp-tanh-256-256-128-128",
 ]
 SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan", "u_weinan_norm"]
-SUPPORTED_DATALOADERS = ["FrozenDataLoader", "GenerativeDataLoader"]
 
 SOLUTIONS = {
     "poisson": {
@@ -117,11 +111,10 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Which boundary condition will be used.",
     )
     parser.add_argument(
-        "--data_loader",
-        type=str,
-        default="FrozenDataLoader",
-        choices=SUPPORTED_DATALOADERS,
-        help="Which data loader will be used.",
+        "--batch_frequency",
+        type=int,
+        default=0,
+        help="Frequency at which new batches are generated. 0 means never.",
     )
     parser.add_argument(
         "--dim_Omega",
@@ -386,7 +379,7 @@ def create_condition_data(
 
 
 def create_data_loader(
-    data_loader: str,
+    frequency: int,
     loss_type: str,
     equation: str,
     condition: str,
@@ -398,7 +391,7 @@ def create_data_loader(
     """Create a data loader for one of the losses.
 
     Args:
-        data_loader: what kind of data loader to use.
+        frequency: How many steps before the data loader samples a new batch.
         loss_type: For which type of loss to generate data. Can be either `'interior'`
             or `'condition'`.
         equation: The name of the equation.
@@ -410,20 +403,12 @@ def create_data_loader(
 
     Returns:
         A data loader for the specified loss which generates batched `(X, y)` pairs.
-
-    Raises:
-        NotImplementedError: If the data loader is not supported.
     """
     data_func = {"interior": create_interior_data, "condition": create_condition_data}[
         loss_type
     ]
     data_func = partial(data_func, equation, condition, dim_Omega, num_data)
-    if data_loader == "FrozenDataLoader":
-        return FrozenDataLoader(data_func, dev, dt)
-    elif data_loader == "GenerativeDataLoader":
-        return GenerativeDataLoader(data_func, dev, dt)
-    else:
-        raise NotImplementedError(f"Data loader {data_loader} not supported.")
+    return DataLoader(data_func, dev, dt, frequency)
 
 
 def main():  # noqa: C901
@@ -444,7 +429,7 @@ def main():  # noqa: C901
     # for satisfying the PDE on the domain
     interior_train_data_loader = iter(
         create_data_loader(
-            args.data_loader,
+            args.batch_frequency,
             "interior",
             equation,
             condition,
@@ -456,7 +441,7 @@ def main():  # noqa: C901
     )
     interior_eval_data_loader = iter(
         create_data_loader(
-            "FrozenDataLoader",
+            0,  # fixed evaluation data
             "interior",
             equation,
             condition,
@@ -469,7 +454,7 @@ def main():  # noqa: C901
     # for satisfying boundary and (maybe) initial conditions
     condition_train_data_loader = iter(
         create_data_loader(
-            args.data_loader,
+            args.batch_frequency,
             "condition",
             equation,
             condition,

@@ -133,6 +133,14 @@ ARGS = [
         "--KFAC_damping=0.01",
         "--KFAC_lr=auto",
     ],
+    # train with SGD + new batches every 2 steps
+    [
+        "--num_steps=5",
+        "--optimizer=SGD",
+        "--SGD_lr=0.1",
+        "--SGD_momentum=0.9",
+        "--batch_frequency=2",
+    ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]
 
