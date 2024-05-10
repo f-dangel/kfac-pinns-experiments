@@ -6,6 +6,9 @@
 
 \usepackage[preprint]{neurips_2023}
 \usepackage{comment}
+\usepackage[most]{tcolorbox}
+
+\definecolor{kfac}{rgb}{0.55294118, 0.17647059, 0.22352941}  %
 
 % to compile a preprint version, e.g., for submission to arXiv, add add the
 % [preprint] option:
@@ -23,33 +26,37 @@
 \input{preamble/custom.tex}
 \input{preamble/metadata.tex}
 
+\newcommand{\jm}[1]{\textcolor{blue}{#1}}
+
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-  Physics-Informed Neural Networks are hard to train with first-order methods. 
-  Recently, second-order methods like natural gradients and Gauß-Newton methods %in the residual
-  have shown promising performance. 
-  However, they come with a high computational cost per iteration. 
-  Using higher-order forward mode differentiation, we propose a Kronecker-Factored approximation of the Gauß-Newton matrix that involves PDE-specific terms. 
-  We provide an efficient implementation and an experimental evaluation targeting large neural networks and PDEs posed in high spatial dimensions. 
-  %To train PINNs efficiently, it has been observed that taking the geometry implied by the PDE operator.
-  %Existing methods that consider this geometry compute and invert the full Gramian.
-  %However, these ENGD-based methods do not scale well to architectures with many parameters due to the quadratic memory and cubic time complexity of storing and inverting the Gramian.
-  %The challenge to develop approximations to the Gramian is that it requires taking the parameter derivative of the PDE operator, which itself contains higher-order derivative.
-  %Here, we propose a Kronecker-factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
+%Despite their immense popularity, 
+Physics-Informed Neural Networks (PINNs) are infamous for being hard to train. % with first-order methods. 
+Recently, second-order methods like natural gradients and Gauß-Newton methods %in the residual
+have shown promising performance improving the accuracy by several orders of magnitude over first-order optimizers. 
+However, these methods require solving a linear system of the size of the network's parameter space and therefore come with a high computational cost per iteration. 
+Using higher-order forward mode differentiation, we perceive the computational graph of the input derivatives of the network as a larger network that shares the weights of the original network for the individual partial derivatives. 
+Utilizing this interpretation, we propose a Kronecker-factored approximation of preconditioners involving PDE-specific terms that greatly reduces the computational complexity of the individual iterations. 
+We provide an efficient implementation and an experimental evaluation targeting large neural networks and PDEs posed in high spatial dimensions. 
+%To train PINNs efficiently, it has been observed that taking the geometry implied by the PDE operator.
+%Existing methods that consider this geometry compute and invert the full Gramian.
+%However, these ENGD-based methods do not scale well to architectures with many parameters due to the quadratic memory and cubic time complexity of storing and inverting the Gramian.
+%The challenge to develop approximations to the Gramian is that it requires taking the parameter derivative of the PDE operator, which itself contains higher-order derivative.
+%Here, we propose a Kronecker-factored approximation for the Gramian, which scales more favourably than existing approaches in terms of both time and memory, while showing similar performance downstream.
 \end{abstract}
 
 \section{Introduction}
 \input{sections/introduction.tex}
 
-\section{Background}
+\section{Background}\label{sec:background}
 \input{sections/background_pinns.tex}
 \input{sections/background_engd.tex}
 \input{sections/background_kfac.tex}
 
-\section{Kronecker-factored Approximate Gauß-Newton Methods for PINNs}\label{sec:kfac_pinns}
+\section{A Kronecker-factored Approximate Gauß-Newton Method for PINNs}\label{sec:kfac_pinns}
 
 
 \input{sections/contribution.tex}

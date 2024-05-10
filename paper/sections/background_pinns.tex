@@ -32,7 +32,7 @@ Here, the weights of the linear layers are trainable and we denote them by $\vth
 The nonlinear layers are given by $\vz\mapsto \sigma(\vz)$ componentwise for a (typically smooth) activation function $\sigma\colon\mathbb R\to\mathbb R$.
 %We denote the parameters of a linear layer by $\vtheta^{(l)} = \mW^{(l)}$ where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
 
-\subsection{Physics-informed neural networks (PINNs)}
+\subsection{The Gauß-Newton Method for Physics-Informed Neural Networks (PINNs)}
 %\begin{itemize}
 %    \item PINNs are one of the most promising approaches to neural network based PDE solvers
 %    \item
@@ -56,7 +56,7 @@ In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a n
   %\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
 %Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}.
 %In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
-\begin{align}
+\begin{align}\label{eq:pinn-loss}
   L(\vtheta)
   &=
     %\frac{1}{2N_\Omega}

@@ -8,16 +8,40 @@
 \end{figure}
 
 \subsection{Setup}
-We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and full-Gramian ENGD in PyTorch~\cite{paszke2019pytorch}.
-As a matrix-free version of ENGD, we use the HessianFree optimizer~\cite{martens2010} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
-We chose this because there is a fully-featured implementation from~\citet{tatzel2022late} which offers many additional heuristics such as adaptive damping, CG backtracking, and backtracking line search, which allow this algorithm to be operated with very little hyperparameter searching.
-We also use SGD with tuned learning rate and momentum, as well as Adam with tuned learning rate.
+We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and full-Gramian ENGD in PyTorch~\citep{paszke2019pytorch}.
+As a matrix-free version of ENGD, we use the HessianFree optimizer~\citep{?} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
+We chose this because there is a fully-featured implementation from~\citet{tatzel2022late} which offers many additional heuristics such as adaptive damping, CG backtracking, and backtracking line search, which allows this algorithm to be operated with very little hyperparameter searching.
+We also use SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate.
 Experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 \paragraph{Experimental setup}
 \begin{itemize}
 \item hyper-parameter search
 \end{itemize}
+
+
+\subsection{Pedagogical example: 2D Poisson and 1D Heat}
+
+We consider the two low-dimensional PDEs used to demonstrate the efficacy of energy natural gradients by~\cite{muller2023achieving}
+as we can use it as a baseline here for its KFAC-approximation. 
+The problems are given by the two-dimensional Poisson equation 
+\begin{align}
+    -\Delta u(x,y) = ? \\ 
+    asdf
+\end{align}
+as well as the one-dimensional heat equation 
+\begin{align}
+\partial_t u(x,t) - \kappa \Delta u(x,t). 
+\end{align}
+Here, we choose the heat-conductivity $\kappa = \frac14$ in our experiments. 
+
+We evaluate the performance of various optimizers... for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function. 
+
+\begin{itemize}
+    \item write down equations 
+    \item Netzwerkarchitekturen
+\end{itemize}
+
 
 \subsection{A high dimensional Poisson equation}
 
@@ -32,13 +56,6 @@ Experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 \item no ENGD, ENGD matrix-free?, only KFACs, L-BFGS, HF, and first-order methods
 \end{itemize}
 
-\subsection{A pedagogical example}
-
-\begin{itemize}
-\item pretty much our current 2D / 5D Poisson example
-\item meant as an illustration of how the approximation of KFAC compares to ENGD and ENGD block-diagonal
-\item plot parameters vs iteration time
-\end{itemize}
 
 \subsection{Heat equation}
 
@@ -69,6 +86,10 @@ Experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
   % we can also scale in time because $e^{-4\pi^2}\approx e^{-40}$
 \item around $10^5-10^6$ parameters
 \end{itemize}
+
+\subsection{Discussion}
+
+Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)
 
 \subsection{Limitations and Future Work}
 
