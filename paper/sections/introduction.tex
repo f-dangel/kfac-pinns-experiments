@@ -1,18 +1,43 @@
 
 %Physics-informed neural networks (PINNs) are among the most popular networks based approaches to the numerical solution of partial differential equations (PDEs). 
-The field of neural network based approaches to the numerical solution of partial differential equations (PDEs) is growing at an unprecedented speed.% and one of the most active subfields of scientific machine learning~\cite{?}. 
+The field of neural network based approaches to the numerical solution of partial differential equations (PDEs) is growing at an unprecedented speed. % and one of the most active subfields of scientific machine learning~\cite{?}. 
 Whereas the idea of training the parameters of a neural network to minimize the residual of a PDE can be traced back at least to the works of~\cite{dissanayake1994neural, lagaris1998artificial} this approach was only recently popularized under the name \emph{deep Galerkin method} (DGM) and \emph{Physics-informed neural networks} (PINNs) through the works of~\cite{sirignano2018dgm, raissi2019physics}, respectively.  
-Now it constitutes one of the most popular networks based approaches to the numerical solution of partial differential equations as it is easy to implement, can seamlessly incorporate data and is commonly attributed with the promise of being able to work well in high dimensions. 
-Despite their immense popularity, PINNs are notoriously difficult and resource demanding to optimize \cite{wang2021understanding} and fail to provide satisfactory accuracy when trained with first-order methods even for simple problems~\cite{zeng2022competitive, muller2023achieving}. Recently, second-order methods that use the function space geometry to design preconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator} have shown remarkable promise to address the training difficulties of PINNs. For example, \emph{energy natural gradient descent} (ENGD) as proposed in \cite{muller2023achieving} emulates Newton's method \emph{in function space} and is able to achieve highly accurate PINN solutions in few iterations. However, as second-order methods, they come with a significant computational cost for every iteration as they require to solve a dense linear system of the size of the parameter space of the network. Hence, this is only feasible for networks of small size when done naively.
-
+Now it constitutes one of the most popular network-based approaches to the numerical solution of partial differential equations as it is easy to implement, can seamlessly incorporate data, and is commonly attributed with the promise of being able to work well in high dimensions. 
+Despite their immense popularity, PINNs are notoriously difficult and resource-demanding to optimize \citep{wang2021understanding}\todo{list more papers documenting pathologies?} and fail to provide satisfactory accuracy when trained with first-order methods even for simple problems~\cite{zeng2022competitive, muller2023achieving}. 
+Recently, second-order methods that use the function space geometry to design preconditioners have shown remarkable promise in addressing the training difficulties of PINNs~\citep{zeng2022competitive, muller2023achieving, de2023operator,jnini2024gauss, muller2024optimization}. 
+%For example, \emph{energy natural gradient descent} (ENGD) as proposed in \cite{muller2023achieving} emulates Newton's method \emph{in function space} and is able to achieve highly accurate PINN solutions in few iterations. 
+However, these methods require solving a linear system of the size of the network's parameters and thus come with a cubic computational cost for every iteration. % as they are required to solve a dense linear system of the size of the parameter space of the network. Hence, this is only feasible for networks of small size when done naively. 
+Here, we build on the idea of Kronecker-factored approximate curvature (KFAC) to provide a %n approximate version of ENGD that scales to large neural network sizes but still remains highly effective. 
+Kronecker-factored approximation of Gauß-Newton matrices involving PDE-specific terms thereby greatly reducing the computational cost of the iterations. % at the cost of allowing for inexact computations of the update directions. %Gauß-Newton 
 
 \paragraph{Contributions} %\todo{Discussion Point: Make clear that with the KFAC we build our main target are big networks where only (? How big can L-BFGS scale in practice?) first-order methods are feasible.}
-
-We build on the idea of Kronecker-factored approximations (KFAC) to provide an approximate version of ENGD that scales to large neural network sizes but still remains highly effective. 
+%We build on the idea of Kronecker-factored approximate curvature (KFAC) to provide a %n approximate version of ENGD that scales to large neural network sizes but still remains highly effective. 
+%Kronecker-factored approximation for Gauß-Newton matrices involving PDE-specific terms. %Gauß-Newton method for PINN 
 %Since, the preconditioner of ENGD involves PDE terms absent in regression problems, the existing KFAC approximations can not be used directly. 
-More precisely, we summarize our contributions as follows: 
+We summarize our contributions as follows: 
 \begin{itemize}
-    \item We develop a Kronecker-factored approximation of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG), see~\Cref{sec:kfac_pinns}. For the important example of the Laplace operator the Gramian takes the form
+    \item We use higher-order forward mode automatic differentiation to perceive the computational graph of the input derivatives of a feedforward network as a larger network that shares weights of the original network for the computation of the partial derivatives, see \Cref{sec:taylor-mode-AD}. 
+    
+    \item We use this interpretation as a network with weight-sharing 
+    to propose a Kronecker-factored approximation of Gauß-Newton matrices involving general PDE terms, for which PINNs are a specific example, 
+    see \Cref{sec:KFAC-general} and in particular \Cref{eq:KFAC-PINNs-general}. 
+    %This approximation covers Gauß-N
+    This approximation yields a linear system that is much cheaper to solve, thereby greatly reducing the cost for individual iterations at the expense of an inexact computation of the Gauß-Newton direction. 
+    
+    \item For the specific case of the Laplace operator, our approximation can readily incorporate the specific structure by using the recently proposed \emph{forward Laplacian} instead of the expensive forward mode computation of the entire Hessian, see \Cref{sec:KFAC-Laplace} and \Cref{eq:KFAC-PINN}. 
+    
+    %of the Gramian matrix appearing as a preconditioner in the energy natural gradient method which we call \emph{Kronecker-factored approximate Gramian} (KFAG), see~\Cref{sec:kfac_pinns}. 
+    \item We provide an efficient implementation of our proposed Kronecker-factored approximate Gauß-Newton method and demonstrate experimentally that it can be used to efficiently train PINNs of considerable size for high-dimensional PDE applications, including the Poisson and the heat equation in up to 100 spatial dimensions, see~\Cref{sec:experiments}.  
+\end{itemize}
+
+Outline of our paper: \Cref{sec:background} introduces the basic concepts regarding Phyiscs-informed neural networks and the classic KFAC algorithm. 
+In \Cref{sec:kfac_pinns} we interpret higher-order forward mode differentiation as a weight-shared network and propose a Kronecker-factored approximation of Gauß-Newton matrices involving general PDE terms and describe algorithmic details. 
+In \Cref{sec:experiments} we test the proposed method on various high-dimensional PDEs and demonstrate and find that?. 
+
+
+\begin{comment}
+    For the important example of the Laplace operator the corresponding Gauß-Newton matrix %to the PDE term 
+    takes the form
     \begin{equation*}
         \mG_{ij}
         =
@@ -20,20 +45,29 @@ More precisely, we summarize our contributions as follows:
     \end{equation*}
     where $u_\theta$ denotes the neural network ansatz and $\Omega\subset\mathbb R^d$ is the computational domain. Following the KFAC literature \cite{martens2015optimizing}, $G$ is approximated by a matrix of the form $\operatorname{diag}(\mA_1\otimes\mB_1, \dots, \mA_L\otimes\mB_L)$ which, due to the comparatively small size of the factors $\mA_i$ and $\mB_i$ and the identity $(\mA \otimes \mB)^{-1} = \mA^{-1} \otimes \mB^{-1}$, is \emph{much} faster to invert than $\mG$. Note that differential operators like the Laplacian complicate the computational graph considerably, which precludes the direct application of the existing KFAC approximations.
     %\todo{I put the Gramian and a tiny explanation of KFAC as many PINN people will not know this.}
-    \item We provide an efficient implementation of KFAG and demonstrate experimentally that it can efficiently train PINNs of considerable size for high-dimensional PDE applications, including the Poisson and the heat equation in up to 100 spatial dimensions, see~\Cref{sec:experiments}.  
-\end{itemize}
+\end{comment}
 
 \paragraph{Related work}
-Various approaches have been suggested to improve the optimization including adaptive reweighting of the individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for the discretization of the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, curriculum learning~\citep{wang2022respecting, krishnapriyan2021characterizing}, and the use of quasi-Newton methods like L-BFGS~\citep{markidis2021old}. 
+Various approaches have been suggested to improve the optimization of PINNs including adaptive reweighting of the individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for the discretization of the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}, and the use of quasi-Newton methods like L-BFGS~\citep{markidis2021old}. 
 However, none of this yields approximations of an accuracy comparable to the approximation error of the network. 
-Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful preconditioners, see~\citep{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning}. 
+Recently, there has been a trend to second-order methods in PINNs and more specifically methods that use the function space geometry to design meaningful preconditioners, see~\cite{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning, jnini2024gauss,chen2024teng, zampini2024petscml}, where we also refer to a unified view on these approaches given by~\cite{muller2024optimization}. 
 Whereas these methods greatly improve the accuracy of PINNs they come with a significant computational cost for every iteration as one needs to solve a linear system of the size of the parameter space of the network. 
-Hence, this is only feasible for networks of small to moderate size when done naively.
-\begin{itemize}
-    \item OG KFAC papers: \cite{martens2015optimizing}, \cite{martens2018kroneckerfactored}, double check similarities to RNNs
-    \item Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)
-    \item KFAC for Rayleigh quotients:
-\end{itemize}
+Hence, this is only feasible for networks of small to moderate size when done naively. 
+One approach is to use matrix-free methods to approximately compute Gauß-Newton update directions by introducing an inner optimization loop that, see~\cite{schraudolph2002fast,martens2010deep} for supervised learning problems and~\cite{zeng2022competitive,bonfanti2024challenges, jnini2024gauss,zampini2024petscml} for PINNs. \todo{neural Galerkin things} 
+Where our approach solves a Kronecker-factored approximation of the original linear system exactly, matrix-free approaches solve the exact system approximately typically via a second optimization loop, and we regard them as two alternative, competing approaches. %\todo{can we argue that matrix-free is slow?}
+%This approach is a competing approach to an approximation by introducing an inner optimization loop can be seen as orthogonal to our 
+
+Our approach builds on the literature on Kronecker-factored approximate curvature (KFAC), which was initially introduced by~\citet{heskes2000natural, martens2010deep} as an approximation of the per-layer Fisher-information matrix to reduce the computational cost of natural gradient descent. %accelerate the computation of the natural gradient direction. 
+Later, Kronecker-factored approximations were extended to other architectures including convolutional and recurrent networks~\citep{grosse2016kroneckerfactored, martens2018kroneckerfactored}, transformers~\citep{zhang2019algorithmic, pauloski2021kaisa, osawa2023pipefisher, grosse2023studying}. %, and to general weight-sharing architectures~\citep{eschenhagen2023kroneckerfactored}. 
+However, these works do not address preconditioners involving PDE-specific terms, but our interpretation of higher-order forward passes as weight-shared networks allows us to design a KFAC in a similar spirit as~\cite{eschenhagen2023kroneckerfactored}. 
+Kronecker-factored approximations have been used for variational Monte-Carlo methods, where despite the objective function involving a Laplacian term, the approximated preconditioner does not~\citep{pfau2020ab,drissi2024second}. 
+
+%\paragraph{Notation?}
+
+%\begin{itemize}
+    %\item OG KFAC papers: \cite{martens2015optimizing}, \cite{martens2018kroneckerfactored}, double check similarities to RNNs
+    %\item KFAC for Rayleigh quotients:
+%\end{itemize}
 
 %%% Local Variables:
 %%% mode: latex
