@@ -8,4 +8,4 @@ python yaml_to_sh.py sweeps/ENGD_full.yaml sweeps/ENGD_full.sh --qos=m5
 python yaml_to_sh.py sweeps/ENGD_per_layer.yaml sweeps/ENGD_per_layer.sh --qos=m5
 python yaml_to_sh.py sweeps/HessianFree.yaml sweeps/HessianFree.sh --qos=m5
 python yaml_to_sh.py sweeps/KFAC.yaml sweeps/KFAC.sh --qos=m5
-python yaml_to_sh.py sweeps/KFAC_auto.yaml sweeps/KFAC.sh --qos=m5
+python yaml_to_sh.py sweeps/KFAC_auto.yaml sweeps/KFAC_auto.sh --qos=m5

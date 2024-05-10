@@ -19,17 +19,17 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "jbm3npeb": "SGD",
-    "go33jqg3": "Adam",
-    "t0z0cb0w": "Hessian-free",
-    "4wrqarzz": "LBFGS",
-    "48jvuiv0": "ENGD (full)",
-    "gpvffr7w": "ENGD (layer-wise)",
-    "mkin6ouu": "ENGD (diagonal)",
+    "b1a1iygs": "SGD",
+    "0zppzhej": "Adam",
+    "v14daetn": "Hessian-free",
+    "gjbxog62": "LBFGS",
+    "0ku0xl1j": "ENGD (full)",
+    "mv3u2nww": "ENGD (layer-wise)",
+    "bczqwxag": "ENGD (diagonal)",
     # KFACs with grid line search and tuned momentum
-    "eyie7x7p": "KFAC",
+    "uhgailog": "KFAC",
     # auto-tuned KFACs
-    "an4zjnn5": "KFAC*",
+    "7pkyy80e": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
