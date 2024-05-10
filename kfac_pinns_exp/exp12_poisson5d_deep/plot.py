@@ -28,12 +28,8 @@ sweep_ids = {  # ids from the wandb agent
     "60yjzuh1": "ENGD (diagonal)",
     # KFACs with grid line search and tuned momentum
     "rsjryuic": "KFAC",
-    "2rdhag2w": "KFAC (empirical)",
-    "gip15lzy": "KFAC (forward-only)",
     # auto-tuned KFACs
     "kwa6wpl1": "KFAC*",
-    "dph7w4op": "KFAC* (empirical)",
-    "1lhffj3u": "KFAC* (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -46,11 +42,7 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    "KFAC (empirical)": "gray",
-    "KFAC (forward-only)": "lightgray",
     "KFAC*": "black",
-    "KFAC* (empirical)": "gray",
-    "KFAC* (forward-only)": "lightgray",
 }
 
 linestyles = {
@@ -62,11 +54,7 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    "KFAC (empirical)": "-",
-    "KFAC (forward-only)": "-",
     "KFAC*": "dashed",
-    "KFAC* (empirical)": "dashed",
-    "KFAC* (forward-only)": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
