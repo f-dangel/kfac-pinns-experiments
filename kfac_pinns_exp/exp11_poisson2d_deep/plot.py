@@ -42,11 +42,7 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    "KFAC (empirical)": "gray",
-    "KFAC (forward-only)": "lightgray",
     "KFAC*": "black",
-    "KFAC* (empirical)": "gray",
-    "KFAC* (forward-only)": "lightgray",
 }
 
 linestyles = {
@@ -58,11 +54,7 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    "KFAC (empirical)": "-",
-    "KFAC (forward-only)": "-",
     "KFAC*": "dashed",
-    "KFAC* (empirical)": "dashed",
-    "KFAC* (forward-only)": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
