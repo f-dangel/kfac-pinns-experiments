@@ -17,6 +17,9 @@ for out_file in out_files:
         if "uncorrectable ECC error encountered" in content:
             error_files.append(out_file)
 
-print(f"Found {len(error_files)} runs with uncorrectable ECC errors:")
+print(
+    f"Found {len(error_files)} runs with uncorrectable ECC errors "
+    + f"in {len(out_files)} .out files:"
+)
 for error_file in error_files:
     print(f"\t{error_file}")
