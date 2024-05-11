@@ -120,7 +120,7 @@ def u_weinan_prods(X: Tensor) -> Tensor:
         The function values as tensor of shape (N, 1).
     """
     N, d = X.shape
-    return X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
+    return (1.0 / 1.34) * X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
 
 
 def f_weinan_prods(X: Tensor) -> Tensor:
