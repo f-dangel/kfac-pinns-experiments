@@ -1,0 +1,29 @@
+entity: kfac-pinns
+project: heat1d_mlp_tanh_256
+name: Adam
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=Adam"
+    - ${args}
+metric:
+    goal: minimize
+    name: l2_error
+method: random
+run_cap: 50
+parameters:
+    dim_Omega:
+        value: 1
+    model:
+        value: mlp-tanh-256-256-128-128
+    equation:
+        value: heat
+    num_seconds:
+        value: 1_000
+    Adam_lr:
+        distribution: log_uniform_values
+        min: 5e-4
+        max: 1e-1
