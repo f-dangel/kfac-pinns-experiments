@@ -113,7 +113,7 @@ if __name__ == "__main__":
                     title = col_title[col] if row == 0 else None
                     ax[row, col].set_title(title)
 
-            # set x_min to 1
+            # set x_min to 1 for time
             for a in ax[1, :]:
                 a.set_xlim(left=1)
 
