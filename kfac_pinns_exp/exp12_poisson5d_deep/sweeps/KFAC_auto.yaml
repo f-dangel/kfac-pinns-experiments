@@ -11,10 +11,12 @@ command:
     - ${args_no_boolean_flags}
 metric:
     goal: minimize
-    name: loss
+    name: l2_error
 method: random
 run_cap: 50
 parameters:
+    batch_frequency:
+        value: 100
     boundary_condition:
         value: cos_sum
     model:

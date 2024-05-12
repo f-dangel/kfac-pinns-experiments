@@ -15,12 +15,12 @@ from kfac_pinns_exp.exp10_reproduce_poisson5d.plot import (
     project,
     sweep_ids,
 )
-from kfac_pinns_exp.exp12_poisson5d_deep.plot import DATADIR as deep_DATADIR
-from kfac_pinns_exp.exp12_poisson5d_deep.plot import project as deep_project
-from kfac_pinns_exp.exp12_poisson5d_deep.plot import sweep_ids as deep_sweep_ids
 from kfac_pinns_exp.exp16_poisson5d_deepwide.plot import DATADIR as deepwide_DATADIR
 from kfac_pinns_exp.exp16_poisson5d_deepwide.plot import project as deepwide_project
 from kfac_pinns_exp.exp16_poisson5d_deepwide.plot import sweep_ids as deepwide_sweep_ids
+from kfac_pinns_exp.exp19_poisson5d_mlp_tanh_256.plot import DATADIR as DATADIR_100K
+from kfac_pinns_exp.exp19_poisson5d_mlp_tanh_256.plot import project as project_100k
+from kfac_pinns_exp.exp19_poisson5d_mlp_tanh_256.plot import sweep_ids as sweep_ids_100k
 from kfac_pinns_exp.wandb_utils import load_best_run
 
 if __name__ == "__main__":
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         "ENGD (diagonal)",
     }
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    APPENDIX = [True, False]  # show all optimizers in the appendix
+    APPENDIX = [False]
 
     for appendix, (y, ylabel) in product(APPENDIX, y_to_ylabel.items()):
         # NOTE Use `nrows` and `ncols` to tweak the subplot size, because `tueplots`
@@ -72,14 +72,14 @@ if __name__ == "__main__":
                 a.set_yscale("log")
 
             for col, row in product(range(num_cols), range(num_rows)):
-                col_sweep_ids = [sweep_ids, deep_sweep_ids, deepwide_sweep_ids][col]
-                col_project = [project, deep_project, deepwide_project][col]
-                col_DATADIR = [DATADIR, deep_DATADIR, deepwide_DATADIR][col]
-                col_title = (
-                    ["$D=449$", "$D=5617$", "$D=10065$"]
-                    if args.disable_tex
-                    else [r"$D=\num{449}$", r"$D=\num{5617}$", r"$D=\num{10065}$"]
-                )
+                col_sweep_ids = [sweep_ids, deepwide_sweep_ids, sweep_ids_100k][col]
+                col_project = [project, deepwide_project, project_100k][col]
+                col_DATADIR = [DATADIR, deepwide_DATADIR, DATADIR_100K][col]
+                col_model_dims = [449, 10065, 116865]
+                col_title = [
+                    f"$D={d}$" if args.disable_tex else r"$D=\num{" + str(d) + r"}$"
+                    for d in col_model_dims
+                ]
 
                 for sweep_id, name in col_sweep_ids.items():
                     if not appendix and name in IGNORE:
@@ -108,6 +108,10 @@ if __name__ == "__main__":
                     )
                     title = col_title[col] if row == 0 else None
                     ax[row, col].set_title(title)
+
+            # set x_min to 1 for time
+            for a in ax[1, :]:
+                a.set_xlim(left=1)
 
             handles, labels = ax[0, 0].get_legend_handles_labels()
             fig.legend(

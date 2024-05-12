@@ -19,21 +19,17 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "jbm3npeb": "SGD",
-    "go33jqg3": "Adam",
-    "t0z0cb0w": "Hessian-free",
-    "4wrqarzz": "LBFGS",
-    "48jvuiv0": "ENGD (full)",
-    "gpvffr7w": "ENGD (layer-wise)",
-    "mkin6ouu": "ENGD (diagonal)",
+    "b1a1iygs": "SGD",
+    "0zppzhej": "Adam",
+    "v14daetn": "Hessian-free",
+    "gjbxog62": "LBFGS",
+    "0ku0xl1j": "ENGD (full)",
+    "mv3u2nww": "ENGD (layer-wise)",
+    "bczqwxag": "ENGD (diagonal)",
     # KFACs with grid line search and tuned momentum
-    "eyie7x7p": "KFAC",
-    "me0h1w7f": "KFAC (empirical)",
-    "lmi1pnbh": "KFAC (forward-only)",
+    "uhgailog": "KFAC",
     # auto-tuned KFACs
-    "an4zjnn5": "KFAC*",
-    "x2psqgsf": "KFAC* (empirical)",
-    "s987tez2": "KFAC* (forward-only)",
+    "7pkyy80e": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -46,11 +42,7 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    "KFAC (empirical)": "gray",
-    "KFAC (forward-only)": "lightgray",
     "KFAC*": "black",
-    "KFAC* (empirical)": "gray",
-    "KFAC* (forward-only)": "lightgray",
 }
 
 linestyles = {
@@ -62,11 +54,7 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    "KFAC (empirical)": "-",
-    "KFAC (forward-only)": "-",
     "KFAC*": "dashed",
-    "KFAC* (empirical)": "dashed",
-    "KFAC* (forward-only)": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))

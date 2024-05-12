@@ -14,26 +14,22 @@ entity = "kfac-pinns"  # team name on wandb
 project = "poisson5d"  # name from the 'Projects' tab on wandb
 
 # Useful to map sweep ids to human-readable names
-print_sweeps = False
+print_sweeps = True
 if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "zvw8o3j8": "SGD",
-    "hg8xkb4n": "Adam",
-    "qa33ab1o": "Hessian-free",
-    "93lz34sy": "LBFGS",
-    "gsrgutf7": "ENGD (full)",
-    "vwvee9es": "ENGD (layer-wise)",
-    "0ld3h3kl": "ENGD (diagonal)",
+    "y6ututck": "SGD",
+    "k3x8mdl7": "Adam",
+    "aqisfnp2": "Hessian-free",
+    "ys3w3k28": "LBFGS",
+    "p2mn2dqo": "ENGD (full)",
+    "sbfwn9ux": "ENGD (layer-wise)",
+    "rly9xnue": "ENGD (diagonal)",
     # KFACs with grid line search and tuned momentum
-    "p8xfyq7y": "KFAC",
-    "qrwfnhcx": "KFAC (empirical)",
-    "989jtvmk": "KFAC (forward-only)",
+    "jlv31nw4": "KFAC",
     # auto-tuned KFACs
-    "2dxayki6": "KFAC*",
-    "l7r2tjvf": "KFAC* (empirical)",
-    "fz50pwm4": "KFAC* (forward-only)",
+    "07g9hs68": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -46,11 +42,7 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    "KFAC (empirical)": "gray",
-    "KFAC (forward-only)": "lightgray",
     "KFAC*": "black",
-    "KFAC* (empirical)": "gray",
-    "KFAC* (forward-only)": "lightgray",
 }
 
 linestyles = {
@@ -62,11 +54,7 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    "KFAC (empirical)": "-",
-    "KFAC (forward-only)": "-",
     "KFAC*": "dashed",
-    "KFAC* (empirical)": "dashed",
-    "KFAC* (forward-only)": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
