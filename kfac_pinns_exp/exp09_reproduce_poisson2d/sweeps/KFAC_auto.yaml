@@ -26,7 +26,6 @@ parameters:
         min: 1e-13
         max: 1e-7
     KFAC_initialize_to_identity:
-        distribution: categorical
-        values: [false, true]
+        value: true
     KFAC_lr:
         value: auto
