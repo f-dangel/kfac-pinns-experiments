@@ -8,5 +8,4 @@ sbatch Adam.sh
 sbatch LBFGS.sh
 sbatch HessianFree.sh
 sbatch ENGD_diagonal.sh
-sbatch ENGD_per_layer.sh
 sbatch KFAC_auto.sh
