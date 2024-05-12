@@ -41,6 +41,8 @@ def create_sbatch_script(
 #SBATCH --mem-per-cpu=8G
 #SBATCH --array=1-{array}%{min(array, array_max_active)}
 
+echo "[DEBUG] Host name: " `hostname`
+
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
