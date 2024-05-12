@@ -1,1 +1,1 @@
-"""Compare optimizers on 5d Poisson equation with a deep and wide net."""
+"""Compare optimizers on 10d Poisson equation with a deep and wide net."""
