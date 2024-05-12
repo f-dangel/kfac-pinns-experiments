@@ -21,5 +21,5 @@ parameters:
         value: 1_000
     Adam_lr:
         distribution: log_uniform_values
-        min: 5e-2
+        min: 1e-4
         max: 5e-1
