@@ -7,7 +7,9 @@
 #SBATCH --mem-per-cpu=8G
 #SBATCH --array=1-64%17
 
+echo "[DEBUG] Host name: " `hostname`
+
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-wandb agent --count 1 kfac-pinns/poisson5d_mlp_tanh_256/8l1fq4jj
+wandb agent --count 1 kfac-pinns/poisson5d_mlp_tanh_256/th4fahxu
