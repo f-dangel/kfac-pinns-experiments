@@ -17,6 +17,7 @@ from kfac_pinns_exp.heat_equation import (
     evaluate_interior_loss,
     square_boundary_random_time,
     u_sin_product,
+    u_sin_sum,
     unit_square_at_start,
 )
 
@@ -115,12 +116,14 @@ def test_evaluate_boundary_loss(dim_Omega: int):
         assert not allclose(g_auto, zeros_like(g_auto))
 
 
+@mark.parametrize("condition", ["sin_product", "sin_sum"], ids=str)
 @mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
-def test_u_sin_product(dim_Omega: int):
-    """Test that the sine product solution satisfies the heat equation.
+def test_heat_equation_solutions(dim_Omega: int, condition: str):
+    """Test that the manual solution satisfy the heat equation.
 
     Args:
         dim_Omega: The spatial dimension of the domain.
+        condition: The type of condition.
     """
     num_data_total = 30
     # points from the interior
@@ -131,13 +134,12 @@ def test_u_sin_product(dim_Omega: int):
     X_initial = unit_square_at_start(num_data_total // 3, dim_Omega)
 
     coordinates = list(range(1, dim_Omega + 1))
+    u = {"sin_product": u_sin_product, "sin_sum": u_sin_sum}[condition]
 
     for X in [X_interior, X_boundary, X_initial]:
-        input_hessian = autograd_input_hessian(
-            u_sin_product, X, coordinates=coordinates
-        )
+        input_hessian = autograd_input_hessian(u, X, coordinates=coordinates)
         input_laplacian = einsum(input_hessian, "batch i i -> batch").unsqueeze(-1)
-        time_jacobian = autograd_input_jacobian(u_sin_product, X)[:, :, 0]
+        time_jacobian = autograd_input_jacobian(u, X)[:, :, 0]
         assert input_laplacian.shape == time_jacobian.shape
         report_nonclose(input_laplacian / 4, time_jacobian)
         assert not allclose(input_laplacian, zeros_like(input_laplacian))

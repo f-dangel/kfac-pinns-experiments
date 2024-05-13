@@ -394,7 +394,10 @@ def plot_solution(
     Raises:
         ValueError: If `dim_Omega` is not `1` or `2`.
     """
-    u = {"sin_product": u_sin_product}[condition]
+    u = {
+        "sin_product": u_sin_product,
+        "sin_sum": u_sin_sum,
+    }[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
     if dim_Omega == 1:
