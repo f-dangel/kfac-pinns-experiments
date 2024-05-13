@@ -119,7 +119,7 @@ def test_evaluate_boundary_loss(dim_Omega: int):
 @mark.parametrize("condition", ["sin_product", "sin_sum"], ids=str)
 @mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
 def test_heat_equation_solutions(dim_Omega: int, condition: str):
-    """Test that the manual solution satisfy the heat equation.
+    """Test that a manual solution satisfies the heat equation.
 
     Args:
         dim_Omega: The spatial dimension of the domain.
