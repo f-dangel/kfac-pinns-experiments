@@ -16,7 +16,7 @@ method: random
 run_cap: 50
 parameters:
     batch_frequency:
-        value: 1
+        value: 100
     dim_Omega:
         value: 4
     N_Omega:
