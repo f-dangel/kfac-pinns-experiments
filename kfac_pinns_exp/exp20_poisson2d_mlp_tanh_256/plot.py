@@ -20,7 +20,7 @@ if print_sweeps:
 
 sweep_ids = {  # ids from the wandb agent
     "1c4zpubc": "SGD",
-    "fk97la1v": "Adam",
+    "qtc8cigj": "Adam",
     "wh0dnmad": "Hessian-free",
     "u0csf03w": "LBFGS",
     "515k1cac": "ENGD (diagonal)",
