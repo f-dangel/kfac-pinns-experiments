@@ -8,10 +8,18 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
+from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
 project = "heat1d_mlp_tanh_64"  # name from the 'Projects' tab on wandb
+
+architecture = "mlp-tanh-64-64-48-48"
+num_params = sum(
+    p.numel()
+    for layer in set_up_layers(architecture, "heat", 1)
+    for p in layer.parameters()
+)
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
@@ -19,15 +27,17 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "d7w5oxwg": "SGD",
-    "p94ov1kl": "Adam",
-    "yejhtfjn": "Hessian-free",
-    "d5tryug2": "LBFGS",
-    "0ptyxxb5": "ENGD (full)",
+    "izzn60bn": "SGD",
+    "v3s6qa64": "Adam",
+    "9dc373dq": "Hessian-free",
+    "mk4jiljd": "LBFGS",
+    "vsnthmr7": "ENGD (full)",
+    "8y6ykiyw": "ENGD (layer-wise)",
+    "mkh7kfhw": "ENGD (diagonal)",
     # KFACs with grid line search and tuned momentum
-    "jzlxphwc": "KFAC",
+    "bybdu97s": "KFAC",
     # auto-tuned KFACs
-    "8rw0lgcg": "KFAC*",
+    "snarij5j": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -93,7 +103,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("1d Heat (mlp-tanh-64-64-48-48)")
+            ax.set_title(f"1d Heat ({architecture}, $D={num_params}$)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
