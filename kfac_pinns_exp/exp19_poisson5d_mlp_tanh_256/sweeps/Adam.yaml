@@ -3,8 +3,8 @@ project: poisson5d_mlp_tanh_256
 name: Adam
 program: ../../train.py
 command:
-  - ${env}
-  - python
+    - ${env}
+    - python
     - ${program}
     - "--wandb"
     - "--optimizer=Adam"
