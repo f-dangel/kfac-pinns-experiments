@@ -72,6 +72,30 @@ def u_sin_product(X: Tensor) -> Tensor:
     return (scale * time).exp() * (pi * spatial).sin().prod(dim=-1, keepdim=True)
 
 
+def u_sin_sum(X: Tensor) -> Tensor:
+    """Solution of the heat equation with sine sum initial & bdry conditions.
+
+    (and zero right-hand side)
+
+    The solution is u(t,x) = exp(-t)sum_i=1^d sin (alpha*pi*x_i)
+    which has a vanishing right-hand side if alpha = 2/pi and the Laplacian
+    is multiplied by 0.25 (as we do in this script).
+
+    Args:
+        X: The points at which to evaluate the solution. First axis is batch dimension.
+            Second axis is time, followed by spatial dimensions.
+
+    Returns:
+        The value of the solution at the given points. Has shape `(X.shape[0], 1)`.
+    """
+    dim_Omega = X.shape[-1] - 1
+    time, spatial = X.split([1, dim_Omega], dim=-1)
+
+    alpha = 2.0 / pi
+
+    return (-time).exp() * (alpha * pi * spatial).sin().sum(dim=-1, keepdim=True)
+
+
 def evaluate_interior_loss(
     model: Union[Module, List[Module]], X: Tensor, y: Tensor
 ) -> Tuple[Tensor, Tensor, Union[List[Dict[str, Tensor]], None]]:
