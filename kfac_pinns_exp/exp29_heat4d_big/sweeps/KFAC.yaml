@@ -1,5 +1,5 @@
 entity: kfac-pinns
-project: heat4d_small
+project: heat4d_big
 name: KFAC
 program: ../../train.py
 command:

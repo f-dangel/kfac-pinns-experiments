@@ -1,5 +1,5 @@
 entity: kfac-pinns
-project: heat4d_small
+project: heat4d_medium
 name: SGD
 program: ../../train.py
 command:
