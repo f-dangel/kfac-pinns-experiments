@@ -51,7 +51,13 @@ SUPPORTED_MODELS = [
     "mlp-tanh-64-64-48-48",
     "mlp-tanh-256-256-128-128",
 ]
-SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan", "u_weinan_norm"]
+SUPPORTED_BOUNDARY_CONDITIONS = [
+    "sin_product",
+    "cos_sum",
+    "u_weinan",
+    "u_weinan_norm",
+    "sin_sum",
+]
 
 SOLUTIONS = {
     "poisson": {
@@ -62,6 +68,7 @@ SOLUTIONS = {
     },
     "heat": {
         "sin_product": heat_equation.u_sin_product,
+        "sin_sum": heat_equation.u_sin_sum,
     },
 }
 INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS = {
@@ -324,7 +331,10 @@ def create_interior_data(
             "u_weinan_norm": poisson_equation.f_weinan_norm,
         }[condition]
         y = f(X)
-    elif equation == "heat" and condition == "sin_product":
+    elif equation == "heat" and condition in {
+        "sin_product",
+        "sin_sum",
+    }:
         y = zeros(num_data, 1)
     else:
         raise NotImplementedError(
@@ -363,7 +373,10 @@ def create_condition_data(
     }:
         # boundary condition
         X_dOmega = square_boundary(num_data, dim_Omega)
-    elif equation == "heat" and condition == "sin_product":
+    elif equation == "heat" and condition in {
+        "sin_product",
+        "sin_sum",
+    }:
         # boundary condition
         X_dOmega1 = heat_equation.square_boundary_random_time(num_data // 2, dim_Omega)
         # initial value condition
