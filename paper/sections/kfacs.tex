@@ -1,3 +1,100 @@
+
+\subsection{A Kronecker-factored approximation for the Poisson equation}
+
+Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauß-Newton matrix, which for the Poisson equation, are given by
+\begin{align}
+    \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
+\end{align}
+Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
+\begin{align*}
+    \jac_{\mW^{(l)}} \Delta_\vx \vu_n & = \jac_{\mZ^{(l)}}\Delta_\vx \vu_n \jac_{\mW^{(l)}} \mZ^{(l)} %=
+    %\jac_{\mW^{(l)}} \mZ^{(l)} \jac_{\mZ^{(l)}}\mZ^{(L)}\jac_{\mZ^{(L)}}\Delta_\vx \vu_n.
+    %\\ & =
+    %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \mI, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \mI\right) \jac_{\mZ^{(l)}}\Delta_\vx \vu_n
+    %\begin{pmatrix}
+    %    \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\
+    %    \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\
+    %    \vdots \\
+    %    \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\
+    %    \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\
+    %\end{pmatrix}^\top
+    %\begin{pmatrix}
+    %    {\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %    {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %    \vdots \\
+    %    {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %    {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
+    %\end{pmatrix}
+    %\\ & 
+    %= 
+    %\sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
+    %\\ & 
+    = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
+    %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
+    %+
+    %\sum_{i=1}^d {\partial_{\vx_i}\vz^{(l-1)}_n}^\top \otimes \jac_{\partial_{\vx_i}\vz^{(l)}}\Delta_{\vx}\vu_n
+    %\\ & \quad
+    %+
+    %{\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \jac_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n.
+    %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \jac_{\vz^{(l-1)}} \Delta_{\vx} \vu_n, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \jac_{\Delta_\vx\vz^{(l-1)}} \Delta_{\vx} \vu_n\right)? not quite
+\end{align*}
+where $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}$ and $S=d+2$.
+Using the notation
+$\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n$ we obtain
+\begin{equation}\label{eq:laplace_gramian_block_exact}
+    \mG_\Omega(\mW^{(l)})
+    =
+    \frac1N\sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \sum_{s=1}^S \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
+\end{equation}
+Now we can use any Kronecker-factored approximation for feedforward networks with weight sharing, where we choose to work with the following.
+
+%
+%\paragraph{Kronecker approximation of the PDE Gramian}
+
+%\paragraph{Individual steps} 
+Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx M^{-1}\sum_{m=1}^M \mA_m \mB_m$ we compute 
+\begin{align*}
+    & \sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \sum_{s=1}^S \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
+    \\ \approx & \;
+    \frac{1}{S}\sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
+    \cdot
+    \left( \mZ
+    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
+    \\ = & \;
+    \frac{1}{S}\sum_{n=1}^N
+    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}{\mZ
+    ^{(l-1)}_{n,s}}^\top\otimes \vg_{n,s}^{(l)}{\vg_{n,s}^{(l)}}^\top \right)
+    \right]
+    \\ \approx & \;
+    \frac{1}{NS}\left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
+    \otimes
+    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top \right],
+\end{align*}
+%\paragraph{The expand approximation}
+%Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products\todo{can we justify this?}, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain 
+which gives the approximation 
+\begin{tcolorbox}[colframe=kfac, title={KFAC for Gauß-Newton with the Laplace operator},bottom=0mm,top=0mm,middle=0mm]
+\begin{align*}\label{eq:KFAC-PINN}
+    \hat{\mG}_\Omega%^{\textup{exp}}
+    (\mW^{(l)})
+    \coloneqq \frac{1}{N^2 S}
+    \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
+    \otimes
+    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top \right].
+\end{align*}
+\end{tcolorbox}
+
+\subsection{KFAC for Gauß-Newton matrices involving general PDE terms}
+
 Here, we provide the derivation of the general Kronecker-factored approximation of the Gauß-Newton matrix. 
 Recall that we consider the general PDE
 \begin{equation}
@@ -27,32 +124,63 @@ we can express the block corresponding to the $l$-th layer of the Gauß-Newton m
     \mG(\mW^{(l)}) & = \frac1N\sum_{n=1}^N \jac_{\mW^{(l)}} v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mA_n}  \jac_{\mW^{(l)}} v_\vtheta(\vx_n),
 \end{align}
 and $v_\vtheta$ is a forward network with shared weights.
-%The reduce approximation is then given by
-%\begin{align}
-%    \hat{\mG}(\mW^{(l)}) \coloneqq \left(\sum_{n=1}^N \left( \sum_{s=1}^S \vz^{(l)}_{n,s} \right) \left(\sum_{s=1}^S {\vz^{(l)}_{n,s}}^\top\right)\right)\otimes\left(\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \mH(\vtheta, \vx_n) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}}^\top \right) \right)?
-%\end{align}
-\todo[inline]{@johannes: elaborate this}
 
 Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives 
 \begin{align}
     \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)} 
 \end{align}
 and hence, we can perceive the computational graph of $v_\vtheta$ as a feedforward network with weight sharing over the multi-indices $\alpha\in\mathbb N$ with $\lvert \alpha \rvert \le k$.
-The generalization of the approximation~\eqref{eq:KFAC-PINN} is given by 
-\begin{align}\label{eq:KFAC-PINNs-general}
+
+Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
+\begin{align*}
+    \jac_{\mW^{(l)}} \vv_n & = \sum_{\lvert \alpha \rvert\le k}\jac_{\partial_\vx^\alpha \vz^{(l-1)}}\vv_n \jac_{\mW^{(l)}} \partial_\vx^\alpha \vz^{(l)} = 
+    \left(\sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \nabla_{\partial_\vx^\alpha \vz^{(l-1)}} \vv_n\right)^\top,
+\end{align*}
+where $\vv_n = v_\vtheta(\vx_n)$. 
+Using the notation $\vg^{(l)}_{n,\alpha} = \nabla_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ we obtain
+\begin{equation}\label{eq:laplace_gramian_block_exact}
+    \mG_\Omega(\mW^{(l)})
+    =
+    \frac1N\sum_{n=1}^N
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,s}^{(l)} \right)
+    \mA_n 
+    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]. 
+\end{equation}
+\todo[inline]{not sure, whether this works without any structure in $\mA_n$ or without another approximation}
+Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx M^{-1}\sum_{m=1}^M \mA_m \mB_m$ we compute 
+\begin{align*}
+    & \sum_{n=1}^N
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes \vg_{n,\alpha}^{(l)} \right)
+    \mA_n
+    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
+    \\ \approx & \;
+    \frac{1}{\binom{d+k}{d}} \sum_{n=1}^N
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)
+    \mA_n
+    \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
+    \\ = & \;
+    \frac{1}{\binom{d+k}{d}}\sum_{n=1}^N
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\otimes \vg_{n,\alpha}^{(l)}{\vg_{n,\alpha}^{(l)}}^\top \right)
+    \right]
+    \\ \approx & \;
+    \frac{1}{N\binom{d+k}{d}}\left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top \right]
+    \otimes
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} \vg^{(l)}_{n,\alpha}{\vg^{(l)}_{n,\alpha}}^\top \right],
+\end{align*}
+which gives the approximation 
+\begin{tcolorbox}[colframe=kfac, title={KFAC for Gauß-Newton with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
+\begin{align*}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
     \coloneqq \frac{1}{N^2 \binom{d+k}{d}}
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
-    \partial_\vx^\alpha \vz_n^{(l)} {\partial_\vx^\alpha \vz_n^{(l)}}^\top\right]
+    \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} \mA_n {\vg^{(l)}_{n,\alpha}}^\top   \right],
-\end{align}
-%where $\mZ^{(l)}_{n,\alpha} = \partial_\vx^\alpha \vz_n^{(l)}$ and 
-where $\vg^{(l)}_{n,\alpha} = \nabla_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ and $\vv_n = v_\vtheta(\vx_n) %= (\partial^\beta_\vx \vz_{n}^{L})_{\lvert \beta \rvert \le k}
-$. 
-A detailed derivation can be found in \Cref{app:derivations}.
-%
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} \mA_n {\vg^{(l)}_{n,\alpha}}^\top \right]. 
+\end{align*}
+\end{tcolorbox}
+
+
 This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}. 
 
 
@@ -71,7 +199,8 @@ This approximation can be stated for a large class of weight-sharing architectur
 %
 %\paragraph{Kronecker approximation of the PDE Gramian}
 
-\paragraph{The reduce approximation}
+\begin{comment}
+    \paragraph{The reduce approximation}
 Approximating the sum of Kronecker products (running over $s$) by the Kronecker product of the sum, simplifying and again approximating for the outer sum (running over $n$) we obtain
 \begin{align*}
     \hat{\mG}_\Omega^{\textup{red}}(\mW^{(l)})
@@ -104,9 +233,10 @@ This approximation agrees with the \emph{reduce} setting described by~\citet{esc
     \otimes
     \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right]
 \end{align*}
+\end{comment}
 
-
-\paragraph{The expand approximation}
+\begin{comment}
+    %\paragraph{The expand approximation}
 Alternatively, approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain
 \begin{align*}
     \hat{\mG}_\Omega^{\textup{exp}}(\mW^{(l)})
@@ -116,31 +246,6 @@ Alternatively, approximating the inner matrix product of sums in equation~\eqref
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top   \right].
 \end{align*}
 which coincides with the \emph{expand} setting of \cite{eschenhagen2023kroneckerfactored}. 
-
-\paragraph{Individual steps} 
-An alternative to the approximation above, one can use the approximation $\sum_{n}A_n\sum_n B_n \approx N^{-1}\sum_{n}A_nB_n$ to get 
-\begin{align*}
-    & \sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \sum_{s=1}^S \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
-    \\ \approx & \;
-    \frac{1}{S?}\sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
-    \\ = & \;
-    \frac{1}{S}\sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}{\mZ
-    ^{(l-1)}_{n,s}}^\top\otimes \vg_{n,s}^{(l)}{\vg_{n,s}^{(l)}}^\top \right)
-    \right]
-    \\ \approx & \;
-    \frac{1}{NS}\left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
-    \otimes
-    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top \right].
-\end{align*}
 
 \paragraph{Forward KFAC}
 One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to compute the grad-output-based Kronecker factors.
@@ -162,3 +267,4 @@ Some works find that if setting this factor to $\mI$, the resulting input-based 
     \item then approximate the expectation with empirical samples 
     \item this reduces computation time...? 
 \end{itemize}
+\end{comment}
