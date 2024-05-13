@@ -117,6 +117,7 @@ ARGS = [
             (1, "poisson", "cos_sum"),
             (2, "poisson", "cos_sum"),
             (1, "heat", "sin_product"),
+            (1, "heat", "sin_sum"),
         ]
     ],
     # train with KFAC+momentum
