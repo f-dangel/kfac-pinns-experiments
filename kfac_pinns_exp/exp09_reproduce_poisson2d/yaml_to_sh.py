@@ -11,6 +11,7 @@ QUEUE_TO_TIME = {
     "m3": "04:00:00",
     "m4": "02:00:00",
     "m5": "01:00:00",
+    "deadline": "12:00:00",
 }
 
 
@@ -35,6 +36,7 @@ def create_sbatch_script(
     script = f"""#!/bin/bash
 #SBATCH --partition={partition}
 #SBATCH --qos={qos}
+{'#SBATCH --account=deadline' if qos == 'deadline' else ''}
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time={QUEUE_TO_TIME[qos]}
