@@ -26,13 +26,13 @@ parameters:
         value: 30_000
     N_Omega:
         min: 100
-        max: 10_000
+        max: 5_000
     N_dOmega:
         min: 50
-        max: 5_000
+        max: 2_500
     batch_frequency:
         min: 0
-        max: 10_000
+        max: 1_000
     ENGD_approximation:
         value: diagonal
     ENGD_damping:
