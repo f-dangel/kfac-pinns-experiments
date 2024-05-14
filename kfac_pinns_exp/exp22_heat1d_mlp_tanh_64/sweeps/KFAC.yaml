@@ -25,7 +25,7 @@ parameters:
         value: 1_000
     KFAC_ema_factor:
         distribution: uniform
-        min: 0
+        min: 0.5
         max: 0.99
     KFAC_momentum:
         distribution: uniform
@@ -36,5 +36,4 @@ parameters:
         min: 1e-13
         max: 1e-7
     KFAC_initialize_to_identity:
-        distribution: categorical
-        values: [false, true]
+        value: true
