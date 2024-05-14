@@ -10,7 +10,7 @@ We also use SGD with a tuned learning rate and momentum, as well as Adam with a 
 
 \paragraph{Experimental setup}
 \begin{itemize}
-\item We tune the hyper parameters with a random search. ... 
+\item Fully transparent hyper-parameter tuning via wandb... with a random search. ... 
 \item All xperiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 \item 
 \end{itemize}
@@ -23,7 +23,7 @@ as we can use it as a baseline here for its KFAC approximation.
 The problems are given by the two-dimensional Poisson equation 
 \begin{align}\label{eq:2D-Poisson}
     \begin{split}
-        -\Delta u(x,y) & = 2\pi^2 sin(\pi x) \sin(\pi y) \quad \text{for } (x,y)\in[0,1]^2 \\ 
+        -\Delta u(x,y) & = 2\pi^2 \sin(\pi x) \sin(\pi y) \quad \text{for } (x,y)\in[0,1]^2 \\ 
     u(x,y) & = 0 \quad \text{for } (x,y) \in\partial[0,1]^2
     \end{split}
 \end{align}
@@ -65,8 +65,17 @@ As both equations admit closed explicit solutions, we report the relative $L^2$ 
     \end{split}
 \end{align}
 
+\subsection{A 10D Poisson equation}
+
+\begin{align}
+    \begin{split}
+        asdf
+    \end{split}
+\end{align}
+
 \begin{figure}[tb]
   \centering
+  \includegraphics{../kfac_pinns_exp/exp24_heat1d_groupplot/l2_error.pdf}
   \includegraphics{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error.pdf}
   \includegraphics{../kfac_pinns_exp/exp18_groupplot_poisson5d/l2_error.pdf}
   \caption{Scaling behaviour of different optimizers for learning the solution of a 5d-Poisson equation w.r.t.
@@ -75,7 +84,8 @@ As both equations admit closed explicit solutions, we report the relative $L^2$ 
 \end{figure}
 \todo[inline]{I think we should only present the time plots to safe space, move everything else to the appendix}
 
-\subsection{A 100D Poisson equation}
+\begin{comment}
+    \subsection{A 100D Poisson equation}
 
 \begin{itemize}
 \item 100D from deep Ritz paper~\citep{yu2018deep}, i.e.,
@@ -121,6 +131,7 @@ As both equations admit closed explicit solutions, we report the relative $L^2$ 
 \end{itemize}
 \end{comment}
 
+\end{comment}
 \subsection{Discussion}
 
 Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)

@@ -4,7 +4,7 @@
 % \PassOptionsToPackage{numbers, compress}{natbib}
 % before loading neurips_2023
 
-\usepackage[preprint]{neurips_2023}
+\usepackage[preprint]{neurips_2024}
 \usepackage{comment}
 \usepackage[most]{tcolorbox}
 
@@ -33,10 +33,8 @@
 \maketitle
 
 \begin{abstract}
-%Despite their immense popularity, 
-Physics-Informed Neural Networks (PINNs) are infamous for being hard to train. % with first-order methods. 
-Recently, second-order methods like natural gradients and Gauß-Newton methods %in the residual
-have shown promising performance improving the accuracy by several orders of magnitude over first-order optimizers. 
+Physics-Informed Neural Networks (PINNs) are infamous for being hard to train. 
+Recently, second-order methods like natural gradients and Gauss-Newton methods have shown promising performance improving the accuracy by several orders of magnitude over first-order optimizers. 
 However, these methods require solving a linear system of the size of the network's parameter space and therefore come with a high computational cost per iteration. 
 Using higher-order forward mode differentiation, we perceive the computational graph of the input derivatives of the network as a larger network that shares the weights of the original network for the individual partial derivatives. 
 Utilizing this interpretation, we propose a Kronecker-factored approximation of preconditioners involving PDE-specific terms that greatly reduces the computational complexity of the individual iterations. 
