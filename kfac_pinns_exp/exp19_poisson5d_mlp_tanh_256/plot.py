@@ -20,14 +20,12 @@ if print_sweeps:
 
 sweep_ids = {  # ids from the wandb agent
     "rsq5lego": "SGD",
-    "yfhfwedb": "Adam",
+    "0sjzv0xk": "Adam",
     "5h6bn2c0": "Hessian-free",
     "eyujjiul": "LBFGS",
     "3twlkinp": "ENGD (diagonal)",
-    # KFACs with grid line search and tuned momentum
-    "8l1fq4jj": "KFAC",
-    # auto-tuned KFACs
-    "wsp1yuea": "KFAC*",
+    "th4fahxu": "KFAC",
+    "ijp48srh": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/

@@ -20,14 +20,18 @@ if print_sweeps:
 
 sweep_ids = {  # ids from the wandb agent
     "1c4zpubc": "SGD",
-    "fk97la1v": "Adam",
+    "qtc8cigj": "Adam",
     "wh0dnmad": "Hessian-free",
     "u0csf03w": "LBFGS",
     "515k1cac": "ENGD (diagonal)",
+    # 1) KFACs with initialize_to_identity=False/True
     # KFACs with grid line search and tuned momentum
-    "s3lt4x2g": "KFAC",
+    # "s3lt4x2g": "KFAC",
     # auto-tuned KFACs
-    "56jr65gg": "KFAC*",
+    # "56jr65gg": "KFAC*",
+    # 2) KFACs with initialize_to_identity=True
+    "s5tdv7ba": "KFAC",
+    "v4rf2fa8": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
