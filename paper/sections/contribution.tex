@@ -146,7 +146,7 @@ We can interpret this formula as a forward pass through a larger neural network 
 
 
 
-\subsection{Kronecker-factored approximations for the Poisson equation}\label{sec:KFAC-Laplace}
+\subsection{A Kronecker-factored approximation for the Poisson equation}\label{sec:KFAC-Laplace}
 Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauß-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
     \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
@@ -362,7 +362,7 @@ The generalization of the approximation~\eqref{eq:KFAC-PINN} is given by
     (\mW^{(l)})
     \coloneqq \frac{1}{N^2 \binom{d+k}{d}}
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
-    \partial_\vx^\alpha \vz_n^{(l)} {\partial_\vx^\alpha \vz_n^{(l)}}^\top\right]
+    \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
     \otimes
     \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} \mA_n {\vg^{(l)}_{n,\alpha}}^\top   \right],
 \end{align}
