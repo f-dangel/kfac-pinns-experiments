@@ -8,10 +8,21 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
+from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
 project = "poisson2d"  # name from the 'Projects' tab on wandb
+
+# information for title
+equation = "poisson"
+architecture = "mlp-tanh-64"
+dim_Omega = 2
+num_params = sum(
+    p.numel()
+    for layer in set_up_layers(architecture, equation, dim_Omega)
+    for p in layer.parameters()
+)
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
@@ -26,12 +37,6 @@ sweep_ids = {  # ids from the wandb agent
     "0ku0xl1j": "ENGD (full)",
     "mv3u2nww": "ENGD (layer-wise)",
     "bczqwxag": "ENGD (diagonal)",
-    # 1) KFACs with initialize_to_identity=False/True
-    # KFACs with grid line search and tuned momentum
-    # "uhgailog": "KFAC",
-    # auto-tuned KFACs
-    # "7pkyy80e": "KFAC*",
-    # 2) KFACs with initialize_to_identity=True
     "euc27yi9": "KFAC",
     "i1txqj6g": "KFAC*",
 }
@@ -99,7 +104,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("2d Poisson")
+            ax.set_title(f"{dim_Omega}d {equation.capitalize()} ($D={num_params}$)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():

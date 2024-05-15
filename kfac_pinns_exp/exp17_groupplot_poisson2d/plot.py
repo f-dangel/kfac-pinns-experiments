@@ -7,20 +7,10 @@ from os import path
 from matplotlib import pyplot as plt
 from tueplots import bundles
 
-from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import (
-    DATADIR,
-    colors,
-    entity,
-    linestyles,
-    project,
-    sweep_ids,
-)
-from kfac_pinns_exp.exp15_poisson2d_deepwide.plot import DATADIR as deepwide_DATADIR
-from kfac_pinns_exp.exp15_poisson2d_deepwide.plot import project as deepwide_project
-from kfac_pinns_exp.exp15_poisson2d_deepwide.plot import sweep_ids as deepwide_sweep_ids
-from kfac_pinns_exp.exp20_poisson2d_mlp_tanh_256.plot import DATADIR as DATADIR_100K
-from kfac_pinns_exp.exp20_poisson2d_mlp_tanh_256.plot import project as project_100k
-from kfac_pinns_exp.exp20_poisson2d_mlp_tanh_256.plot import sweep_ids as sweep_ids_100k
+from kfac_pinns_exp.exp09_reproduce_poisson2d import plot as SMALL
+from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import colors, linestyles
+from kfac_pinns_exp.exp15_poisson2d_deepwide import plot as MEDIUM
+from kfac_pinns_exp.exp20_poisson2d_mlp_tanh_256 import plot as BIG
 from kfac_pinns_exp.wandb_utils import load_best_run
 
 if __name__ == "__main__":
@@ -33,27 +23,22 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    HEREDIR = path.dirname(path.abspath(__file__))
-    IGNORE = {  # ignore the following optimizers for the plots in the main text
-        "KFAC (empirical)",
-        "KFAC (forward-only)",
-        "KFAC* (empirical)",
-        "KFAC* (forward-only)",
-        "ENGD (diagonal)",
-    }
-    ALLOW_MISSING = {  # it is okay for these optimizers to be missing in some plots
-        "ENGD (per-layer)",
-        "ENGD (full)",
-    }
-    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    APPENDIX = [False]  # show all optimizers in the appendix
+    COLUMNS = [SMALL, MEDIUM, BIG]  # which sub-experiment to plot in which column
+    IGNORE = {"ENGD (diagonal)"}
 
-    for appendix, (y, ylabel) in product(APPENDIX, y_to_ylabel.items()):
+    # Create plots of all combinations of x and y
+    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
+
+    for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
         # NOTE Use `nrows` and `ncols` to tweak the subplot size, because `tueplots`
         # always forces the plots length/height-ratio to be the golden ratio
         with plt.rc_context(
             bundles.neurips2023(
-                rel_width=1.0, nrows=4, ncols=5, usetex=not args.disable_tex
+                rel_width=1.0,
+                nrows=4,
+                ncols=3 * len(COLUMNS),
+                usetex=not args.disable_tex,
             ),
         ):
             # update LaTeX preamble, so we can pretty-print the dimension titles
@@ -62,71 +47,62 @@ if __name__ == "__main__":
                 + r"\usepackage[group-separator={,}, group-minimum-digits={3}]{siunitx}"
             )
 
-            num_rows, num_cols = 2, 3
-            fig, ax = plt.subplots(num_rows, num_cols)
+            num_rows, num_cols = 1, len(COLUMNS)
+            fig, axs = plt.subplots(num_rows, num_cols)
 
-            ax[0, 1].set_xlabel("Iteration")
-            ax[1, 1].set_xlabel("Time [s]")
-            ax[0, 0].set_ylabel(ylabel)
-            ax[1, 0].set_ylabel(ylabel)
+            axs[0].set_ylabel(ylabel)
+            for ax in axs.flatten():
+                ax.set_xlabel(xlabel)
+                ax.grid(True, alpha=0.5)
+                ax.set_xscale("log")
+                ax.set_yscale("log")
 
-            for a in ax.flatten():
-                a.grid(True, alpha=0.5)
-                a.set_xscale("log")
-                a.set_yscale("log")
+            for ax, exp in zip(axs, COLUMNS):
+                D = exp.num_params
+                title = f"$D={D}$" if args.disable_tex else r"$D=\num{" + str(D) + r"}$"
+                ax.set_title(title)
 
-            for col, row in product(range(num_cols), range(num_rows)):
-                col_sweep_ids = [sweep_ids, deepwide_sweep_ids, sweep_ids_100k][col]
-                col_project = [project, deepwide_project, project_100k][col]
-                col_DATADIR = [DATADIR, deepwide_DATADIR, DATADIR_100K][col]
-                col_model_dims = [257, 9873, 116097]
-                col_title = [
-                    f"$D={d}$" if args.disable_tex else r"$D=\num{" + str(d) + r"}$"
-                    for d in col_model_dims
-                ]
-
-                for sweep_id, name in col_sweep_ids.items():
-                    if not appendix and name in IGNORE:
+                for sweep_id, name in exp.sweep_ids.items():
+                    if name in IGNORE:
                         continue
 
                     df_history, _ = load_best_run(
-                        entity,
-                        col_project,
+                        exp.entity,
+                        exp.project,
                         sweep_id,
                         save=False,
                         # load data from other experiments to avoid duplication
                         update=False,
-                        savedir=col_DATADIR,
+                        savedir=exp.DATADIR,
                     )
                     x_data = {
-                        0: df_history["step"] + 1,
-                        1: df_history["time"] - min(df_history["time"]),
-                    }[row]
-                    label = name if (col == row == 0 and "*" not in name) else None
-                    ax[row, col].plot(
+                        "step": df_history["step"] + 1,
+                        "time": df_history["time"] - min(df_history["time"]),
+                    }[x]
+                    label = name if ax is axs[0] and not "*" in name else None
+                    ax.plot(
                         x_data,
                         df_history[y],
                         label=label,
                         color=colors[name],
                         linestyle=linestyles[name],
                     )
-                    title = col_title[col] if row == 0 else None
-                    ax[row, col].set_title(title)
 
             # set x_min to 1 for time
-            for a in ax[1, :]:
-                a.set_xlim(left=1)
+            if x == "time":
+                for ax in axs.flatten():
+                    ax.set_xlim(left=1)
 
-            handles, labels = ax[0, 0].get_legend_handles_labels()
+            handles, labels = axs[0].get_legend_handles_labels()
             fig.legend(
                 handles,
                 labels,
                 loc="lower center",
                 # adjust legend to not overlap with xlabel
-                bbox_to_anchor=(0.5, -0.15 if appendix else -0.1),
+                bbox_to_anchor=(0.5, -0.13),
                 # shorter lines so legend fits into a single line in the main text
                 handlelength=1.2,
-                ncols=5 if appendix else 7,
+                ncols=7,
             )
-            suffix = "_all" if appendix else ""
-            plt.savefig(path.join(HEREDIR, f"{y}{suffix}.pdf"), bbox_inches="tight")
+            HEREDIR = path.dirname(path.abspath(__file__))
+            plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
