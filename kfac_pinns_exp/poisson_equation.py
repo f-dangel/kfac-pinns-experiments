@@ -148,7 +148,7 @@ def u_weinan_norm(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
-    return (X**2.0).sum(dim=1, keepdim=True)
+    return (1.0 / 33.47) * (X**2.0).sum(dim=1, keepdim=True)
 
 
 def f_weinan_norm(X: Tensor) -> Tensor:
@@ -161,7 +161,7 @@ def f_weinan_norm(X: Tensor) -> Tensor:
         2 * dim_Omega of the shape (len(X), 1).
     """
     N, d = X.shape
-    return -2 * d * ones(N, 1)
+    return -2 * d * (1.0 / 33.47) * ones(N, 1)
 
 
 def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:
