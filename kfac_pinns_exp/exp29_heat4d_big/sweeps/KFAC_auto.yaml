@@ -33,14 +33,13 @@ parameters:
         value: sin_sum
     KFAC_ema_factor:
         distribution: uniform
-        min: 0
+        min: 0.5
         max: 0.99
     KFAC_damping:
         distribution: log_uniform_values
-        min: 1e-13
-        max: 1e-7
+        min: 1e-14
+        max: 1e-8
     KFAC_initialize_to_identity:
-        distribution: categorical
-        values: [false, true]
+        value: true
     KFAC_lr:
         value: auto
