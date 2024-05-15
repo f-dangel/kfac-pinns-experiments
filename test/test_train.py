@@ -90,6 +90,7 @@ ARGS = [
             "mlp-tanh-64-48-32-16",
             "mlp-tanh-64-64-48-48",
             "mlp-tanh-256-256-128-128",
+            "mlp-tanh-768-768-512-512",
         ]
     ],
     # train with different boundary conditions

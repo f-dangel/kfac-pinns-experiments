@@ -1,0 +1,47 @@
+entity: kfac-pinns
+project: heat4d_medium
+name: KFAC
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFAC"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: l2_error
+method: random
+run_cap: 50
+parameters:
+    model:
+        value: mlp-tanh-64-64-48-48
+    batch_frequency:
+        value: 100
+    dim_Omega:
+        value: 4
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 500
+    num_seconds:
+        value: 3_000
+    equation:
+        value: heat
+    boundary_condition:
+        value: sin_sum
+    KFAC_ema_factor:
+        distribution: uniform
+        min: 0.5
+        max: 0.99
+    KFAC_momentum:
+        distribution: uniform
+        min: 0
+        max: 0.99
+    KFAC_damping:
+        distribution: log_uniform_values
+        min: 1e-14
+        max: 1e-8
+    KFAC_initialize_to_identity:
+        value: true

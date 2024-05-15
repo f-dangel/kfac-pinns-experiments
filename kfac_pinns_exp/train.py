@@ -50,6 +50,7 @@ SUPPORTED_MODELS = [
     "mlp-tanh-64-48-32-16",
     "mlp-tanh-64-64-48-48",
     "mlp-tanh-256-256-128-128",
+    "mlp-tanh-768-768-512-512",
 ]
 SUPPORTED_BOUNDARY_CONDITIONS = [
     "sin_product",
@@ -287,6 +288,18 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
             Linear(128, 128),
             Tanh(),
             Linear(128, 1),
+        ]
+    elif model == "mlp-tanh-768-768-512-512":
+        layers = [
+            Linear(in_dim, 768),
+            Tanh(),
+            Linear(768, 768),
+            Tanh(),
+            Linear(768, 512),
+            Tanh(),
+            Linear(512, 512),
+            Tanh(),
+            Linear(512, 1),
         ]
     else:
         raise ValueError(
