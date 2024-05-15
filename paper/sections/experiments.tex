@@ -2,18 +2,16 @@
 
 %\subsection{Setup}
 
-\paragraph{Tested optimizers}
-We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and full-Gramian ENGD in PyTorch~\citep{paszke2019pytorch}.
+%\paragraph{Tested optimizers}
+We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and 
+full-Gramian ENGD in PyTorch~\citep{paszke2019pytorch}.
 As a matrix-free version of ENGD, we use the HessianFree optimizer~\citep{?} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
 We chose this because there is a fully-featured implementation from~\citet{tatzel2022late} which offers many additional heuristics such as adaptive damping, CG backtracking, and backtracking line search, which allows this algorithm to be operated with very little hyperparameter searching.
 We also use SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate.
 
 \paragraph{Experimental setup}
-\begin{itemize}
-\item Fully transparent hyper-parameter tuning via wandb... with a random search. ... 
-\item All xperiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
-\item 
-\end{itemize}
+We tune all hyper-parameters using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance. 
+All experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 
 \subsection{Pedagogical examples: 2D Poisson and 1D Heat equation}
@@ -82,7 +80,7 @@ As both equations admit closed explicit solutions, we report the relative $L^2$ 
     neural network size under a given time budget of $3\cdot 10^3\,\text{s}$ on an RTX 6000 GPU.}
   \label{fig:pedagogical-example}
 \end{figure}
-\todo[inline]{I think we should only present the time plots to safe space, move everything else to the appendix}
+%\todo[inline]{I think we should only present the time plots to safe space, move everything else to the appendix}
 
 \begin{comment}
     \subsection{A 100D Poisson equation}
