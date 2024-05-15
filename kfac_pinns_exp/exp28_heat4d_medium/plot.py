@@ -22,7 +22,7 @@ num_params = sum(
 )
 
 # Useful to map sweep ids to human-readable names
-print_sweeps = True
+print_sweeps = False
 if print_sweeps:
     show_sweeps(entity, project)
 
@@ -34,10 +34,8 @@ sweep_ids = {  # ids from the wandb agent
     "mukgr9h9": "ENGD (full)",
     "a4auf0xl": "ENGD (layer-wise)",
     "yjr31aky": "ENGD (diagonal)",
-    # KFACs with grid line search and tuned momentum
-    "jmnhdvwy": "KFAC",
-    # auto-tuned KFACs
-    "rq6z38w0": "KFAC*",
+    "j23j5nyh": "KFAC",
+    "85ykym0u": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
