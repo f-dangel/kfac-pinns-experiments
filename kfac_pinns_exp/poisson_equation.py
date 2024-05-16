@@ -119,6 +119,11 @@ def u_weinan_prods(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
+    if not X.shape[-1] == 10:
+        print(
+            "[u_weinan_prods]: u_weinan_prods is not of unit L2 norm. "
+            "Consider changing the normalization constant."
+        )
     N, d = X.shape
     return (1.0 / 1.34) * X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
 
@@ -148,6 +153,11 @@ def u_weinan_norm(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
+    if not X.shape[-1] == 100:
+        print(
+            "[u_weinan_norm]: u_weinan_norm is not of unit L2 norm. "
+            "Consider changing the normalization constant."
+        )
     return (1.0 / 33.47) * (X**2.0).sum(dim=1, keepdim=True)
 
 
