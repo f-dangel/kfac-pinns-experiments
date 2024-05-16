@@ -53,7 +53,7 @@ As the equation admits a closed-form explicit solutions, we report the relative 
 \subsection{A higher-dimensional evolutionary problem}
 
 To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation 
-\begin{align}
+\begin{align}\label{eq:4D-heat}
     asdf.
 \end{align}
 Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes. 
@@ -62,17 +62,25 @@ We report the relative $L^2$ error with respect to the optimization time in \Cre
 \begin{figure}
     \centering
     \includegraphics{kfac_pinns_exp/exp30_heat4d_groupplot/loss_over_time.pdf}
-    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
+    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
     \label{fig:4D-heat}
 \end{figure}
 
-%\subsection{A 10D Poisson equation}
 
-%\begin{align}
-%    \begin{split}
-%        asdf
-%    \end{split}
-%\end{align}
+\subsection{A 10D Poisson equation}
+
+\begin{align}
+    \begin{split}
+        asdf
+    \end{split}
+\end{align}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.33\textwidth]{kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
+    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:10D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
+    \label{fig:10D-Poisson}
+\end{figure}
 
 %\todo[inline]{I think we should only present the time plots to safe space, move everything else to the appendix}
 
