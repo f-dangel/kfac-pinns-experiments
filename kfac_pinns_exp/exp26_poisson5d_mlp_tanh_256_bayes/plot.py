@@ -24,9 +24,7 @@ sweep_ids = {  # ids from the wandb agent
     "qczg0d7s": "Hessian-free",
     "oyw9btw9": "LBFGS",
     "ei4els7w": "ENGD (diagonal)",
-    # KFACs with grid line search and tuned momentum
     "ngewaxal": "KFAC",
-    # auto-tuned KFACs
     "ucllzkcw": "KFAC*",
 }
 
