@@ -32,10 +32,8 @@ sweep_ids = {  # ids from the wandb agent
     "hsbs4ryg": "Hessian-free",
     "tykqgfdh": "LBFGS",
     "fjjgb3i4": "ENGD (diagonal)",
-    # KFACs with grid line search and tuned momentum
-    "acmh3fw5": "KFAC",
-    # auto-tuned KFACs
-    "skt87qys": "KFAC*",
+    "j2wl83aw": "KFAC",
+    "4oywxhpj": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
