@@ -8,10 +8,18 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
+from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
 project = "heat4d_mlp_tanh_256_bayes"  # name from the 'Projects' tab on wandb
+
+architecture = "mlp-tanh-256-256-128-128"
+num_params = sum(
+    p.numel()
+    for layer in set_up_layers(architecture, "heat", 4)
+    for p in layer.parameters()
+)
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
@@ -19,13 +27,13 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "411po3yo": "SGD",
-    "beee368w": "Adam",
-    "rtyv68q1": "Hessian-free",
-    "hnmoy3ow": "LBFGS",
-    "mbk1oicc": "ENGD (diagonal)",
-    "rt6aaptq": "KFAC",
-    "ogc8ioel": "KFAC*",
+    "kr1lt1k0": "SGD",
+    "3rxwkmuf": "Adam",
+    "khk9ppjk": "Hessian-free",
+    "c5dozwg3": "LBFGS",
+    "hoy90su9": "ENGD (diagonal)",
+    "tgv5pgbp": "KFAC",
+    "ml685rb5": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -87,7 +95,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("5d Poisson (mlp-tanh-256-256-128-128 net + Bayes)")
+            ax.set_title(f"4d Heat ({architecture}, $D={num_params}$ + Bayes)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
