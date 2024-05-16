@@ -20,7 +20,6 @@ How to compute the function values through a forward pass is well known.
        %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\
        %\partial_{\vx_i} \partial_{\vx_j} (f \circ g)(\vx) & = \partial_{\vx_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{\vx_j} g(\vx) + \jac f(g(\vx)) \partial_{\vx_i} \partial_{\vx_j} g(\vx).
 %\end{align}
-\todo{I have removed the second-order chain rule for spacing reasons}
 If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz %+ \vb^{(l)}
 $ is a linear layer, then setting $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{\vx_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{\vx_i}\partial_{\vx_j}\vz^{(0)} = 0\in\mathbb R^d$, applying the chain rule gives the second-order forward pass is given by
 \begin{subequations}\label{eq:forward_pass}
@@ -105,7 +104,7 @@ Summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrde
     \label{eq:forward-laplacian-linear-layer-compact}
 \end{align}
 \end{comment}
-\begin{align}
+\begin{align}\label{eq:forward_Laplacian_linear}
     \Delta_\vx\vz^{(l)} = \mW^{(l)}\Delta_\vx\vz^{(l-1)}
 \end{align}
 and for nonlinear layers by
@@ -123,7 +122,7 @@ and for nonlinear layers by
      \label{eq:forward-laplacian-nonlinear-layer-compact}
 \end{align}
 \end{comment}
-\begin{align}
+\begin{align}\label{eq:forward_Laplacian_nonlinear}
     \Delta_\vx\vz^{(l)} = \sigma'(\vz^{(l-1)})\odot\Delta_x\vz^{(l-1)} + \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}^{\odot 2}. 
 \end{align}
 This greatly reduces the computational complexity of the forward pass, but is restricted to PDEs that involve second-order derivatives only via the Laplacian. %, i.e., for PDEs of the form $\Psi(u, \partial u, \Delta u)=0$.
@@ -160,9 +159,14 @@ $\mZ^{(0)}=  \begin{pmatrix}
 Rearranging $\mZ^{(l)}$ as a matrix of shape $(d+2)\times h^{(l)}$ and yields $\mZ^{(l)} = \mZ^{(l-1)}{\mW^{(l)}}^\top$ for linear layers.
 \end{comment}
 
+\paragraph{Forward propagation for linear PDEs} 
+A similar reduction of the complexity of the forward pass similar to the forward Laplacian can be achieved for other linear PDEs. 
+Indeed, for a second order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, we obtain the forward pass $\mathcal L \vz^{(l)} = \mW^{(l)}\mathcal L \vz^{(l-1)}$ generalizing~\eqref{eq:forward_Laplacian_linear} for linear layers. 
+Similarly, a generalization of~\eqref{eq:forward_Laplacian_nonlinear} can be given. 
+%\todo{asdf}
 
 
-\subsection{A Kronecker-factored approximation for the Poisson equation}\label{sec:KFAC-Laplace}
+\subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}\label{sec:KFAC-Laplace}
 Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauß-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
     \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
@@ -219,7 +223,7 @@ Now we can use any Kronecker-factored approximation for feedforward networks wit
 
 
 %\paragraph{The expand approximation}
-Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products\todo{can we justify this?}, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain 
+Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain 
 \begin{tcolorbox}[colframe=kfac, title={KFAC for ENGD with the Laplace operator},bottom=0mm,top=0mm,middle=0mm]
 \begin{align}\label{eq:KFAC-PINN}
     \hat{\mG}_\Omega%^{\textup{exp}}
@@ -329,7 +333,7 @@ PDE
     %\Psi(u, \nabla u, \nabla^{2} u) = 0,
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
 \end{equation}
-where $\Psi\colon \mathbb R^{K}\to\mathbb R^M,K=\binom{d+k}{d}$ is some smooth function.
+where $\Psi\colon \mathbb R^{K}\to\mathbb R^M,K=\binom{d+k}{d}$ is smooth. 
 %We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
 %Set $v_\vtheta(x)\coloneqq (u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))$
 %and

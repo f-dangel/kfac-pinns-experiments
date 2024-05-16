@@ -27,58 +27,84 @@ Poisson equation is given by
     \end{split}
 \end{align}
 %as well as the one-dimensional heat equation
-%\begin{align}\label{eq:1D-Heat}
-%    \begin{split}
-%        \partial_t u(t,x) &= \kappa\partial_x^2u(t,x) \quad \text{for }(t,x)\in[0,1]^2
-%        \\
-%        u(0,x) &= \sin(\pi x) \qquad\;\, \text{for }x\in[0,1]
-%        \\
-%        u(t,x) &= 0 \qquad\qquad\quad\text{for }(t,x)\in[0,1]\times\{0,1\}.
-%    \end{split}
-%\end{align}
-%Here, we choose the heat-conductivity $\kappa = \frac14$ in our experiments.
 
-We evaluate the performance of the different optimizers for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function.
+\begin{comment}
+    \begin{align}\label{eq:1D-Heat}
+    \begin{split}
+        \partial_t u(t,x) &= \kappa\partial_x^2u(t,x) \quad \text{for }(t,x)\in[0,1]^2
+        \\
+        u(0,x) &= \sin(\pi x) \qquad\;\, \text{for }x\in[0,1]
+        \\
+        u(t,x) &= 0 \qquad\qquad\quad\text{for }(t,x)\in[0,1]\times\{0,1\}.
+    \end{split}
+\end{align}
+Here, we choose the heat-conductivity $\kappa = \frac14$ in our experiments.
+\end{comment}
+
+We evaluate the performance of the different optimizers for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function, where we allow the same computation time for all optimizers. 
 Here, we only include the exact second-order methods when the parameter space of the network is small enough for this to be feasible.
-As the equation admits a closed-form explicit solutions, we report the relative $L^2$ errors against the wall clock time achieved by the different optimizers in \Cref{fig:2D-Poisson}.
-
+As the equation admits a closed-form explicit solutions, we report the relative $L^2$ errors against the wall clock time achieved by the different optimizers in \Cref{fig:2D-Poisson}. 
+%We are able to reproduce the results of~\cite{muller2023achieving} 
+For networks of small size, we can reproduce the results of~\cite{muller2023achieving}, where exact ENGD achieves high accuracy, but in terms of computation time KFAC is competitive with the second-order optimizers. 
+In contrast to ENGD which relies on an exact solution of the preconditioning step, KFAC scales to larger networks and is again competitive to other second-order optimizers that use much more sophisticated heuristics. 
 \begin{figure}
     \centering
     \includegraphics{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error_over_time.pdf}
+    \caption{We report the performance of different optimizers on the 2D Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
+    \label{fig:2D-Poisson}
+\end{figure}
+\begin{comment}
+    \begin{figure}
+    \centering
+    \includegraphics{kfac_pinns_exp/exp24_heat1d_groupplot/l2_error_over_time.pdf}
     \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
     \label{fig:2D-Poisson}
 \end{figure}
+\end{comment}
 
 
-\subsection{A higher-dimensional evolutionary problem}
+\subsection{A higher-dimensional evolutionary problem: (4+1)D heat equation}
 
 To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
+\todo{double check that this is the equation we are solving!}
 \begin{align}\label{eq:4D-heat}
-    asdf.
+     \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in [0,1]^{4} \\
+    u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
+     x\in [0,1]^{4}
+     \\
+     u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in\partial[0,1]^{4}
 \end{align}
 Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
 We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.
-
+Due to the higher spatial dimension, we use mini-batches in the evaluation of the loss and the preconditioner, where for KFAC, we keep the same batch for $100$ iterations.\todo{for the other optimizers?} 
+Like in the two-dimensional example, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics. 
 \begin{figure}
     \centering
-    \includegraphics{../kfac_pinns_exp/exp30_heat4d_groupplot/loss_over_time.pdf}
-    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
+    \includegraphics{kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
+    \caption{We report the performance of different optimizers on the 4D heat equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
     \label{fig:4D-heat}
 \end{figure}
 
 
-\subsection{A 10D Poisson equation}
-
-\begin{align}
+\subsection{High-dimensional Poisson equations}
+To test KFAC on a high-dimensional PDE, we consider the Poisson equation used by~\cite{yu2018deep} to evalute the performance of the deep Ritz method, which is given by 
+\begin{align}\label{eq:high_dimensional_poisson}
     \begin{split}
-        asdf
+        -\Delta u(x) & = -2d \quad \text{for } x\in [0,1]^{d} \\
+    u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{d}
     \end{split}
 \end{align}
+We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ select the hyper-parameters via a Bayesian optimization procedure. 
+Again, we use mini-batches that we use for $100$ iterations before drawing news samples. 
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.33\textwidth]{kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
-    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:10D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
+    \includegraphics[width=0.3\textwidth]{kfac_pinns_exp/exp26_poisson5d_mlp_tanh_256_bayes/l2_error_over_time.pdf}
+    \includegraphics[width=0.3\textwidth]{kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
+    \includegraphics[width=0.3\textwidth]{kfac_pinns_exp/exp14_poisson_100d_weinan/l2_error_over_time.pdf}
+    \caption{
+    We report the performance of different optimizers on the Poisson equation~\eqref{eq:high_dimensional_poisson} in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $?$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
+    }
     \label{fig:10D-Poisson}
 \end{figure}
 
@@ -130,33 +156,7 @@ We report the relative $L^2$ error with respect to the optimization time in \Cre
 \end{itemize}
 \end{comment}
 
-\subsection{Discussion}
-
-Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)
-
-\begin{itemize}
-    \item KFAC is competitive with exact second-order methods on smaller scale networks
-    \item ...
-\end{itemize}
-
 %\subsection{Limitations and Future Work}
-
-\paragraph{Limitations}
-\paragraph{Studying further KFAC heuristics} The original KFAC optimizer introduces many additional techniques to improve performance and stability, e.g.\,adaptive damping and heuristics for splitting up the damping onto the different Kronecker factors.
-Our algorithms borrow components, but we did not explore all bells and whistles.
-We believe they can help to either reduce the number of hyper-parameters that need to be tuned, or improve performance.
-We use an independent Kronecker product for each of the losses and dit not look into further condensing this representation into a single Kronecker product.
-Doing so would allow to further reduce memory cost for storing the pre-conditioner, as well as computational cost to invert it.
-We did not play around with updating the KFAC matrices or inverting the pre-conditioner less frequently.
-We did not try lower precision than float64 because this is the standard setup for PINNs (??).
-
-\paragraph{Performance improvements} The generalized eigenvalue that we currently need to solve to invert the Kronecker sum is currently computed through SciPy as there is no PyTorch API for doing so. This has the downside that we need to sync the Kronecker factors with CPU each time we want to invert the curvature approximation. Our results could be further improved by using a fully GPU-compatible implementation.
-As pointed out in \citep{martens2015optimizing}, the requested Gramian projections can be computed at the cost of two forward passes; however, we are currently using a non-specialized implementation which does not take into account the Gramian's matrix square root factorization.
-One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done by~\cite{dangel2020backpack}.
-However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
-
-\paragraph{Future work}
-Inverse-free KFAC update~\citep{lin2023simplifying} and structured Kronecker factors~\citep{lin2023structured}.
 
 \begin{comment}
   We want to show the following things:

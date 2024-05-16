@@ -3,24 +3,26 @@ We work with the following standard feedforward networks.
 \paragraph{Sequential neural networks} Consider a \emph{sequential neural network} $%u_{\vtheta} = f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
 u_{\vtheta} = f_{\vtheta^{(L)}} \circ f_{\vtheta^{(L-1)}} \circ \ldots \circ f_{\vtheta^{(1)}}
 $ with depth $L\in\mathbb N$ that consists of layers %$f^{(l)}_{\vtheta^{(l)}}$
-\begin{align}
-  \begin{split}
+$f_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}\to\sR^{h^{(l)}}$, $\vz^{(l-1)}\mapsto \vz^{(l)} = f_{\vtheta^{(l)}}(\vz^{(l-1)})$
+%\begin{align}
+%  \begin{split}
     %u_{\vtheta}
     %&=
     %f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
     %\\
-    f%^{(l)}
-    _{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}
-    &\to
-      \sR^{h^{(l)}}\,,
+    %f%^{(l)}
+    %_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}
+    %&\to
+    %  \sR^{h^{(l)}}\,,
     %\\
-    \quad \vz^{(l-1)}
+    %\quad 
+    %\vz^{(l-1)}
     %&
-    \mapsto
-      \vz^{(l)} = f%^{(l)}
-      _{\vtheta^{(l)}}(\vz^{(l-1)})
-  \end{split}
-\end{align}
+    %\mapsto
+    %  \vz^{(l)} = f%^{(l)}
+    %  _{\vtheta^{(l)}}(\vz^{(l-1)})
+  %\end{split}
+%\end{align}
 with trainable parameters $\vtheta^{(l)} \in \sR^{p^{(l)}}%, l=1,\dots, L,
 $ that transform an input $\vz_0=\vx \in \mathbb R^{d_{\operatorname{in}}}$ into a prediction $\vu = \vz^{(L)}\in \sR^{d_{\operatorname{out}}}$ via intermediate representations $\vz^{(l)} \in \sR^{h^{(l)}}%, l= 0, \dots, L
 $.
