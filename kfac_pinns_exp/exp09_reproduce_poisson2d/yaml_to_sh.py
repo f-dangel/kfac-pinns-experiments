@@ -73,6 +73,12 @@ if __name__ == "__main__":
         default=17,
         help="Maximum number of active tasks in the array.",
     )
+    parser.add_argument(
+        "--array",
+        type=int,
+        default=64,
+        help="Size of the job array.",
+    )
     args = parser.parse_args()
 
     cmd = [
@@ -94,5 +100,9 @@ if __name__ == "__main__":
 
     sh_file = args.yaml_file.replace(".yaml", ".sh")
     create_sbatch_script(
-        sh_file, line, args.qos, array_max_active=args.array_max_active
+        sh_file,
+        line,
+        args.qos,
+        array_max_active=args.array_max_active,
+        array=args.array,
     )
