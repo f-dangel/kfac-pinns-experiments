@@ -3,30 +3,30 @@
 %\subsection{Setup}
 
 %\paragraph{Tested optimizers}
-We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and 
+We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and
 full-Gramian ENGD in PyTorch~\citep{paszke2019pytorch}.
 As a matrix-free version of ENGD, we use the HessianFree optimizer~\citep{martens2010deep} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
 We chose this because there is a fully-featured implementation from~\citet{tatzel2022late} which offers many additional heuristics such as adaptive damping, CG backtracking, and backtracking line search, which allows this algorithm to be operated with very little hyperparameter searching.
-As first order-optimizers, we consider SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate. 
+As first order-optimizers, we consider SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate.
 %
 %\paragraph{Experimental setup}
-We tune all hyper-parameters including step-sizes, momentum, the exponential-moving-average\todo{tba} parameter using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance. 
+We tune all hyper-parameters including step-sizes, momentum, the exponential-moving-average\todo{tba} parameter using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance.
 All experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 
 \subsection{A pedagogical example: 2D Poisson equation}
 
 We consider a low-dimensional Poisson equation used to demonstrate the efficacy of energy natural gradients by~\cite{muller2023achieving}
-as we can use it as a baseline here for its KFAC approximation. 
-The %problems are given by the two-dimensional 
-Poisson equation is given by 
+as we can use it as a baseline here for its KFAC approximation.
+The %problems are given by the two-dimensional
+Poisson equation is given by
 \begin{align}\label{eq:2D-Poisson}
     \begin{split}
-        -\Delta u(x,y) & = 2\pi^2 \sin(\pi x) \sin(\pi y) \quad \text{for } (x,y)\in[0,1]^2 \\ 
+        -\Delta u(x,y) & = 2\pi^2 \sin(\pi x) \sin(\pi y) \quad \text{for } (x,y)\in[0,1]^2 \\
     u(x,y) & = 0 \quad \text{for } (x,y) \in\partial[0,1]^2.
     \end{split}
 \end{align}
-%as well as the one-dimensional heat equation 
+%as well as the one-dimensional heat equation
 %\begin{align}\label{eq:1D-Heat}
 %    \begin{split}
 %        \partial_t u(t,x) &= \kappa\partial_x^2u(t,x) \quad \text{for }(t,x)\in[0,1]^2
@@ -36,11 +36,11 @@ Poisson equation is given by
 %        u(t,x) &= 0 \qquad\qquad\quad\text{for }(t,x)\in[0,1]\times\{0,1\}.
 %    \end{split}
 %\end{align}
-%Here, we choose the heat-conductivity $\kappa = \frac14$ in our experiments. 
+%Here, we choose the heat-conductivity $\kappa = \frac14$ in our experiments.
 
-We evaluate the performance of the different optimizers for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function. 
-Here, we only include the exact second-order methods when the parameter space of the network is small enough for this to be feasible. 
-As the equation admits a closed-form explicit solutions, we report the relative $L^2$ errors against the wall clock time achieved by the different optimizers in \Cref{fig:2D-Poisson}. 
+We evaluate the performance of the different optimizers for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function.
+Here, we only include the exact second-order methods when the parameter space of the network is small enough for this to be feasible.
+As the equation admits a closed-form explicit solutions, we report the relative $L^2$ errors against the wall clock time achieved by the different optimizers in \Cref{fig:2D-Poisson}.
 
 \begin{figure}
     \centering
@@ -52,13 +52,13 @@ As the equation admits a closed-form explicit solutions, we report the relative 
 
 \subsection{A higher-dimensional evolutionary problem}
 
-To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation 
-\begin{align}
+To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
+\begin{align}\label{eq:4D-heat}
     asdf.
 \end{align}
-Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes. 
-We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.  
- 
+Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
+We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.
+
 \begin{figure}
     \centering
     \includegraphics{../kfac_pinns_exp/exp30_heat4d_groupplot/loss_over_time.pdf}
@@ -66,13 +66,21 @@ We report the relative $L^2$ error with respect to the optimization time in \Cre
     \label{fig:4D-heat}
 \end{figure}
 
-%\subsection{A 10D Poisson equation}
 
-%\begin{align}
-%    \begin{split}
-%        asdf
-%    \end{split}
-%\end{align}
+\subsection{A 10D Poisson equation}
+
+\begin{align}
+    \begin{split}
+        asdf
+    \end{split}
+\end{align}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.33\textwidth]{kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
+    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:10D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
+    \label{fig:10D-Poisson}
+\end{figure}
 
 %\todo[inline]{I think we should only present the time plots to safe space, move everything else to the appendix}
 
@@ -128,7 +136,7 @@ Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)
 
 \begin{itemize}
     \item KFAC is competitive with exact second-order methods on smaller scale networks
-    \item ... 
+    \item ...
 \end{itemize}
 
 %\subsection{Limitations and Future Work}
