@@ -79,7 +79,7 @@ if __name__ == "__main__":
                         "step": df_history["step"] + 1,
                         "time": df_history["time"] - min(df_history["time"]),
                     }[x]
-                    label = name if ax is axs[0] and not "*" in name else None
+                    label = name if ax is axs[0] and "*" not in name else None
                     ax.plot(
                         x_data,
                         df_history[y],
