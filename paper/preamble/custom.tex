@@ -3,6 +3,10 @@
 % ===================================================================
 \usepackage{nicefrac} % fractions that fit into inline text
 \usepackage{dsfont} % for \mathds command
+\usepackage[%
+exponent-product=\ensuremath{\cdot},%
+group-minimum-digits={3}%
+]{siunitx} % \num command for pretty-formatting large numbers
 
 % ===================================================================
 % REFERENCES
@@ -21,6 +25,10 @@
 % FIGURES & COLORS
 % ===================================================================
 \usepackage{subcaption} % \subfigure environment
+\captionsetup[subfigure]{% subfigure captions are left-aligned
+  justification=justified,%
+  singlelinecheck=false,%
+}%
 \usepackage{tikz} % for drawings in LaTeX
 \usetikzlibrary{arrows.meta} % for prettier arrows
 
