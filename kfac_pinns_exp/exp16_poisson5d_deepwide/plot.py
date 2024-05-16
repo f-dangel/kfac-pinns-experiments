@@ -8,10 +8,21 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
+from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
 project = "poisson5d_deepwide"  # name from the 'Projects' tab on wandb
+
+# information for title
+equation = "poisson"
+architecture = "mlp-tanh-64-64-48-48"
+dim_Omega = 5
+num_params = sum(
+    p.numel()
+    for layer in set_up_layers(architecture, equation, dim_Omega)
+    for p in layer.parameters()
+)
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
@@ -93,7 +104,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("5d Poisson (deep+wide net)")
+            ax.set_title(f"{dim_Omega}d {equation.capitalize()} ($D={num_params}$)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
