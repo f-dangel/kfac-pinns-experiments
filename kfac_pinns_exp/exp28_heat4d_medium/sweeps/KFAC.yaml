@@ -1,5 +1,9 @@
 entity: kfac-pinns
+<<<<<<<< HEAD:kfac_pinns_exp/exp28_heat4d_medium/sweeps/KFAC.yaml
 project: heat4d_medium
+========
+project: weinan_10d
+>>>>>>>> master:kfac_pinns_exp/exp21_poisson_10d/sweeps/KFAC.yaml
 name: KFAC
 program: ../../train.py
 command:
@@ -15,6 +19,7 @@ metric:
 method: random
 run_cap: 50
 parameters:
+<<<<<<<< HEAD:kfac_pinns_exp/exp28_heat4d_medium/sweeps/KFAC.yaml
     model:
         value: mlp-tanh-64-64-48-48
     batch_frequency:
@@ -31,6 +36,22 @@ parameters:
         value: heat
     boundary_condition:
         value: sin_sum
+========
+    boundary_condition:
+        value: u_weinan
+    batch_frequency:
+        value: 100
+    model:
+        value: mlp-tanh-256-256-128-128
+    num_seconds:
+        value: 6_000
+    dim_Omega:
+        value: 10
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 1_000
+>>>>>>>> master:kfac_pinns_exp/exp21_poisson_10d/sweeps/KFAC.yaml
     KFAC_ema_factor:
         distribution: uniform
         min: 0.5
@@ -41,7 +62,12 @@ parameters:
         max: 0.99
     KFAC_damping:
         distribution: log_uniform_values
+<<<<<<<< HEAD:kfac_pinns_exp/exp28_heat4d_medium/sweeps/KFAC.yaml
         min: 1e-14
         max: 1e-8
+========
+        min: 1e-10
+        max: 1e-4
+>>>>>>>> master:kfac_pinns_exp/exp21_poisson_10d/sweeps/KFAC.yaml
     KFAC_initialize_to_identity:
         value: true

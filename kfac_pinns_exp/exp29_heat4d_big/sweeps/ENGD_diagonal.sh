@@ -13,4 +13,8 @@ echo "[DEBUG] Host name: " `hostname`
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
+<<<<<<<< HEAD:kfac_pinns_exp/exp29_heat4d_big/sweeps/ENGD_diagonal.sh
 wandb agent --count 1 kfac-pinns/heat4d_big/fjjgb3i4
+========
+wandb agent --count 1 kfac-pinns/heat4d_big/acmh3fw5
+>>>>>>>> master:kfac_pinns_exp/exp29_heat4d_big/sweeps/KFAC.sh
