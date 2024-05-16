@@ -1,4 +1,4 @@
-\subsection{Kronecker-factored Approximate Curvature (KFAC)}
+\subsection{Kronecker-factored Approximate Curvature}
 
 %\toodoo{F.D.  Get to the point more quickly. Make notation  consistent.}
 
@@ -34,16 +34,20 @@ Note that a block diagonal linear system can be solved by solving the subsystems
 %Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
 %In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
 %We consider the following vectorization of the matrices appearing as the trainable parameters of the network.
-To vectorize the weight matrices of the linear layers we follow the % index convention to vectorize will be
-\emph{first-varies-fastest} convention, which means column-stacking (row index varies first, column index varies second).
+To vectorize %the weight 
+matrices %of the linear layers 
+we follow the % index convention to vectorize will be
+\emph{first-varies-fastest} convention, which corresponds to column-stacking (row index varies first, column index varies second).
 We denote the corresponding flattening operation by $\flatten(\cdot)$.
 Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$
 %\begin{equation}\label{eq:vecTrick}
 %  \flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}
 %\end{equation}
-for matrices $\mA, \mX, \mB$.
-In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
-The flattening notation allows to reduce derivatives of matrix/tensor-valued objects back to the matrix case.
+for matrices $\mA, \mX, \mB$ %.
+%In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence 
+which implies $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
+The flattening notation allows to reduce derivatives of matrix or tensor-valued objects back to the matrix case.
+\todo{shorten a bit?}
 Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
 It collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
 For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ w.r.t.\,a matrix $\mA$, we simply have $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.

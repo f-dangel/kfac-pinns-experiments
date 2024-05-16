@@ -5,12 +5,12 @@
 %\paragraph{Tested optimizers}
 We implement KFAC, KFAC*, as well as the diagonal, block-diagonal, and 
 full-Gramian ENGD in PyTorch~\citep{paszke2019pytorch}.
-As a matrix-free version of ENGD, we use the HessianFree optimizer~\citep{?} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
+As a matrix-free version of ENGD, we use the HessianFree optimizer~\citep{martens2010deep} which uses truncated CG with exact Gramian-vector products to pre-condition the gradient.
 We chose this because there is a fully-featured implementation from~\citet{tatzel2022late} which offers many additional heuristics such as adaptive damping, CG backtracking, and backtracking line search, which allows this algorithm to be operated with very little hyperparameter searching.
-We also use SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate.
+As first order-optimizers, we consider SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate. 
 
-\paragraph{Experimental setup}
-We tune all hyper-parameters using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance. 
+%\paragraph{Experimental setup}
+We tune all hyper-parameters including step-sizes, momentum, the exponential-moving-average\todo{tba} parameter using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance. 
 All experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 
@@ -37,25 +37,32 @@ as well as the one-dimensional heat equation
 \end{align}
 Here, we choose the heat-conductivity $\kappa = \frac14$ in our experiments. 
 
-We evaluate the performance of various optimizers... for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function. 
+We evaluate the performance of the different optimizers for different network architectures with $4$ hidden layers of different widths and the hyperbolic tangent $\tanh$ as an activation function. 
 As both equations admit closed explicit solutions, we report the relative $L^2$ errors against the wall clock time achieved by the different optimizers in \Cref{fig:2D-Poisson} and \Cref{fig:1D-heat} for the two problems, respectively. 
 
 \begin{figure}
     \centering
     \includegraphics{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error_over_time.pdf}
-    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; }
+    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; ...}
     \label{fig:2D-Poisson}
 \end{figure}
 
 \begin{figure}
     \centering
-    % \includegraphics{}
-    \caption{We report the performance of different optimizers on the Poisson equation~\eqref{eq:1D-Heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; }
+    \includegraphics{../kfac_pinns_exp/exp24_heat1d_groupplot/l2_error.pdf}
+    \caption{We report the performance of different optimizers on the heat equation~\eqref{eq:1D-Heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$; }
     \label{fig:1D-heat}
 \end{figure}
 
 
-\subsection{A 5D Poisson equation}
+\subsection{A higher-dimensional problems}
+
+
+\begin{itemize}
+    \item 5D Poisson, formulate in general dimensions 
+    \item 10D heat 
+    \item 4D heat equation 
+\end{itemize}
 
 \begin{align}
     \begin{split}
@@ -63,18 +70,18 @@ As both equations admit closed explicit solutions, we report the relative $L^2$ 
     \end{split}
 \end{align}
 
-\subsection{A 10D Poisson equation}
+%\subsection{A 10D Poisson equation}
 
-\begin{align}
-    \begin{split}
-        asdf
-    \end{split}
-\end{align}
+%\begin{align}
+%    \begin{split}
+%        asdf
+%    \end{split}
+%\end{align}
 
 \begin{figure}[tb]
   \centering
-  \includegraphics{../kfac_pinns_exp/exp24_heat1d_groupplot/l2_error.pdf}
-  \includegraphics{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error.pdf}
+  %\includegraphics{../kfac_pinns_exp/exp24_heat1d_groupplot/l2_error.pdf}
+  %\includegraphics{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error.pdf}
   \includegraphics{../kfac_pinns_exp/exp18_groupplot_poisson5d/l2_error.pdf}
   \caption{Scaling behaviour of different optimizers for learning the solution of a 5d-Poisson equation w.r.t.
     neural network size under a given time budget of $3\cdot 10^3\,\text{s}$ on an RTX 6000 GPU.}
@@ -129,10 +136,14 @@ As both equations admit closed explicit solutions, we report the relative $L^2$ 
 \end{itemize}
 \end{comment}
 
-\end{comment}
 \subsection{Discussion}
 
 Hessian free vs KFAC (KFAC plays nicer with stochasticity?!)
+
+\begin{itemize}
+    \item KFAC is competitive with exact second-order methods on smaller scale networks
+    \item ... 
+\end{itemize}
 
 %\subsection{Limitations and Future Work}
 

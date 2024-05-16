@@ -148,8 +148,9 @@ Using the notation $\vg^{(l)}_{n,\alpha} = \nabla_{\partial_\vx^\alpha \vz_n^{(l
 \end{equation}
 \todo[inline]{not sure, whether this works without any structure in $\mA_n$ or without another approximation}
 Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx M^{-1}\sum_{m=1}^M \mA_m \mB_m$ we compute 
-\begin{align*}
-    & \sum_{n=1}^N
+\begin{align}
+    \begin{split}
+        & \sum_{n=1}^N
     \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes \vg_{n,\alpha}^{(l)} \right)
     \mA_n
     \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
@@ -160,15 +161,16 @@ Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx M^{-
     \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
     \\ = & \;
     \frac{1}{\binom{d+k}{d}}\sum_{n=1}^N
-    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\otimes \vg_{n,\alpha}^{(l)}{\vg_{n,\alpha}^{(l)}}^\top \right)
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\otimes \vg_{n,\alpha}^{(l)} \mA_n{\vg_{n,\alpha}^{(l)}}^\top \right)
     \right]
     \\ \approx & \;
     \frac{1}{N\binom{d+k}{d}}\left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top \right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} \vg^{(l)}_{n,\alpha}{\vg^{(l)}_{n,\alpha}}^\top \right],
-\end{align*}
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} \vg^{(l)}_{n,\alpha}\mA_n{\vg^{(l)}_{n,\alpha}}^\top \right],
+    \end{split}
+\end{align}
 which gives the approximation 
-\begin{tcolorbox}[colframe=kfac, title={KFAC for Gauß-Newton with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
+\begin{tcolorbox}[colframe=kfac, title={KFAC with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
 \begin{align*}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
@@ -268,3 +270,23 @@ Some works find that if setting this factor to $\mI$, the resulting input-based 
     \item this reduces computation time...? 
 \end{itemize}
 \end{comment}
+
+\paragraph{KFAC for linear PDEs}
+
+Consider now the specific case of a general linear PDE 
+\begin{align}
+    \sum_{\lvert \alpha \rvert\le k} c_\alpha \partial^\alpha u = f.
+\end{align}
+Then we can derive the approximation 
+\begin{tcolorbox}[colframe=kfac, title={KFAC for ENGD for a general linear PDE},bottom=0mm,top=0mm,middle=0mm]
+\begin{align*}\label{eq:KFAC-PINNs-general}
+    \hat{\mG}%^{\textup{exp}}
+    (\mW^{(l)})
+    \coloneqq \frac{1}{N^2 \binom{d+k}{d}}
+    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
+    c_\alpha^2\partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
+    \otimes
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} {\vg^{(l)}_{n,\alpha}}^\top \right]. 
+\end{align*}
+\end{tcolorbox}
+
