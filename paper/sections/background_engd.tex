@@ -26,9 +26,9 @@ a popular choice as a Gramian is given by the Gauß-Newton matrix
 which agrees with the (empirical) Fisher information matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}. Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$. 
 \end{comment}
 
-It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\cite{?}. 
+It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\cite{?}. \todo{add references}
 Whereas BFGS improves the accuracy, function-space-inspired methods have shown more promising results, see~\cite{?}.
-Here, we focus on, energy natural gradients (ENGD), which in the case of PINNs agree with the Gauß-Newton method~\cite{muller2023achieving}. 
+Here, we focus on, \emph{energy natural gradients (ENGD)}, which in the case of PINNs agree with the Gauß-Newton method~\citep{muller2023achieving}. 
 ENGD mimics Newton's method up to a projection onto the tangent space of the model and a discretization error that vanishes quadratically in the step size, thus providing locally optimal updates in the residual~\citep{muller2023achieving}. Alternatively, the Gauß-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauß-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}. 
 
 %To account for the PDE terms in the loss function in PINNs,
@@ -36,7 +36,8 @@ ENGD mimics Newton's method up to a projection onto the tangent space of the mod
 %and the loss involves PDE terms.
 %In order to adjust the definition of
 %To capture the geometric properties of this specific problem we consider the following Fisher / Gramian matrix %to this problemThe energy natural gradient is for this example to use the Fischer/Gramian of the form
-The Gauß-Newton matrix corresponding to the PINN-loss~\eqref{eq:pinn-loss} is given by 
+Natural gradient methods perform parameter updates via a preconditioned gradient descent scheme $\vtheta_{t+1} = \vtheta_t - \alpha_t \mG(\vtheta_t)^+\nabla L(\vtheta_t)$, where $\mG(\vtheta)^+$ denotes the pseudo-inverse of a suitable \emph{Gramian matrix} $\mG(\vtheta)$. 
+In the context of ENGD for the PINN-loss~\eqref{eq:pinn-loss}, the Gramian is given by 
 \begin{equation}\label{eq:gramian}
   \mG(\vtheta) = %\mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta) =
   \underbrace{\frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)^\top \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)}_{\eqqcolon \mG_\Omega(\vtheta)} + \underbrace{\frac1{{N_{\partial\Omega}}} \sum_{n=1}^{N_{\partial\Omega}} \jac_{\vtheta} u_\vtheta(\vx_n^b)^\top \jac_{\vtheta} u_\vtheta (\vx_n^b)}_{\eqqcolon \mG_{\partial\Omega}(\vtheta)}.

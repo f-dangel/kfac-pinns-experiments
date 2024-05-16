@@ -1,7 +1,7 @@
 
-The overall Gauß-Newton matrix is given by the sum $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$ of two Gramian matrices stemming from the PDE and the boundary term, respectively.
+The overall Gramian matrix of ENGD is given by the sum $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$ of two Gramian matrices stemming from the PDE and the boundary term, respectively.
 A Kronecker factored approximation of the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ can be obtained just like the case of the  Fisher $\mF(\vtheta)$.
-The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section in \eqref{eq:KFAC-PINN} and \eqref{eq:KFAC-PINNs-general} for the Laplace equation and general Gauß-Newton matrices involving PDE terms, respectively. 
+The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section in \eqref{eq:KFAC-PINN} and \eqref{eq:KFAC-PINNs-general} for the Laplace equation and more general PDEs, respectively. 
 For this, we use forward mode automatic differentiation to express the computation of higher-order derivatives as forward passes of a larger network with shared weights, for which we propose a Kronecker-factored approximation generalizing the expand approximation by~\citet{eschenhagen2023kroneckerfactored}.
 The approximations of $\mG_{\Omega}(\vtheta)$ and $\mG_{\partial\Omega}(\vtheta)$ can be %combined into a single approximation or 
 inverted using an explicit formula based on the individual inversions~\citep{martens2015optimizing}.
@@ -14,14 +14,15 @@ Many PDEs only incorporate first and second partial derivatives and we focus our
 However, a completely analogous approach can be taken for higher-order PDEs.
 
 How to compute the function values through a forward pass is well known.
-The computation of the gradient through forward mode differentiation uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$.
-If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by
-\begin{align}
+%The computation of the gradient through forward mode differentiation uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$.
+%If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by
+%\begin{align}
        %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\
-       \partial_{\vx_i} \partial_{\vx_j} (f \circ g)(\vx) & = \partial_{\vx_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{\vx_j} g(\vx) + \jac f(g(\vx)) \partial_{\vx_i} \partial_{\vx_j} g(\vx).
-\end{align}
+       %\partial_{\vx_i} \partial_{\vx_j} (f \circ g)(\vx) & = \partial_{\vx_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{\vx_j} g(\vx) + \jac f(g(\vx)) \partial_{\vx_i} \partial_{\vx_j} g(\vx).
+%\end{align}
+\todo{I have removed the second-order chain rule for spacing reasons}
 If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz %+ \vb^{(l)}
-$ is a linear layer, then setting $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{\vx_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{\vx_i}\partial_{\vx_j}\vz^{(0)} = 0\in\mathbb R^d$, the second-order forward pass is given by
+$ is a linear layer, then setting $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{\vx_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{\vx_i}\partial_{\vx_j}\vz^{(0)} = 0\in\mathbb R^d$, applying the chain rule gives the second-order forward pass is given by
 \begin{subequations}\label{eq:forward_pass}
     \begin{align}
     \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} %+ \vb^{(l)}
@@ -38,8 +39,6 @@ The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$
     \partial_{\vx_i}\partial_{\vx_j} \vz^{(l)} & = \partial_{\vx_i} \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_{\vx_j} \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_{\vx_i} \partial_{\vx_j} \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}.
 \end{align}
 \end{subequations}
-
-
 
 \paragraph{Forward Laplacian}
 To compute not the full Hessian but only the Laplacian, we can simplify the forward pass only to propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}. 
@@ -374,7 +373,7 @@ Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order pa
 and hence, we can perceive the computational graph of $v_\vtheta$ as a feedforward network with weight sharing over the multi-indices $\alpha\in\mathbb N$ with $\lvert \alpha \rvert \le k$.
 The generalization of%the approximation
 ~\eqref{eq:KFAC-PINN} is given by 
-\begin{tcolorbox}[colframe=kfac, title={KFAC for Gauß-Newton with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
+\begin{tcolorbox}[colframe=kfac, title={KFAC with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
 \begin{align}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
@@ -475,12 +474,12 @@ This can be done without building up the full matrix utilizing a generalized eig
 %The boundary Gramian matrix $\mG_{\partial\Omega}(\mW^{(l)})$ is a classic Gauß-Newton matrix and thus we can use a classic KFAC approximation $\hat{\mG}_{\partial\Omega}(\mW^{(l)})$. 
 %To invert the sum $\hat{\mG}_\Omega(\mW^{(l)}) + \hat{\mG}_{\partial\Omega}(\mW^{(l)})$ of the two Kronecker approximations we use the procedure described in \cite[Appendix I]{martens2015optimizing}.
 
-\paragraph{Learning rate selection and momentum}
-We consider two different flavors to obtain the update $\vdelta_{t+1} = \vtheta_{t+1} - \vtheta_t$ at iteration $t$ from the pre-conditioned gradient $\vDelta_t$, which we call as `KFAC' and `KFAC*'.
+\paragraph{Learning rate and momentum}
+We consider two different updates $ \vtheta_{t+1} = \vtheta_t + \vdelta_{t}$ at iteration $t$ from the pre-conditioned gradient $\vDelta_t$, which we call as `KFAC' and `KFAC*'.
 KFAC uses momentum %buffer of all previous updates, 
 $\hat{\vdelta}_t = \mu \vdelta_{t-1} + \vDelta_t$ %(similar to momentum in SGD).
 %The
-where the parameter $\mu$ is tuned manually\todo{?} in our experiments via random search.
+where the parameter $\mu$ can be chosen by the practitioner.
 Like in ENGD, we use a logarithmic grid line search along 
 %$\hat{\vdelta}_t$, i.e.\,
 %choosing 
@@ -488,7 +487,7 @@ leading to the update
 $\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where 
 $\alpha_{\star} = \argmin_{\alpha} \gL(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
 KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}.
-\todo{can potentially be moved to the appendix is we need more space}
+\todo{can potentially be moved to the appendix from here on is we need more space}
 It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
 The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
 \begin{align}

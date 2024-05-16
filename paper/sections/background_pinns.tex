@@ -32,7 +32,7 @@ Here, the weights of the linear layers are trainable and we denote them by $\vth
 The nonlinear layers are given by $\vz\mapsto \sigma(\vz)$ componentwise for a (typically smooth) activation function $\sigma\colon\mathbb R\to\mathbb R$.
 %We denote the parameters of a linear layer by $\vtheta^{(l)} = \mW^{(l)}$ where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
 
-\subsection{The Gauß-Newton Method for Physics-Informed Neural Networks (PINNs)}
+\subsection{Energy Natural Gradients for Physics-Informed Neural Networks}
 %\begin{itemize}
 %    \item PINNs are one of the most promising approaches to neural network based PDE solvers
 %    \item
@@ -52,7 +52,7 @@ Here, $\mathcal{L}$ denotes a differential operator, e.g., the \emph{Laplacian} 
 %  \[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds, \]
 %which is designed such that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$.
 %Hence, we discretize the integral and use the following loss function t
-In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a neural network and train its parameters $\vtheta$ using the loss
+In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a neural network and train its parameters $\vtheta$ to minimize the loss s
   %\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
 %Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}.
 %In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
