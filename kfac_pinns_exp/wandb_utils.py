@@ -6,9 +6,10 @@ from typing import Any, Dict, List, Tuple, Union
 
 from pandas import DataFrame, read_csv
 from wandb import Api
+from wandb.apis.public.sweeps import Sweep
 
 
-def show_sweeps(entity: str, project: str):
+def show_sweeps(entity: str, project: str) -> List[Sweep]:
     """Print ids and names of sweeps in a project.
 
     This is useful to map sweep ids to human-readable names.
@@ -16,12 +17,16 @@ def show_sweeps(entity: str, project: str):
     Args:
         entity: The team name on wandb.
         project: The name from the 'Projects' tab on wandb.
+
+    Returns:
+        A list of sweep objects.
     """
     api = Api()
     sweeps = api.project(project, entity=entity).sweeps()
     print(f"Found the following sweeps in {entity}/{project}:")
     for sweep in sweeps:
         print(f"\tid: {sweep.id}, ({sweep.config['name']})")
+    return list(sweeps)
 
 
 def load_best_run(
@@ -92,8 +97,34 @@ def remove_unused_runs(keep: List[str], best_run_dir: str = ".", verbose: bool =
 class WandbRunFormatter:
     """Class to format command line args of a wandb run to LaTeX."""
 
-    @staticmethod
-    def num(value: Union[float, int, bool, str]) -> str:
+    HYPERPARAMETERS = {
+        "SGD": {"SGD_lr": "learning rate", "SGD_momentum": "momentum"},
+        "Adam": {"Adam_lr": "learning rate"},
+        "HessianFree": {
+            "HessianFree_curvature_opt": "curvature matrix",
+            "HessianFree_damping": "initial damping",
+            "HessianFree_no_adapt_damping": "constant damping",
+            "HessianFree_cg_max_iter": "maximum CG iterations",
+        },
+        "LBFGS": {
+            "LBFGS_lr": "learning rate",
+            "LBFGS_history_size": "history size",
+        },
+        "ENGD": {
+            "ENGD_damping": "damping",
+            "ENGD_ema_factor": "exponential moving average",
+            "ENGD_initialize_to_identity": "initialize Gramian to identity",
+        },
+        "KFAC": {
+            "KFAC_damping": "damping",
+            "KFAC_momentum": "momentum",
+            "KFAC_ema_factor": "exponential moving average",
+            "KFAC_initialize_to_identity": "initialize Kronecker factors to identity",
+        },
+    }
+
+    @classmethod
+    def num(cls, value: Union[float, int, bool, str]) -> str:
         """Format a value to LaTeX.
 
         Args:
@@ -102,11 +133,16 @@ class WandbRunFormatter:
         Returns:
             The LaTeX-formatted string.
         """
+        # Strangely, some numbers are stored as float in wandb. I noticed that they
+        # follow the pattern 1e-X. FIX: Convert to float here explicitly
+        if isinstance(value, str) and value.startswith("1e-"):
+            value = float(value)
+
         if isinstance(value, str):
             spellings = {"ggn": "GGN", "hessian": "Hessian"}
-            return spellings.get(value, value)
+            return r"$\text{" + spellings.get(value, value) + "}$"
         elif isinstance(value, bool):
-            return {True: "yes", False: "no"}[value]
+            return cls.num({True: "yes", False: "no"}[value])
         elif isinstance(value, float):
             value_str = f"{value:.6e}" if len(str(value)) > 10 else str(value)
             return r"$\num[scientific-notation=true]{" + value_str + "}$"
@@ -122,32 +158,7 @@ class WandbRunFormatter:
             args: The dictionary of command line args.
         """
         optimizer = args["optimizer"]
-
-        hyperparams = {
-            "SGD": {"SGD_lr": "learning rate", "SGD_momentum": "momentum"},
-            "Adam": {"Adam_lr": "learning rate"},
-            "HessianFree": {
-                "HessianFree_curvature_opt": "curvature matrix",
-                "HessianFree_damping": "initial damping",
-                "HessianFree_no_adapt_damping": "constant damping",
-                "HessianFree_cg_max_iter": "maximum CG iterations",
-            },
-            "LBFGS": {
-                "LBFGS_lr": "learning rate",
-                "LBFGS_history_size": "history size",
-            },
-            "ENGD": {
-                "ENGD_damping": "damping",
-                "ENGD_ema_factor": "exponential moving average",
-                "ENGD_initialize_to_identity": "initialize Gramian to identity",
-            },
-            "KFAC": {
-                "KFAC_damping": "damping",
-                "KFAC_momentum": "momentum",
-                "KFAC_ema_factor": "exponential moving average",
-                "KFAC_initialize_to_identity": "initialize Kronecker factors to identity",
-            },
-        }[optimizer]
+        hyperparams = cls.HYPERPARAMETERS[optimizer]
 
         if optimizer == "ENGD":
             approximation = args["ENGD_approximation"]
@@ -158,13 +169,95 @@ class WandbRunFormatter:
             }[approximation]
         elif optimizer == "KFAC" and args["KFAC_lr"] == "auto":
             optimizer = "KFAC_auto"
-            hyperparams.pop("KFAC_momentum")
+            hyperparams = {k: v for k, v in hyperparams.items() if k != "KFAC_momentum"}
 
         # create human-readable description
         text = ", ".join(
             [f"{value}: {cls.num(args[key])}" for key, value in hyperparams.items()]
         )
 
-        tex_file = path.join(directory, f"{optimizer}.tex")
+        tex_file = path.join(directory, f"best_{optimizer}.tex")
+        with open(tex_file, "w") as f:
+            f.write(text)
+
+
+class WandbSweepFormatter(WandbRunFormatter):
+    """Class to format wandb sweeps into human-readable LaTeX files."""
+
+    @classmethod
+    def dist(cls, parameter: Dict) -> str:
+        """Format a parameter entry of a sweep into LaTeX.
+
+        Args:
+            parameter: The parameter entry of a sweep.
+
+        Returns:
+            The LaTeX-formatted string describing the parameter.
+
+        Raises:
+            NotImplementedError: If the distribution is not recognized.
+        """
+        if "distribution" not in parameter:
+            return cls.num(parameter["value"])
+
+        dist = parameter["distribution"]
+        if dist == "log_uniform_values":
+            min_str = cls.num(parameter["min"]).replace("$", "")
+            max_str = cls.num(parameter["max"]).replace("$", "")
+            return r"$\mathcal{LU}([" + f"{min_str}; {max_str}])$"
+        elif dist == "uniform":
+            min_str = cls.num(parameter["min"]).replace("$", "")
+            max_str = cls.num(parameter["max"]).replace("$", "")
+            return r"$\mathcal{U}([" + f"{min_str}; {max_str}])$"
+        elif dist == "categorical":
+            values = ",".join(
+                [cls.num(v).replace("$", "") for v in parameter["values"]]
+            )
+            return r"$\mathcal{C}(\{" + values + r"\})$"
+        else:
+            raise NotImplementedError(f"Unknown distribution {dist}.")
+
+    @classmethod
+    def to_tex(cls, directory: str, args: Dict[str, Dict[str, Any]]):
+        """Format a dictionary of command line args to LaTeX and save to tex file.
+
+        Args:
+            directory: The directory to save the tex file.
+            args: The nested dictionary of sweep arguments.
+        """
+        # extract optimizer name
+        cmd_args = args["command"]
+        (optimizer,) = [
+            arg.removeprefix("--optimizer=")
+            for arg in cmd_args
+            if "--optimizer=" in arg
+        ]
+        hyperparams = cls.HYPERPARAMETERS[optimizer]
+        parameters = args["parameters"]
+
+        # add suffix for KFAC and ENGD specifying the variant.
+        if (
+            optimizer == "KFAC"
+            and "KFAC_lr" in parameters
+            and parameters["KFAC_lr"].get("value") == "auto"
+        ):
+            optimizer = "KFAC_auto"
+            hyperparams = {k: v for k, v in hyperparams.items() if k != "KFAC_momentum"}
+        if optimizer == "ENGD":
+            optimizer = {
+                "full": "ENGD_full",
+                "per_layer": "ENGD_per_layer",
+                "diagonal": "ENGD_diagonal",
+            }[parameters["ENGD_approximation"]["value"]]
+
+        # create human-readable description
+        text = ", ".join(
+            [
+                f"{value}: {cls.dist(parameters[key])}"
+                for key, value in hyperparams.items()
+            ]
+        )
+
+        tex_file = path.join(directory, f"sweep_{optimizer}.tex")
         with open(tex_file, "w") as f:
             f.write(text)

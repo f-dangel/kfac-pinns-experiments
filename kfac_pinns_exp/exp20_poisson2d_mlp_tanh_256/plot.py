@@ -11,6 +11,7 @@ from tueplots import bundles
 from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import (
     WandbRunFormatter,
+    WandbSweepFormatter,
     load_best_run,
     remove_unused_runs,
     show_sweeps,
@@ -101,44 +102,44 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    # x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
+    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
 
-    # for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
-    #     with plt.rc_context(
-    #         bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
-    #     ):
-    #         fig, ax = plt.subplots(1, 1)
-    #         ax.set_xlabel(xlabel)
-    #         ax.set_xscale("log")
-    #         ax.set_ylabel(ylabel)
-    #         ax.set_yscale("log")
-    #         ax.set_title(f"{dim_Omega}d {equation.capitalize()} ($D={num_params}$)")
-    #         ax.grid(True, alpha=0.5)
+    for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
+        with plt.rc_context(
+            bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+        ):
+            fig, ax = plt.subplots(1, 1)
+            ax.set_xlabel(xlabel)
+            ax.set_xscale("log")
+            ax.set_ylabel(ylabel)
+            ax.set_yscale("log")
+            ax.set_title(f"{dim_Omega}d {equation.capitalize()} ($D={num_params}$)")
+            ax.grid(True, alpha=0.5)
 
-    #         for sweep_id, label in sweep_ids.items():
-    #             df_history, _ = load_best_run(
-    #                 entity,
-    #                 project,
-    #                 sweep_id,
-    #                 save=True,
-    #                 update=args.update,
-    #                 savedir=DATADIR,
-    #             )
-    #             x_data = {
-    #                 "step": df_history["step"] + 1,
-    #                 "time": df_history["time"] - min(df_history["time"]),
-    #             }[x]
-    #             ax.plot(
-    #                 x_data,
-    #                 df_history[y],
-    #                 label=None if "*" in label else label,
-    #                 color=colors[label],
-    #                 linestyle=linestyles[label],
-    #             )
+            for sweep_id, label in sweep_ids.items():
+                df_history, _ = load_best_run(
+                    entity,
+                    project,
+                    sweep_id,
+                    save=True,
+                    update=args.update,
+                    savedir=DATADIR,
+                )
+                x_data = {
+                    "step": df_history["step"] + 1,
+                    "time": df_history["time"] - min(df_history["time"]),
+                }[x]
+                ax.plot(
+                    x_data,
+                    df_history[y],
+                    label=None if "*" in label else label,
+                    color=colors[label],
+                    linestyle=linestyles[label],
+                )
 
-    #         ax.legend()
-    #         plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
+            ax.legend()
+            plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
 
     # export run descriptions to LaTeX
     TEXDIR = path.join(HEREDIR, "tex")
@@ -150,3 +151,7 @@ if __name__ == "__main__":
         )
         args = meta.to_dict()["config"][0]
         WandbRunFormatter.to_tex(TEXDIR, args)
+
+    if args.update:  # only if online access is possible
+        for sweep in show_sweeps(entity, project):
+            WandbSweepFormatter.to_tex(TEXDIR, sweep.config)
