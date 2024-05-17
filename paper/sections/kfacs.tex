@@ -1,5 +1,5 @@
 
-\subsection{A Kronecker-factored approximation for the Poisson equation}
+\subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}
 
 Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauß-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
@@ -161,7 +161,7 @@ Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx M^{-
     \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
     \\ = & \;
     \frac{1}{\binom{d+k}{d}}\sum_{n=1}^N
-    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\otimes \vg_{n,\alpha}^{(l)} \mA_n{\vg_{n,\alpha}^{(l)}}^\top \right)
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\right) \otimes \left(\vg_{n,\alpha}^{(l)} \mA_n{\vg_{n,\alpha}^{(l)}}^\top \right)
     \right]
     \\ \approx & \;
     \frac{1}{N\binom{d+k}{d}}\left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top \right]

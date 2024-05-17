@@ -63,16 +63,16 @@ In the context of ENGD for the PINN-loss~\eqref{eq:pinn-loss}, the Gramian is gi
 
 %\paragraph{Interpretation as Gau\ss-Newton method}
 %Consider the combined residual
-Note that $\mG(\vtheta)$ is the Gauß-Newton matrix of the joint residual 
-\begin{equation*}
-    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad 
-    \vtheta 
-    \mapsto 
-    \begin{pmatrix}
-        (2N_\Omega)^{-1/2}r_\Omega(\vtheta) \\ 
-        (2N_{\partial\Omega})^{-1/2}r_{\partial\Omega}(\vtheta)
-    \end{pmatrix},
-\end{equation*}
+Note that $\mG(\vtheta)$ is the Gauß-Newton matrix of $r(\theta) = ((2N_\Omega)^{-1/2}r_\Omega(\vtheta), (2N_{\partial\Omega})^{-1/2} r_{\partial\Omega}(\vtheta))^\top$, 
+%\begin{equation*}
+%    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad 
+%    \vtheta 
+%    \mapsto 
+%    \begin{pmatrix}
+%        (2N_\Omega)^{-1/2}r_\Omega(\vtheta) \\ 
+%        (2N_{\partial\Omega})^{-1/2}r_{\partial\Omega}(\vtheta)
+%    \end{pmatrix},
+%\end{equation*}
 where $r_{\Omega}(\vtheta)_n = \Delta u_\vtheta(\vx_n) + f(\vx_n)$ and $r_{\Omega}(\vtheta)_n = u_\vtheta(\vx_n^b) - g(\vx_n^b)$, respectively. 
 %Then %(with the right choice of the inner product)
 %$L(\vtheta) = \frac12 \lVert r(\vtheta) \rVert_2^2$ and hence the Gau\ss-Newton matrix is given by

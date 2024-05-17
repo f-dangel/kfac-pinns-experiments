@@ -1,18 +1,37 @@
 
-\paragraph{What did we do?}
+We provide KFAC approximations for preconditioners involving general PDE terms
+This builds on an interpretation of the input-derivatives of a network via Taylor-mode automatic differentiation as a weight-sharing network. 
+We provide an efficient implementation of the proposed KFAC method and demonstrate that it...? 
 
-\begin{itemize}
-    \item 
-\end{itemize}
+\paragraph{Limitations}
+\paragraph{Studying further KFAC heuristics} The original KFAC optimizer introduces many additional techniques to improve performance and stability, e.g.\,adaptive damping and heuristics for splitting up the damping onto the different Kronecker factors.
+Our algorithms borrow components, but we did not explore all bells and whistles.
+We believe they can help to either reduce the number of hyper-parameters that need to be tuned, or improve performance.
+We use an independent Kronecker product for each of the losses and dit not look into further condensing this representation into a single Kronecker product.
+Doing so would allow to further reduce memory cost for storing the pre-conditioner, as well as computational cost to invert it.
+We did not play around with updating the KFAC matrices or inverting the pre-conditioner less frequently.
+We did not try lower precision than float64 because this is the standard setup for PINNs (??).
 
-\paragraph{Future directions:}
-\begin{itemize}
-    \item Only works for sequential networks
+\paragraph{Performance improvements} The generalized eigenvalue that we currently need to solve to invert the Kronecker sum is currently computed through SciPy as there is no PyTorch API for doing so. This has the downside that we need to sync the Kronecker factors with CPU each time we want to invert the curvature approximation. Our results could be further improved by using a fully GPU-compatible implementation.
+As pointed out in \citep{martens2015optimizing}, the requested Gramian projections can be computed at the cost of two forward passes; however, we are currently using a non-specialized implementation which does not take into account the Gramian's matrix square root factorization.
+One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done by~\cite{dangel2020backpack}.
+However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
+
+\paragraph{Future work}
+%\paragraph{Future directions}
+Currently, our KFAC approximations can only handle feedforward architectures, where it is natural to extend them to more general architectures in the future. 
+Further, optimizing our implementation using inverse-free KFAC update~\citep{lin2023simplifying}, structured Kronecker factors~\citep{lin2023structured}, and more sophisticated heuristics would likely improve the proposed method. 
+It remains to test the performance of our proposed approximation when applied to the optimization of larger networks and more PDEs including nonlinear problems. 
+
+
+
+%\begin{itemize}
+    %\item Only works for sequential networks
     %\item Hessian backpropagation requires memory quadratic in the intermediate features size and therefore becomes impractical for large intermediates like in CNNs.
-    \item Our implementation is likely manual and relatively hard to automate with the current graph inspection tools offered by ML frameworks.
-    \item bigger networks
-    \item harder, nonlinear PDEs 
-\end{itemize}
+    %\item Our implementation is likely manual and relatively hard to automate with the current graph inspection tools offered by ML frameworks.
+%    \item bigger networks
+%    \item harder, nonlinear PDEs 
+%\end{itemize}
 
 
 
