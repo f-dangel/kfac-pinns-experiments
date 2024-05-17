@@ -7,3 +7,9 @@ for DIR in exp14_poisson_100d_weinan \
     echo "Updating plots in $DIR"
     cd $DIR && python plot.py && cd -
 done
+
+# group plots recycle the downloaded data from the individual experiments, they
+# must thus be updated after to be up-to-date
+DIR=exp33_poisson_bayes_groupplot
+echo "Updating group plot in $DIR"
+cd $DIR && python plot.py && cd -
