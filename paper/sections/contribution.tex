@@ -228,7 +228,7 @@ Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gra
 \begin{align}\label{eq:KFAC-PINN}
     \hat{\mG}_\Omega%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{1}{N^2 S}
+    \coloneqq \frac{S}{N^2 }
     \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
     \otimes
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top   \right].
@@ -381,7 +381,7 @@ The generalization of%the approximation
 \begin{align}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{1}{N^2 \binom{d+k}{d}}
+    \coloneqq \frac{\binom{d+k}{d}}{N^2}
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
     \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
     \otimes
