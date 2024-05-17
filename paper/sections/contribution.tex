@@ -329,7 +329,7 @@ PDE
     %\Psi(u, \nabla u, \nabla^{2} u) = 0,
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
 \end{equation}
-where $\Psi\colon \mathbb R^{K}\to\mathbb R^M$ is some smooth function.
+where $\Psi\colon \mathbb R^{K}\to\mathbb R^M,K=\binom{d+k}{d}$ is some smooth function.
 %We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
 %Set $v_\vtheta(x)\coloneqq (u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))$
 %and
@@ -340,7 +340,7 @@ we denote the residual and consider the PINN loss
     %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
     L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
 \end{equation}
-where $\ell\colon\mathbb R^K\to\mathbb R, K=\binom{d+k}{d}$ is a smooth convex function with definite Hessian $\nabla^2\ell\succ0$ that typically has a unique minimizer at $0$. 
+where $\ell\colon\mathbb R^K\to\mathbb R$ is a smooth convex function with definite Hessian $\nabla^2\ell\succ0$ that typically has a unique minimizer at $0$. 
 We consider the Gauß-Newton matrix
 \begin{align}
     \mG(\vtheta) & \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),

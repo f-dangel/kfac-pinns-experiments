@@ -9,20 +9,15 @@ from palettable.colorbrewer import sequential
 from tueplots import bundles
 
 from kfac_pinns_exp.train import set_up_layers
-from kfac_pinns_exp.wandb_utils import (
-    WandbRunFormatter,
-    load_best_run,
-    remove_unused_runs,
-    show_sweeps,
-)
+from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
-project = "poisson2d"  # name from the 'Projects' tab on wandb
+project = "poisson10d_mlp_tanh_256_bayes"  # name from the 'Projects' tab on wandb
 
 # information for title
 equation = "poisson"
-architecture = "mlp-tanh-64"
-dim_Omega = 2
+architecture = "mlp-tanh-256-256-128-128"
+dim_Omega = 10
 num_params = sum(
     p.numel()
     for layer in set_up_layers(architecture, equation, dim_Omega)
@@ -35,23 +30,19 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "b1a1iygs": "SGD",
-    "0zppzhej": "Adam",
-    "v14daetn": "Hessian-free",
-    "gjbxog62": "LBFGS",
-    "0ku0xl1j": "ENGD (full)",
-    "mv3u2nww": "ENGD (layer-wise)",
-    "bczqwxag": "ENGD (diagonal)",
-    "euc27yi9": "KFAC",
-    "i1txqj6g": "KFAC*",
+    "da1eqjye": "SGD",
+    "eyi26oki": "Adam",
+    "qczg0d7s": "Hessian-free",
+    "oyw9btw9": "LBFGS",
+    "ei4els7w": "ENGD (diagonal)",
+    "ngewaxal": "KFAC",
+    "ucllzkcw": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
 colors = {
     "SGD": sequential.Reds_4.mpl_colors[-2],
     "Adam": sequential.Reds_4.mpl_colors[-1],
-    "ENGD (full)": sequential.Blues_5.mpl_colors[-3],
-    "ENGD (layer-wise)": sequential.Blues_5.mpl_colors[-2],
     "ENGD (diagonal)": sequential.Blues_5.mpl_colors[-1],
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
@@ -62,8 +53,6 @@ colors = {
 linestyles = {
     "SGD": "-",
     "Adam": "-",
-    "ENGD (full)": "-",
-    "ENGD (layer-wise)": "-",
     "ENGD (diagonal)": "-",
     "Hessian-free": "-",
     "LBFGS": "-",
@@ -97,8 +86,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
     x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
+    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
 
     for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
         with plt.rc_context(
@@ -128,21 +117,10 @@ if __name__ == "__main__":
                 ax.plot(
                     x_data,
                     df_history[y],
-                    label=None if "*" in label else label,
+                    label=label,
                     color=colors[label],
                     linestyle=linestyles[label],
                 )
 
             ax.legend()
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
-
-    # export run descriptions to LaTeX
-    TEXDIR = path.join(HEREDIR, "tex")
-    makedirs(TEXDIR, exist_ok=True)
-
-    for sweep_id in sweep_ids:
-        _, meta = load_best_run(
-            entity, project, sweep_id, save=True, update=args.update, savedir=DATADIR
-        )
-        args = meta.to_dict()["config"][0]
-        WandbRunFormatter.to_tex(TEXDIR, args)

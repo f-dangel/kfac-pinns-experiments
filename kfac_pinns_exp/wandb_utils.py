@@ -2,7 +2,7 @@
 
 from glob import glob
 from os import path, remove
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from pandas import DataFrame, read_csv
 from wandb import Api
@@ -87,3 +87,84 @@ def remove_unused_runs(keep: List[str], best_run_dir: str = ".", verbose: bool =
         if verbose:
             print(f"Removing unused sweep data in {f}.")
         remove(f)
+
+
+class WandbRunFormatter:
+    """Class to format command line args of a wandb run to LaTeX."""
+
+    @staticmethod
+    def num(value: Union[float, int, bool, str]) -> str:
+        """Format a value to LaTeX.
+
+        Args:
+            value: The value to format.
+
+        Returns:
+            The LaTeX-formatted string.
+        """
+        if isinstance(value, str):
+            spellings = {"ggn": "GGN", "hessian": "Hessian"}
+            return spellings.get(value, value)
+        elif isinstance(value, bool):
+            return {True: "yes", False: "no"}[value]
+        elif isinstance(value, float):
+            value_str = f"{value:.6e}" if len(str(value)) > 10 else str(value)
+            return r"$\num[scientific-notation=true]{" + value_str + "}$"
+        else:
+            return str(value)
+
+    @classmethod
+    def to_tex(cls, directory: str, args: Dict[str, Any]):
+        """Format a dictionary of command line args to LaTeX and save to tex file.
+
+        Args:
+            directory: The directory to save the tex file.
+            args: The dictionary of command line args.
+        """
+        optimizer = args["optimizer"]
+
+        hyperparams = {
+            "SGD": {"SGD_lr": "learning rate", "SGD_momentum": "momentum"},
+            "Adam": {"Adam_lr": "learning rate"},
+            "HessianFree": {
+                "HessianFree_curvature_opt": "curvature matrix",
+                "HessianFree_damping": "initial damping",
+                "HessianFree_no_adapt_damping": "constant damping",
+                "HessianFree_cg_max_iter": "maximum CG iterations",
+            },
+            "LBFGS": {
+                "LBFGS_lr": "learning rate",
+                "LBFGS_history_size": "history size",
+            },
+            "ENGD": {
+                "ENGD_damping": "damping",
+                "ENGD_ema_factor": "exponential moving average",
+                "ENGD_initialize_to_identity": "initialize Gramian to identity",
+            },
+            "KFAC": {
+                "KFAC_damping": "damping",
+                "KFAC_momentum": "momentum",
+                "KFAC_ema_factor": "exponential moving average",
+                "KFAC_initialize_to_identity": "initialize Kronecker factors to identity",
+            },
+        }[optimizer]
+
+        if optimizer == "ENGD":
+            approximation = args["ENGD_approximation"]
+            optimizer = {
+                "full": "ENGD_full",
+                "per_layer": "ENGD_per_layer",
+                "diagonal": "ENGD_diagonal",
+            }[approximation]
+        elif optimizer == "KFAC" and args["KFAC_lr"] == "auto":
+            optimizer = "KFAC_auto"
+            hyperparams.pop("KFAC_momentum")
+
+        # create human-readable description
+        text = ", ".join(
+            [f"{value}: {cls.num(args[key])}" for key, value in hyperparams.items()]
+        )
+
+        tex_file = path.join(directory, f"{optimizer}.tex")
+        with open(tex_file, "w") as f:
+            f.write(text)
