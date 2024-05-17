@@ -14,10 +14,13 @@ from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_s
 entity = "kfac-pinns"  # team name on wandb
 project = "poisson100d_weinan_norm"  # name from the 'Projects' tab on wandb
 
+# information for title
+equation = "poisson"
+dim_Omega = 100
 architecture = "mlp-tanh-768-768-512-512"
 num_params = sum(
     p.numel()
-    for layer in set_up_layers(architecture, "poisson", 100)
+    for layer in set_up_layers(architecture, equation, dim_Omega)
     for p in layer.parameters()
 )
 
@@ -95,7 +98,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title(f"100d Poisson ({architecture}, $D={num_params}$)")
+            ax.set_title(f"{dim_Omega}d {equation.capitalize()} ($D={num_params}$)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
