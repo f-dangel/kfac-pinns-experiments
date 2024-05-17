@@ -2,6 +2,7 @@
 
 from math import pi
 from typing import Callable, Dict, List, Optional, Tuple, Union
+from warnings import warn
 
 from einops import einsum, rearrange, reduce
 from matplotlib import pyplot as plt
@@ -119,8 +120,14 @@ def u_weinan_prods(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
+    if X.shape[-1] != 10:
+        warn(
+            "[u_weinan_prods]: u_weinan_prods is not of unit L2 norm. "
+            "Consider changing the normalization constant."
+        )
     N, d = X.shape
-    return (1.0 / 1.34) * X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
+    norm = 1.34  # numerical approximation for dim_Omega=10
+    return X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True) / norm
 
 
 def f_weinan_prods(X: Tensor) -> Tensor:
@@ -148,7 +155,13 @@ def u_weinan_norm(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
-    return (1.0 / 33.47) * (X**2.0).sum(dim=1, keepdim=True)
+    if X.shape[-1] != 100:
+        warn(
+            "[u_weinan_norm]: u_weinan_norm is not of unit L2 norm. "
+            "Consider changing the normalization constant."
+        )
+    norm = 33.47  # numerical approximation for dim_Omega=100
+    return (X**2.0).sum(dim=1, keepdim=True) / norm
 
 
 def f_weinan_norm(X: Tensor) -> Tensor:
