@@ -14,7 +14,7 @@ We tune all hyper-parameters including step-sizes, momentum, the exponential-mov
 All experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 
-\subsection{A pedagogical example: 2D Poisson equation}
+\paragraph{A pedagogical example: 2d Poisson equation}
 
 We consider a low-dimensional Poisson equation used to demonstrate the efficacy of energy natural gradients by~\cite{muller2023achieving}
 as we can use it as a baseline here for its KFAC approximation.
@@ -63,7 +63,7 @@ In contrast to ENGD which relies on an exact solution of the preconditioning ste
 \end{comment}
 
 
-\subsection{A higher-dimensional evolutionary problem: (4+1)D heat equation}
+\paragraph{An evolutionary problem: (4+1)d heat equation}
 
 To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
 \todo{double check that this is the equation we are solving!}
@@ -86,7 +86,7 @@ Like in the two-dimensional example, we observe that KFAC offers competitive per
 \end{figure}
 
 
-\subsection{High-dimensional Poisson equations}
+\paragraph{High-dimensional Poisson equations}
 To test KFAC on a high-dimensional PDE, we consider the Poisson equation used by~\cite{yu2018deep} to evalute the performance of the deep Ritz method, which is given by 
 \begin{align}\label{eq:high_dimensional_poisson}
     \begin{split}
@@ -94,16 +94,14 @@ To test KFAC on a high-dimensional PDE, we consider the Poisson equation used by
     u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{d}
     \end{split}
 \end{align}
-We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ select the hyper-parameters via a Bayesian optimization procedure. 
+We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ and select the hyper-parameters via a Bayesian optimization procedure. 
 Again, we use mini-batches that we use for $100$ iterations before drawing news samples. 
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.3\textwidth]{../kfac_pinns_exp/exp26_poisson5d_mlp_tanh_256_bayes/l2_error_over_time.pdf}
-    \includegraphics[width=0.3\textwidth]{../kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
-    \includegraphics[width=0.3\textwidth]{../kfac_pinns_exp/exp14_poisson_100d_weinan/l2_error_over_time.pdf}
+    \includegraphics{../kfac_pinns_exp/exp33_poisson_bayes_groupplot/l2_error_over_time.pdf}
     \caption{
-    We report the performance of different optimizers on the Poisson equation~\eqref{eq:high_dimensional_poisson} in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $?$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
+    We report the performance of different optimizers on the Poisson equation~\eqref{eq:high_dimensional_poisson} in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $D$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
     }
     \label{fig:10D-Poisson}
 \end{figure}
