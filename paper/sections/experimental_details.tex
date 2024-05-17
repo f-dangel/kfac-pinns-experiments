@@ -21,23 +21,53 @@ We will release the details of all hyper-parameter search spaces, as well as the
 
 \subsection{Two-dimensional Poisson Equation}
 
-We consider a two-dimensional Poisson equation $\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
+\paragraph{Setup} We consider a two-dimensional Poisson equation $\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
 We choose a single set of training points with $N_{\Omega} = 900, N_{\partial\Omega} = 120$.
 The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points.
 Each run is limited to 1000\,s.
-We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to64\to1$ MLP with $D=257$, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$.
+We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$.
 For the biggest architecture, ENGD-full leads to out-of-memory errors.
-Figure~\Cref{fig:poisson2d-appendix} visualizes the best runs:
+\Cref{fig:poisson2d-appendix} visualizes the results.
+
+\paragraph{Best run details}
+The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hyper-parameters:
 \begin{itemize}
-  \def\pathToRuns{../kfac_pinns_exp/exp09_reproduce_poisson2d/tex}
-\item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
-\item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
-\item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
-\item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
-\item \textbf{ENGD (full):} \input{\pathToRuns/ENGD_full.tex}
-\item \textbf{ENGD (layer-wise):} \input{\pathToRuns/ENGD_per_layer.tex}
-\item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
-\item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+\item $2\to 64\to 1$ MLP with $D=257$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp09_reproduce_poisson2d/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/ENGD_per_layer.tex}
+  \item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
+  \item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+  \end{itemize}
+
+\item $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp15_poisson2d_deepwide/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/ENGD_per_layer.tex}
+  \item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
+  \item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+  \end{itemize}
+
+\item $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp20_poisson2d_mlp_tanh_256/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
+  \item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
+  \item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+  \end{itemize}
 \end{itemize}
 
 \begin{figure}[!h]

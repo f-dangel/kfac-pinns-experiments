@@ -80,7 +80,7 @@ Due to the higher spatial dimension, we use mini-batches in the evaluation of th
 Like in the two-dimensional example, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics. 
 \begin{figure}
     \centering
-    \includegraphics{kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
+    \includegraphics{../kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
     \caption{We report the performance of different optimizers on the 4D heat equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
     \label{fig:4D-heat}
 \end{figure}
@@ -99,9 +99,9 @@ Again, we use mini-batches that we use for $100$ iterations before drawing news 
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.3\textwidth]{kfac_pinns_exp/exp26_poisson5d_mlp_tanh_256_bayes/l2_error_over_time.pdf}
-    \includegraphics[width=0.3\textwidth]{kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
-    \includegraphics[width=0.3\textwidth]{kfac_pinns_exp/exp14_poisson_100d_weinan/l2_error_over_time.pdf}
+    \includegraphics[width=0.3\textwidth]{../kfac_pinns_exp/exp26_poisson5d_mlp_tanh_256_bayes/l2_error_over_time.pdf}
+    \includegraphics[width=0.3\textwidth]{../kfac_pinns_exp/exp21_poisson_10d/loss_over_time.pdf}
+    \includegraphics[width=0.3\textwidth]{../kfac_pinns_exp/exp14_poisson_100d_weinan/l2_error_over_time.pdf}
     \caption{
     We report the performance of different optimizers on the Poisson equation~\eqref{eq:high_dimensional_poisson} in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $?$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
     }
