@@ -120,17 +120,18 @@ def u_weinan_prods(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
-    if X.shape[-1] == 10:
-        factor = 1.34
-    elif X.shape[-1] == 100:
-        factor = 12.59
+    N, d = X.shape
+    if d == 10:
+        norm = 1.34  # numerical approximation for dim_Omega=10
+    elif d == 100:
+        norm = 12.59  # numerical approximation for dim_Omega=100
     else:
-        print(
+        norm = 1.0
+        warn(
             "[u_weinan_prods]: u_weinan_prods is not of unit L2 norm. "
             "Consider changing the normalization constant."
         )
-    N, d = X.shape
-    return (1.0 / factor) * X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
+    return X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True) / norm
 
 
 def f_weinan_prods(X: Tensor) -> Tensor:

@@ -12,12 +12,13 @@ from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
 
 entity = "kfac-pinns"  # team name on wandb
-project = "poisson10d_mlp_tanh_256_bayes"  # name from the 'Projects' tab on wandb
+# name from the 'Projects' tab on wandb
+project = "poisson100d_mlp_tanh_768_product_solution_bayes"
 
 # information for title
 equation = "poisson"
-architecture = "mlp-tanh-256-256-128-128"
-dim_Omega = 10
+architecture = "mlp-tanh-768-768-512-512"
+dim_Omega = 100
 num_params = sum(
     p.numel()
     for layer in set_up_layers(architecture, equation, dim_Omega)
