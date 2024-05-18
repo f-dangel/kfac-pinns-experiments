@@ -66,15 +66,15 @@ In contrast to ENGD which relies on an exact solution of the preconditioning ste
 \paragraph{An evolutionary problem: (4+1)d heat equation}
 
 To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
-\todo{double check that this is the equation we are solving!}
+\todo{This is what we implement}
 \begin{align}\label{eq:4D-heat}
-     \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in [0,1]^{4} \\
-    u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
+     \partial_t u(t,x)-\kappa\Delta_x u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in [0,1]^{4} \\
+    u(0,x) & = \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
      x\in [0,1]^{4}
      \\
-     u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in\partial[0,1]^{4}
+     u(t,x) & = \exp(-t) \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for } t\in[0,1], x\in\partial[0,1]^{4}
 \end{align}
-Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
+with $\kappa = 1/4$. Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
 We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.
 Due to the higher spatial dimension, we use mini-batches in the evaluation of the loss and the preconditioner, where for KFAC, we keep the same batch for $100$ iterations.\todo{for the other optimizers?} 
 Like in the two-dimensional example, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics. 
@@ -87,7 +87,7 @@ Like in the two-dimensional example, we observe that KFAC offers competitive per
 
 
 \paragraph{High-dimensional Poisson equations}
-To test KFAC on a high-dimensional PDE, we consider the Poisson equation used by~\cite{yu2018deep} to evalute the performance of the deep Ritz method, which is given by 
+To test KFAC on a high-dimensional PDE, we consider the Poisson equation used by~\cite{yu2018deep} to evalute the performance of the deep Ritz method, which is given by\todo{5d is cos sum solution, 10d is weinan product solution, only 100d is norm squared} 
 \begin{align}\label{eq:high_dimensional_poisson}
     \begin{split}
         -\Delta u(x) & = -2d \quad \text{for } x\in [0,1]^{d} \\
