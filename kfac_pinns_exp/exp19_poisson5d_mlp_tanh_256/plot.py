@@ -17,7 +17,7 @@ project = "poisson5d_mlp_tanh_256"  # name from the 'Projects' tab on wandb
 # information for title
 equation = "poisson"
 architecture = "mlp-tanh-256-256-128-128"
-dim_Omega = 2
+dim_Omega = 5
 num_params = sum(
     p.numel()
     for layer in set_up_layers(architecture, equation, dim_Omega)
