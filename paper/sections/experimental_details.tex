@@ -19,37 +19,38 @@ First, we choose a relatively wide search space and limit to approximately 50 ru
 In a second, round, we narrow down the hyper-parameter space based on the first round, then re-run for another approximately 50 runs.
 We will release the details of all hyper-parameter search spaces, as well as the hyper-parameters for the best runs in our implementation.
 
-\subsection{Two-dimensional Poisson Equation}
+\subsection{2d Poisson Equation}
 
-\paragraph{Setup} We consider a two-dimensional Poisson equation $\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
+\paragraph{Setup} We consider a two-dimensional Poisson equation $-\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
 We choose a single set of training points with $N_{\Omega} = 900, N_{\partial\Omega} = 120$.
-The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points.
+The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points using the known solution $u_{\star}(x, y) = \sin(x) \sin(y)$.
 Each run is limited to 1000\,s.
 We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$.
-For the biggest architecture, ENGD-full leads to out-of-memory errors.
+For the biggest architecture, full and per-layer ENGD lead to out-of-memory errors.
 \Cref{fig:poisson2d-appendix} visualizes the results.
 
 \begin{figure}[!h]
   \centering
+  \def\pathToFigs{../kfac_pinns_exp/exp17_groupplot_poisson2d}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:poisson2d-time}
     % trim legend, xlabel and xticklabels
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 1.3cm 0 0},clip]{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error_over_time.pdf}
+    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{../kfac_pinns_exp/exp17_groupplot_poisson2d/loss_over_time.pdf}
+    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:poisson2d-step}
     % trim the legend, xlabel and xticklabels
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error_over_step.pdf}
+    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
     % trim the titles
-    \includegraphics[trim={0 0 0 0.3cm},clip]{../kfac_pinns_exp/exp17_groupplot_poisson2d/loss_over_step.pdf}
+    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
   \end{subfigure}
   \caption{ Training loss and evaluation $L_2$ error for learning the solution to a 2d Poisson equation over (\subref{subfig:poisson2d-time}) time and (\subref{subfig:poisson2d-step}) steps.
-    Column are different neural networks.}\label{fig:poisson2d-appendix}
+    Columns are different neural networks.}\label{fig:poisson2d-appendix}
 \end{figure}
 
 \paragraph{Best run details}
@@ -58,42 +59,42 @@ The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hype
 \item $2\to 64\to 1$ MLP with $D=257$
   \begin{itemize}
     \def\pathToRuns{../kfac_pinns_exp/exp09_reproduce_poisson2d/tex}
-  \item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
-  \item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
-  \item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
-  \item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
-  \item \textbf{ENGD (full):} \input{\pathToRuns/ENGD_full.tex}
-  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/ENGD_per_layer.tex}
-  \item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
-  \item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
   \end{itemize}
 
 \item $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$
   \begin{itemize}
     \def\pathToRuns{../kfac_pinns_exp/exp15_poisson2d_deepwide/tex}
-  \item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
-  \item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
-  \item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
-  \item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
-  \item \textbf{ENGD (full):} \input{\pathToRuns/ENGD_full.tex}
-  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/ENGD_per_layer.tex}
-  \item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
-  \item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
   \end{itemize}
 
 \item $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$
   \begin{itemize}
     \def\pathToRuns{../kfac_pinns_exp/exp20_poisson2d_mlp_tanh_256/tex}
-  \item \textbf{SGD:} \input{\pathToRuns/SGD.tex}
-  \item \textbf{Adam:} \input{\pathToRuns/Adam.tex}
-  \item \textbf{Hessian-free:} \input{\pathToRuns/HessianFree.tex}
-  \item \textbf{LBFGS:} \input{\pathToRuns/LBFGS.tex}
-  \item \textbf{KFAC} \input{\pathToRuns/KFAC.tex}
-  \item \textbf{KFAC*} \input{\pathToRuns/KFAC_auto.tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
   \end{itemize}
 \end{itemize}
 
-\paragraph{Search space details:} The runs shown in \Cref{fig:poisson2d-appendix} were determined to be the best via a search with approximately 50 runs on the following search spaces which were obtained by refining an initially wider search ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+\paragraph{Search space details} The runs shown in \Cref{fig:poisson2d-appendix} were determined to be the best via a search with approximately 50 runs on the following search spaces which were obtained by refining an initially wider search ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
 \begin{itemize}
 \item $2\to 64\to 1$ MLP with $D=257$
   \begin{itemize}
@@ -104,8 +105,8 @@ The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hype
   \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
   \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
   \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
-  \item \textbf{KFAC} \input{\pathToRuns/sweep_KFAC.tex}
-  \item \textbf{KFAC*} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
   \end{itemize}
 
 \item $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$
@@ -117,8 +118,8 @@ The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hype
   \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
   \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
   \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
-  \item \textbf{KFAC} \input{\pathToRuns/sweep_KFAC.tex}
-  \item \textbf{KFAC*} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
   \end{itemize}
 
 \item $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$
@@ -128,21 +129,142 @@ The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hype
   \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
   \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
   \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
-  \item \textbf{KFAC} \input{\pathToRuns/sweep_KFAC.tex}
-  \item \textbf{KFAC*} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
   \end{itemize}
 \end{itemize}
 
-\subsection{Five-dimensional Poisson Equation}
+\subsection{5d Poisson Equation}
+
+\paragraph{Setup} We consider a five-dimensional Poisson equation $-\Delta u(\vx) = \pi^2 \sum_{i=1}^5 \cos(\pi \evx_i)$ on the five-dimensional unit square $\vx \in [0, 1]^5$ with cosine sum right hand side and boundary conditions $u(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$ for $\vx \in \partial [0,1]^5$.
+We sample training batches of size $N_{\Omega} = \num{3000}, N_{\partial\Omega} = 500$ and evaluate the $L_2$ error on a separate set of $\num{30000}$ data points using the known solution $u_{\star}(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$.
+All optimizers except for KFAC sample a new training batch each iteration.
+KFAC only re-samples every 100 iterations because we noticed it works significantly better with multiple iterations on a fixed batch.
+To make sure that this does not lead to an unfair advantage of KFAC, we conduct an additional experiment where we also tune the batch sampling frequency, as well as other hyper-parameters; see \Cref{sec:high-dimensional-poissons-app}.
+The results presented in this section are consistent with this additional experiment.
+Each run is limited to 3000\,s.
+We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $5\to 64\to 1$ MLP with $D=449$, a five layer $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$, and a five layer $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116864}$.
+For the biggest architecture, full and layer-wise ENGD lead to out-of-memory errors.
+\Cref{fig:poisson5d-appendix} visualizes the results.
 
 \begin{figure}[!h]
   \centering
-  % \includegraphics{../kfac_pinns_exp/exp18_groupplot_poisson5d/loss_all.pdf}
-  % \\
-  % \includegraphics{../kfac_pinns_exp/exp18_groupplot_poisson5d/l2_error_all.pdf}
-  \caption{Loss curves for learning the solution of a 5d-Poisson equation with different neural network size under a given time budget of $3\cdot 10^3\,\text{s}$ on an RTX 6000 GPU.
-    Top row shows loss over time, bottom row shows loss over step.}
+  \def\pathToFigs{../kfac_pinns_exp/exp18_groupplot_poisson5d}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:poisson5d-time}
+    % trim legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
+    % trim the legend and titles
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+  \end{subfigure}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:poisson5d-step}
+    % trim the legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
+    % trim the titles
+    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
+  \end{subfigure}
+  \caption{Training loss and evaluation $L_2$ error for learning the solution to a 5d Poisson equation over (\subref{subfig:poisson5d-time}) time and (\subref{subfig:poisson5d-step}) steps.
+    Columns are different neural networks.}\label{fig:poisson5d-appendix}
 \end{figure}
+
+\paragraph{Best run details}
+The runs shown in \Cref{fig:poisson5d-appendix} correspond to the following hyper-parameters:
+\begin{itemize}
+\item $5\to 64\to 1$ MLP with $D=449$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp10_reproduce_poisson5d/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp16_poisson5d_deepwide/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp19_poisson5d_mlp_tanh_256/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Search space details} The runs shown in \Cref{fig:poisson5d-appendix} were determined to be the best via a search with approximately 50 runs on the following search spaces which were obtained by refining an initially wider search ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+\begin{itemize}
+\item $5\to 64\to 1$ MLP with $D=449$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp10_reproduce_poisson5d/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp16_poisson5d_deepwide/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp19_poisson5d_mlp_tanh_256/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+\end{itemize}
+
+\subsection{5/10/100-d Poisson Equations with Bayesian Search}\label{sec:high-dimensional-poissons-app}
+
+\subsection{1+1d Heat Equation}
+
+\subsection{4+1d Heat Equation}
+
+\subsection{4+1d Heat Equation with Bayesian Search}
+
+\paragraph{Setup} TODO
+
+\paragraph{Best run details} TODO
+
+\paragraph{Search space details} TODO
 
 %%% Local Variables:
 %%% mode: latex
