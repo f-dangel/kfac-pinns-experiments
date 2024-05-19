@@ -24,7 +24,7 @@ We will release the details of all hyper-parameter search spaces, as well as the
 \paragraph{Setup} We consider a two-dimensional Poisson equation $-\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
 We choose a single set of training points with $N_{\Omega} = 900, N_{\partial\Omega} = 120$.
 The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points using the known solution $u_{\star}(x, y) = \sin(x) \sin(y)$.
-Each run is limited to 1000\,s.
+Each run is limited to $\num{1000}\,\text{s}$.
 We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$.
 For the biggest architecture, full and per-layer ENGD lead to out-of-memory errors.
 \Cref{fig:poisson2d-appendix} visualizes the results.
@@ -263,7 +263,7 @@ The runs shown in \Cref{fig:poisson5d-appendix} correspond to the following hype
   We assign each run a budget of $\num{6000}\,\text{s}$.
 
 \item $d=100$ with constant non-zero right hand side $f(\vx) = -2 d$, square norm boundary conditions $u(\vx) = \left\lVert \vx \right\rVert_2^2$ for $\vx \in \partial [0,1]^d$, and known solution $u_{\star}(\vx) =  \left\lVert \vx \right\rVert_2^2$.
-We assign each run a budget of $\num{10000}\,\text{s}$.
+  We assign each run a budget of $\num{10000}\,\text{s}$.
 \end{itemize}
 We tune the optimizer-hyperparameters described in \Cref{sec:tuning-protocol}, as well as the batch sizes $N_{\Omega}, N_{\partial \Omega}$, and their associated re-sampling frequencies using Bayesian search.
 We use five layer MLP architectures with varying widths whose layers are Tanh-activated except for the final layer.
@@ -368,29 +368,267 @@ These architectures are too large to be optimized by ENGD.
   \end{itemize}
 \end{itemize}
 
+\subsection{PINN Loss for the Heat Equation}
+\input{sections/heat_equation.tex}
 
 \subsection{1+1d Heat Equation}
 
-\paragraph{Setup} TODO
+\paragraph{Setup} We consider a 1+1-dimensional heat equation $\partial_tu(t,x) - \kappa \Delta_{x} u(t, x) = 0$ with $\kappa = \nicefrac{1}{4}$ on the unit square and unit time interval, $x, t \in [0,1] \times [0,1]$.
+The equation has spatial zero boundary conditions $u(t, x) = 0$ throughout time, and initial value conditions $u(0, x) = \sin(\pi x)$ for $\vx \in [0,1]$.
+We sample a single training batch of size $N_{\Omega} = \num{900}, N_{\partial\Omega} = 120$ ($\nicefrac{N_{\partial\Omega}}{2}$ points for the initial value and spatial boundary conditions each) and evaluate the $L_2$ error on a separate set of $\num{9000}$ data points using the known solution $u_{\star}(t, x) = \exp(-\nicefrac{\pi^2t}{4}) \sin(\pi x)$.
+Each run is limited to $\num{1000}\,\text{s}$.
+We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$.
+For the biggest architecture, full and layer-wise ENGD lead to out-of-memory errors.
+Figure \Cref{fig:heat1d-appendix} summarizes the results.
 
-\paragraph{Best run details} TODO
-
-\paragraph{Search space details} TODO
-
-\subsection{4+1d Heat Equation}
-
-\paragraph{Setup} TODO
-
-\paragraph{Best run details} TODO
-
-\paragraph{Search space details} TODO
-
-\subsection{4+1d Heat Equation with Bayesian Search}
-
-\paragraph{Setup} TODO
+\begin{figure}[!h]
+  \centering
+  \def\pathtofigs{../kfac_pinns_exp/exp24_heat1d_groupplot}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:heat1d-time}
+    % trim legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathtofigs/l2_error_over_time.pdf}
+    % trim the legend and titles
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathtofigs/loss_over_time.pdf}
+  \end{subfigure}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:heat1d-step}
+    % trim the legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathtofigs/l2_error_over_step.pdf}
+    % trim the titles
+    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathtofigs/loss_over_step.pdf}
+  \end{subfigure}
+  \caption{training loss and evaluation $l_2$ error for learning the solution to a 1+1-dimensional heat equation over (\subref{subfig:heat1d-time}) time and (\subref{subfig:heat1d-step}). each column corresponds to a different neural network.}\label{fig:heat1d-appendix}
+\end{figure}
 
 \paragraph{Best run details}
-The runs shown in \Cref{XXX} correspond to the following hyper-parameters:
+The runs shown in \Cref{fig:heat1d-appendix} correspond to the following hyper-parameters:
+\begin{itemize}
+\item $2\to 64\to 1$ MLP with $D=257$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp13_reproduce_heat1d/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp22_heat1d_mlp_tanh_64/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp23_heat1d_mlp_tanh_256/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Search space details} The runs shown in \Cref{fig:heat1d-appendix} were determined to be the best via a search with approximately 50 runs on the following search spaces which were obtained by refining an initially wider search ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+
+\begin{itemize}
+\item $2\to 64\to 1$ MLP with $D=257$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp13_reproduce_heat1d/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp22_heat1d_mlp_tanh_64/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp23_heat1d_mlp_tanh_256/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+\end{itemize}
+
+\subsection{4+1d Heat Equation}\label{sec:4d-heat-app}
+
+\paragraph{Setup} We consider a 4+1-dimensional heat equation $\partial_tu(t,\vx) - \kappa \Delta_{\vx} u(t, \vx) = 0$ with $\kappa = \nicefrac{1}{4}$ on the four-dimensional unit square and unit time interval, $\vx, t \in [0,1]^4 \times [0,1]$.
+The equation has spatial boundary conditions $u(t, x) = \exp(-t) \sum_{i=1}^4 \sin( 2 \evx_i)$ for $t, \vx \in [0,1] \times \partial [0,1]^4$ throughout time, and initial value conditions $u(0, \vx) = \sum_{i=1}^4 \sin(2 \evx_i)$ for $\vx \in [0,1]^4$.
+We sample training batches of size $N_{\Omega} = \num{3000}, N_{\partial\Omega} = 500$ ($\nicefrac{N_{\partial\Omega}}{2}$ points for the initial value and spatial boundary conditions each) and evaluate the $L_2$ error on a separate set of $\num{30000}$ data points using the known solution $u_{\star}(t, \vx) = \exp(-t) \sum_{i=1}^4 \sin(2 \evx_i)$.
+All optimizers except for KFAC sample a new training batch each iteration.
+KFAC only re-samples every 100 iterations because we noticed it works significantly better with multiple iterations on a fixed batch.
+To make sure that this does not lead to an unfair advantage of KFAC, we conduct an additional experiment where we also tune the batch sampling frequency, as well as other hyper-parameters; see \Cref{sec:4d-heat-bayes-app}.
+The results presented in this section are consistent with this additional experiment (compare the rightmost column of \Cref{fig:heat4d-appendix} and \Cref{fig:heat4d-bayes-appendix}).
+Each run is limited to 3000\,s.
+We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $5\to 64\to 1$ MLP with $D=449$, a five layer $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$, and a five layer $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116864}$.
+For the biggest architecture, full and layer-wise ENGD lead to out-of-memory errors.
+\Cref{fig:heat4d-appendix} visualizes the results.
+
+\begin{figure}[!h]
+  \centering
+  \def\pathToFigs{../kfac_pinns_exp/exp30_heat4d_groupplot}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:heat4d-time}
+    % trim legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
+    % trim the legend and titles
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+  \end{subfigure}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:heat4d-step}
+    % trim the legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
+    % trim the titles
+    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
+  \end{subfigure}
+  \caption{Training loss and evaluation $L_2$ error for learning the solution to a 4+1-d heat equation over (\subref{subfig:heat4d-time}) time and (\subref{subfig:heat4d-step}) steps.
+    Columns are different neural networks.}\label{fig:heat4d-appendix}
+\end{figure}
+
+\paragraph{Search space details} The runs shown in \Cref{fig:heat4d-appendix} were determined to be the best via a search with approximately 50 runs on the following search spaces which were obtained by refining an initially wider search ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+\begin{itemize}
+\item $5\to 64\to 1$ MLP with $D=449$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp27_heat4d_small/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp28_heat4d_medium/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp29_heat4d_big/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Search space details} The runs shown in \Cref{fig:heat4d-appendix} were determined to be the best via a search with approximately 50 runs on the following search spaces which were obtained by refining an initially wider search ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+
+\begin{itemize}
+\item $5\to 64\to 1$ MLP with $D=449$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp27_heat4d_small/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp28_heat4d_medium/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$
+  \begin{itemize}
+    \def\pathToRuns{../kfac_pinns_exp/exp29_heat4d_big/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+\end{itemize}
+
+\subsection{4+1d Heat Equation with Bayesian Search}\label{sec:4d-heat-bayes-app}
+
+\paragraph{Setup} We consider the same heat equation from \Cref{sec:4d-heat-app} and use the $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116864}$.
+We tune all optimizer hyper-parameters as described in \Cref{sec:tuning-protocol} and also tune the batch sizes $N_{\omega}, N_{\partial \Omega}$, as well as their re-sampling frequencies.
+\Cref{fig:heat4d-bayes-appendix} summarizes the results.
+
+\begin{figure}[!h]
+  \centering
+  \def\pathToFigs{../kfac_pinns_exp/exp31_heat4d_mlp_tanh_256_bayes}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:heat4d-bayes-time}
+    \includegraphics{\pathToFigs/l2_error_over_time.pdf}
+    \includegraphics{\pathToFigs/loss_over_time.pdf}
+  \end{subfigure}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:heat4d-bayes-step}
+    \includegraphics{\pathToFigs/l2_error_over_step.pdf}
+    \includegraphics{\pathToFigs/loss_over_step.pdf}
+  \end{subfigure}
+  \caption{Training loss and evaluation $L_2$ error for learning the solution to a 4+1-dimensional heat equation over (\subref{subfig:heat4d-bayes-time}) time and (\subref{subfig:heat4d-bayes-step}) using Bayesian search.}\label{fig:heat4d-bayes-appendix}
+\end{figure}
+
+\paragraph{Best run details}
+The runs shown in \Cref{fig:heat4d-bayes-appendix} correspond to the following hyper-parameters:
 \begin{itemize}
   \def\pathToRuns{../kfac_pinns_exp/exp31_heat4d_mlp_tanh_256_bayes/tex/}
 \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
@@ -401,8 +639,7 @@ The runs shown in \Cref{XXX} correspond to the following hyper-parameters:
 \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
 \end{itemize}
 
-\paragraph{Search space details} TODO
-
+\paragraph{Search space details} The runs shown in \Cref{fig:heat4d-bayes-appendix} were determined to be the best via a Bayesian search on the following search spaces which each optimizer given approximately the same total computational time ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
 \begin{itemize}
   \def\pathToRuns{../kfac_pinns_exp/exp31_heat4d_mlp_tanh_256_bayes/tex/}
 \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}

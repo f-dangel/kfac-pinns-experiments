@@ -37,7 +37,6 @@ sweep_ids = {  # ids from the wandb agent
     "3rxwkmuf": "Adam",
     "khk9ppjk": "Hessian-free",
     "c5dozwg3": "LBFGS",
-    "hoy90su9": "ENGD (diagonal)",
     "tgv5pgbp": "KFAC",
     "ml685rb5": "KFAC*",
 }
@@ -46,7 +45,6 @@ sweep_ids = {  # ids from the wandb agent
 colors = {
     "SGD": sequential.Reds_4.mpl_colors[-2],
     "Adam": sequential.Reds_4.mpl_colors[-1],
-    "ENGD (diagonal)": sequential.Blues_5.mpl_colors[-1],
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
@@ -56,7 +54,6 @@ colors = {
 linestyles = {
     "SGD": "-",
     "Adam": "-",
-    "ENGD (diagonal)": "-",
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
@@ -94,14 +91,13 @@ if __name__ == "__main__":
 
     for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
         with plt.rc_context(
-            bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+            bundles.neurips2023(rel_width=0.5, usetex=not args.disable_tex)
         ):
             fig, ax = plt.subplots(1, 1)
             ax.set_xlabel(xlabel)
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title(f"4d Heat ({architecture}, $D={num_params}$ + Bayes)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
@@ -125,7 +121,8 @@ if __name__ == "__main__":
                     linestyle=linestyles[label],
                 )
 
-            ax.legend()
+            if x == "time" and y == "l2_error":
+                ax.legend()
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
 
     # export sweep and run descriptions to LaTeX
