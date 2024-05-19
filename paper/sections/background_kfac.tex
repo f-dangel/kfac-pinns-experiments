@@ -46,32 +46,39 @@ Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) 
 for matrices $\mA, \mX, \mB$ %.
 %In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence 
 which implies $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
-The flattening notation allows to reduce derivatives of matrix or tensor-valued objects back to the matrix case.
-\todo{shorten a bit?}
-Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ w.r.t.\,a vector $\va$.
-It collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
-For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ w.r.t.\,a matrix $\mA$, we simply have $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
-Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ w.r.t.\,a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
-For the Hessian $\gradsquared{\mA} b$ of a scalar $b$ w.r.t.\,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
+The flattening notation allows to reduce the derivatives of matrix or tensor-valued objects back to the matrix case.
+When considering the differentiation of matrix-valued functions or functions depending defined on matrices, we use the identification $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$ and $\gradsquared{\mA}\mB = \gradsquared{\flatten(\mA)} \flatten(\mB)$ for the Jacobian and Hessian, respectively. 
+
+\begin{comment}
+    Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ with respect to a vector $\va$, which collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$. 
+For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ with respect to a matrix $\mA$, we simply set $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
+Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ with respect to a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
+For the Hessian $\gradsquared{\mA} b$ of a scalar $b$  with respect to \,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
 We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
+\end{comment}
 
 \paragraph{Kronecker-factored approximation of the blocks}
 We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point. 
-The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and note that by the vec-trick, we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$. 
-By the chain rule, we have
+The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and %by the vec-trick, 
+we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$ by the vec-trick. 
+The chain rule gives  
 %\begin{align}
     $\jac_{\mW^{(l)}} \vu_n%u_{\vtheta}(\vx_n) 
      = \jac_{\vz^{(l)}}  \vu_n \jac_{\mW^{(l)}} \vz_n^{(l)}%\vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n 
-    = {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vu_n$.%\vz^{(L)}_n. 
+    = {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vu_n$. %\vz^{(L)}_n. 
 %\end{align}
 %and hence 
 %\begin{align}
 %    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.  
 %\end{align}
-Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$~\citep{martens2015optimizing} we obtain 
+Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ %~\citep{martens2015optimizing} 
+ we obtain 
 \begin{equation}
     \mF(\mW^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top 
-    \approx \frac1N\left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N\nabla_{\vz^{(l)}}  \vu_n\nabla_{\vz^{(l)}}  \vu_n^\top\right),
+    \approx \frac1N\left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N
+    {\jac_{\vz^{(l)}}  \vu_n}^\top
+    \jac_{\vz^{(l)}}  \vu_n
+    \right),
 \end{equation}
 see~\citep{eschenhagen2023kroneckerfactored}. 
 Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost. 

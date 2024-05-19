@@ -26,10 +26,10 @@ a popular choice as a Gramian is given by the Gauß-Newton matrix
 which agrees with the (empirical) Fisher information matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}. Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$. 
 \end{comment}
 
-It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\cite{?}. \todo{add references}
-Whereas BFGS improves the accuracy, function-space-inspired methods have shown more promising results, see~\cite{?}.
+It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\citep{cuomo2022scientific}. Still, lately, function-space-inspired methods have shown more promising results~\citep{muller2024optimization}. 
 Here, we focus on, \emph{energy natural gradients (ENGD)}, which in the case of PINNs agree with the Gauß-Newton method~\citep{muller2023achieving}. 
-ENGD mimics Newton's method up to a projection onto the tangent space of the model and a discretization error that vanishes quadratically in the step size, thus providing locally optimal updates in the residual~\citep{muller2023achieving}. Alternatively, the Gauß-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauß-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}. 
+ENGD mimics Newton's method up to a projection onto the tangent space of the model and a discretization error that vanishes quadratically in the step size, thus providing locally optimal updates in the residual%~\citep{muller2023achieving}
+. Alternatively, the Gauß-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauß-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}. 
 
 %To account for the PDE terms in the loss function in PINNs,
 %the models $u_\vtheta$ are functions rather than probability measures %$p_\vtheta$

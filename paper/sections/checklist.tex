@@ -1,4 +1,6 @@
 \newpage
+\todo[inline]{delete explanations before submission}
+
 \section*{NeurIPS Paper Checklist}
 
 %%% BEGIN INSTRUCTIONS %%%
@@ -45,7 +47,7 @@ IMPORTANT, please:
 \item {\bf Limitations}
     \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
     \item[] Answer: \answerYes{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{} See \Cref{sec:experiments}. 
+    \item[] Justification: See \Cref{sec:conclusion}. 
     \item[] Guidelines:
     \begin{itemize}
         \item The answer NA means that the paper has no limitation while the answer No means that the paper has limitations, but those are not discussed in the paper. 
@@ -61,7 +63,8 @@ IMPORTANT, please:
 \item {\bf Theory Assumptions and Proofs}
     \item[] Question: For each theoretical result, does the paper provide the full set of assumptions and a complete (and correct) proof?
     \item[] Answer: \answerNA{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{} Whereas we provide a derivation of the proposed Kronecker-factored approximation, our work does not provide any rigorous mathematical statements. 
+    \item[] Justification: %\justificationTODO{}
+    Whereas we provide a derivation of the proposed Kronecker-factored approximation, our work does not provide any rigorous mathematical statements. 
     \item[] Guidelines:
     \begin{itemize}
         \item The answer NA means that the paper does not include theoretical results. 
@@ -111,8 +114,9 @@ IMPORTANT, please:
 
 \item {\bf Experimental Setting/Details}
     \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer, etc.) necessary to understand the results?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
+    \item[] Answer: \answerYes{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
     \item[] Justification: \justificationTODO{}
+    In \Cref{sec:experiments} and \Cref{sec:experimental_details} we list.... 
     \item[] Guidelines:
     \begin{itemize}
         \item The answer NA means that the paper does not include experiments.
@@ -140,7 +144,8 @@ IMPORTANT, please:
 \item {\bf Experiments Compute Resources}
     \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
     \item[] Answer: \answerYes{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
+    \item[] Justification: \justificationTODO{} 
+    In \Cref{sec:experiments} we describe the cluster and GPUs used and report the wall clock computation times. 
     \item[] Guidelines:
     \begin{itemize}
         \item The answer NA means that the paper does not include experiments.
