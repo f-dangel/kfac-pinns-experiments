@@ -146,6 +146,8 @@ class WandbRunFormatter:
         elif isinstance(value, float):
             value_str = f"{value:.6e}" if len(str(value)) > 10 else str(value)
             return r"$\num[scientific-notation=true]{" + value_str + "}$"
+        elif isinstance(value, int):
+            return r"$\num[scientific-notation=false]{" + str(value) + "}$"
         else:
             return str(value)
 
@@ -214,6 +216,20 @@ class WandbSweepFormatter(WandbRunFormatter):
                 [cls.num(v).replace("$", "") for v in parameter["values"]]
             )
             return r"$\mathcal{C}(\{" + values + r"\})$"
+        elif dist == "int_uniform":
+            values = ",".join(
+                [
+                    cls.num(v).replace("$", "")
+                    for v in [
+                        parameter["min"],
+                        parameter["min"] + 1,
+                        r"$\dots$",
+                        parameter["max"],
+                    ]
+                ]
+            )
+            return r"$\mathcal{C}(\{" + values + "\})$"
+
         else:
             raise NotImplementedError(f"Unknown distribution {dist}.")
 
@@ -261,3 +277,13 @@ class WandbSweepFormatter(WandbRunFormatter):
         tex_file = path.join(directory, f"sweep_{optimizer}.tex")
         with open(tex_file, "w") as f:
             f.write(text)
+
+
+class WandbBayesianSweepFormatter(WandbSweepFormatter):
+    """Class to format Bayesian sweeps into human-readable LaTeX."""
+
+    HYPERPARAMETERS = WandbSweepFormatter.HYPERPARAMETERS
+    for params in HYPERPARAMETERS.values():
+        params["N_Omega"] = r"$N_{\Omega}$"
+        params["N_dOmega"] = r"$N_{\partial\Omega}$"
+        params["batch_frequency"] = "batch sampling frequency"

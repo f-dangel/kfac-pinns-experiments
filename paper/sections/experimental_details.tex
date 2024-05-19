@@ -254,17 +254,55 @@ The runs shown in \Cref{fig:poisson5d-appendix} correspond to the following hype
 
 \subsection{5/10/100-d Poisson Equations with Bayesian Search}\label{sec:high-dimensional-poissons-app}
 
+\paragraph{Setup} TODO
+
+\paragraph{Best run details} TODO
+
+\paragraph{Search space details} TODO
+
 \subsection{1+1d Heat Equation}
-
-\subsection{4+1d Heat Equation}
-
-\subsection{4+1d Heat Equation with Bayesian Search}
 
 \paragraph{Setup} TODO
 
 \paragraph{Best run details} TODO
 
 \paragraph{Search space details} TODO
+
+\subsection{4+1d Heat Equation}
+
+\paragraph{Setup} TODO
+
+\paragraph{Best run details} TODO
+
+\paragraph{Search space details} TODO
+
+\subsection{4+1d Heat Equation with Bayesian Search}
+
+\paragraph{Setup} TODO
+
+\paragraph{Best run details}
+The runs shown in \Cref{XXX} correspond to the following hyper-parameters:
+\begin{itemize}
+  \def\pathToRuns{../kfac_pinns_exp/exp31_heat4d_mlp_tanh_256_bayes/tex/}
+\item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+\item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+\item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+\item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+\item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+\item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+\end{itemize}
+
+\paragraph{Search space details} TODO
+
+\begin{itemize}
+  \def\pathToRuns{../kfac_pinns_exp/exp31_heat4d_mlp_tanh_256_bayes/tex/}
+\item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+\item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+\item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+\item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+\item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+\item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+\end{itemize}
 
 %%% Local Variables:
 %%% mode: latex
