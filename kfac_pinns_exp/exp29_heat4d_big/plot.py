@@ -9,7 +9,13 @@ from palettable.colorbrewer import sequential
 from tueplots import bundles
 
 from kfac_pinns_exp.train import set_up_layers
-from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
+from kfac_pinns_exp.wandb_utils import (
+    WandbRunFormatter,
+    WandbSweepFormatter,
+    load_best_run,
+    remove_unused_runs,
+    show_sweeps,
+)
 
 entity = "kfac-pinns"  # team name on wandb
 project = "heat4d_big"  # name from the 'Projects' tab on wandb
@@ -121,3 +127,18 @@ if __name__ == "__main__":
 
             ax.legend()
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
+
+    # export run descriptions to LaTeX
+    TEXDIR = path.join(HEREDIR, "tex")
+    makedirs(TEXDIR, exist_ok=True)
+
+    for sweep_id in sweep_ids:
+        _, meta = load_best_run(
+            entity, project, sweep_id, save=True, update=args.update, savedir=DATADIR
+        )
+        args = meta.to_dict()["config"][0]
+        WandbRunFormatter.to_tex(TEXDIR, args)
+
+    if args.update:  # only if online access is possible
+        for sweep in show_sweeps(entity, project):
+            WandbSweepFormatter.to_tex(TEXDIR, sweep.config)

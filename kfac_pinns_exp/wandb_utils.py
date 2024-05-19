@@ -1,5 +1,6 @@
 """Utility functions for Weights & Biases."""
 
+from copy import deepcopy
 from glob import glob
 from os import path, remove
 from typing import Any, Dict, List, Tuple, Union
@@ -282,7 +283,7 @@ class WandbSweepFormatter(WandbRunFormatter):
 class WandbBayesianSweepFormatter(WandbSweepFormatter):
     """Class to format Bayesian sweeps into human-readable LaTeX."""
 
-    HYPERPARAMETERS = WandbSweepFormatter.HYPERPARAMETERS
+    HYPERPARAMETERS = deepcopy(WandbSweepFormatter.HYPERPARAMETERS)
     for params in HYPERPARAMETERS.values():
         params["N_Omega"] = r"$N_{\Omega}$"
         params["N_dOmega"] = r"$N_{\partial\Omega}$"
