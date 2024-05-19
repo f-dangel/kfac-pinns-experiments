@@ -1,50 +1,31 @@
 \documentclass{article}
 
-% if you need to pass options to natbib, use, e.g.:
-% \PassOptionsToPackage{numbers, compress}{natbib}
-% before loading neurips_2023
+% use numbers for citations to save space
+\PassOptionsToPackage{numbers, compress}{natbib}
 
-\usepackage{neurips_2024}
-\usepackage{comment}
-\usepackage[most]{tcolorbox}
-
-\definecolor{kfac}{rgb}{0.55294118, 0.17647059, 0.22352941}  %
-
-% to compile a preprint version, e.g., for submission to arXiv, add add the
-% [preprint] option:
-% \usepackage[preprint]{neurips_2023}
-
-% to compile a camera-ready version, add the [final] option, e.g.:
-% \usepackage[final]{neurips_2023}
-
-% to avoid loading the natbib package, add option nonatbib:
-% \usepackage[nonatbib]{neurips_2023}
+% either empty (for submission), 'preprint', or 'final'
+\def\status{}
+\usepackage[\status]{neurips_2024}
 
 \input{preamble/custom_early.tex}
-\input{preamble/neurips_2023.tex}
-\input{preamble/goodfellow.tex} % follow DL notation from the Goodfellow book
+\input{preamble/neurips_2024.tex}
+% follow DL notation from the Goodfellow book
+\input{preamble/goodfellow.tex}
 \input{preamble/custom.tex}
 \input{preamble/metadata.tex}
-
-\newcommand{\jm}[1]{\textcolor{blue}{#1}}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-Physics-Informed Neural Networks (PINNs) are infamous for being hard to train.
-Recently, second-order methods based on natural gradient and Gauss-Newton methods have shown promising performance, improving the accuracy achieved by first-order methods by several orders of magnitude. 
-While promising, the proposed methods only scale to networks with a few thousand parameters due to the high computational cost to evaluate, store, and invert the curvature matrix.
-We propose Kronecker-factored approximate curvature (KFAC) for PINN losses that greatly reduces the computational cost and allows scaling to much larger networks.
-Our approach goes beyond the popular KFAC for traditional deep learning problems as it captures contributions from a PDE's differential operator that are crucial for optimization. 
-To establish KFAC for such losses, 
-we use Taylor-mode automatic differentiation to describe the differential operator's computation graph as a forward network with shared weights which allows us to 
-%we provide new insights into the differential operator's computation graph using Taylor-mode automatic differentiation and 
-%combine them with a recently proposed generalization of KFAC to linear layers with weight sharing.
-apply a variant of KFAC for networks with weight-sharing. 
-%Specifically, we show that linear layers inside a neural net process multiple vectors containing partial derivatives, hence act like linear layers with weight sharing which allows for a straightforward KFAC approximation.
-Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods.
+  Physics-Informed Neural Networks (PINNs) are infamous for being hard to train.
+  Recently, second-order methods based on natural gradient and Gauss-Newton methods have shown promising performance, improving the accuracy achieved by first-order methods by several orders of magnitude.
+  While promising, the proposed methods only scale to networks with a few thousand parameters due to the high computational cost to evaluate, store, and invert the curvature matrix.
+  We propose Kronecker-factored approximate curvature (KFAC) for PINN losses that greatly reduces the computational cost and allows scaling to much larger networks.
+  Our approach goes beyond the popular KFAC for traditional deep learning problems as it captures contributions from a PDE's differential operator that are crucial for optimization.
+  To establish KFAC for such losses, we use Taylor-mode automatic differentiation to describe the differential operator's computation graph as a forward network with shared weights which allows us to apply a variant of KFAC for networks with weight-sharing.
+  Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods.
 \end{abstract}
 
 \section{Introduction}
@@ -56,18 +37,14 @@ Empirically, we find that our KFAC-based optimizers are competitive with expensi
 \input{sections/background_kfac.tex}
 
 \section{Kronecker-Factored Approximate Curvature for
-PINNs}\label{sec:kfac_pinns}
-
-
+  PINNs}\label{sec:kfac_pinns}
 \input{sections/contribution.tex}
 
 \section{Experiments}\label{sec:experiments}
-
 \input{sections/experiments.tex}
 
 \section{Discussion and Conclusion}
 \input{sections/conclusion.tex}
-
 \input{sections/acknowledgements.tex}
 
 \bibliography{references}
@@ -77,7 +54,6 @@ PINNs}\label{sec:kfac_pinns}
 \appendix
 
 \input{sections/appendix.tex}
-
 \input{sections/checklist.tex}
 
 \end{document}

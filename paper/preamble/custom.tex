@@ -17,8 +17,6 @@ group-minimum-digits={3}%
 % TODOS & COMMENTS
 % ===================================================================
 \usepackage{todonotes} % for TODOs, loads xcolor with []
-\newcommand{\toodoo}[1]{{\tt\color{red} #1}}
-\newcommand{\felix}[1]{{\color{blue}\textbf{Felix:} #1}}
 \usepackage{comment} % for comment environment
 
 % ===================================================================
@@ -47,6 +45,11 @@ group-minimum-digits={3}%
 \colorlet{thirdcolor}{VectorOrange}
 \colorlet{fourthcolor}{VectorTeal}
 \colorlet{fifthcolor}{VectorGray}
+
+% COLOR FOR KFAC BOXES
+\definecolor{kfac}{rgb}{0.55294118, 0.17647059, 0.22352941}
+
+\usepackage[most]{tcolorbox} % coloured boxes
 
 % ===================================================================
 % LINKS & REFERENCES
