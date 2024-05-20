@@ -189,7 +189,7 @@ class KFAC(Optimizer):
                   paper (https://arxiv.org/pdf/1503.05671) for details.
             T_kfac: Positive integer specifying the update frequency for
                 the boundary and the interior terms' KFACs. Default is `1`.
-            T_inv: Positive integer specifying the pre-conditioner update
+            T_inv: Positive integer specifying the preconditioner update
                 frequency. Default is `1`.
             ema_factor: Exponential moving average factor for the KFAC factors. Must be
                 in `[0, 1)`. Default is `0.95`.
@@ -201,7 +201,7 @@ class KFAC(Optimizer):
             inv_strategy: Inversion strategy. Must `'invert kronecker sum'`. Default is
                 `'invert kronecker sum'`.
             inv_dtype: Data type to carry out the curvature inversion. Default is
-                `torch.float64`. The pre-conditioner will be converted back to the same
+                `torch.float64`. The preconditioner will be converted back to the same
                 data type as the parameters after the inversion.
             initialize_to_identity: Whether to initialize the KFAC factors to the
                 identity matrix. Default is `False` (initialize with zero).

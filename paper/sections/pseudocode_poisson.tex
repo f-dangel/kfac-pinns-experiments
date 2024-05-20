@@ -44,7 +44,7 @@
   \State $\mL_{\partial\Omega}(\vtheta) \gets \frac{1}{2 N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} (u_n - y^{\partial \Omega}_n)^2$ \Comment Compute boundary loss
 
   \\
-  \State \textbf{3) Update the pre-conditioner (use inverse of Kronecker sum relation)}
+  \State \textbf{3) Update the preconditioner (use inverse of Kronecker sum relation)}
   \State $ {\mC^{(l)}}^{-1} \gets \left[(\mA_{\Omega}^{(l)} + \delta \mI) \otimes (\mB_{\Omega}^{(l)} + \delta \mI) + (\mA_{\partial\Omega}^{(l)} + \delta \mI) \otimes (\mB_{\partial\Omega}^{(l)} + \delta \mI)  \right]^{-1}$
 
   \\
@@ -67,7 +67,7 @@
   \EndFor
 \end{algorithmic}
 \caption{KFAC for the Poisson equation.
-  For simplicity, we omitted additional logic to update the Kronecker factors and the pre-conditioner less frequently, and the augmentation of the intermediates to account for the bias.}
+  For simplicity, we omitted additional logic to update the Kronecker factors and the preconditioner less frequently, and the augmentation of the intermediates to account for the bias.}
 \end{figure}
 %%% Local Variables:
 %%% mode: latex
