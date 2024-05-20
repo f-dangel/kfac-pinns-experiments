@@ -184,6 +184,16 @@ class WandbRunFormatter:
             f.write(text)
 
 
+class WandbBayesianRunFormatter(WandbRunFormatter):
+    """Class to format command line args of a Bayesian wandb run to LaTeX."""
+
+    HYPERPARAMETERS = deepcopy(WandbRunFormatter.HYPERPARAMETERS)
+    for params in HYPERPARAMETERS.values():
+        params["N_Omega"] = r"$N_{\Omega}$"
+        params["N_dOmega"] = r"$N_{\partial\Omega}$"
+        params["batch_frequency"] = "batch sampling frequency"
+
+
 class WandbSweepFormatter(WandbRunFormatter):
     """Class to format wandb sweeps into human-readable LaTeX files."""
 

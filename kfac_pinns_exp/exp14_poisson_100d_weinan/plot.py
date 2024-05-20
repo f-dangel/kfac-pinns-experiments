@@ -10,7 +10,7 @@ from tueplots import bundles
 
 from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import (
-    WandbRunFormatter,
+    WandbBayesianRunFormatter,
     WandbSweepFormatter,
     load_best_run,
     remove_unused_runs,
@@ -140,7 +140,7 @@ if __name__ == "__main__":
             entity, project, sweep_id, save=True, update=args.update, savedir=DATADIR
         )
         args = meta.to_dict()["config"][0]
-        WandbRunFormatter.to_tex(TEXDIR, args)
+        WandbBayesianRunFormatter.to_tex(TEXDIR, args)
 
     if args.update:  # only if online access is possible
         for sweep in show_sweeps(entity, project):

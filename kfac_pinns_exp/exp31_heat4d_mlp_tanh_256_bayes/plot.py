@@ -10,8 +10,8 @@ from tueplots import bundles
 
 from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import (
+    WandbBayesianRunFormatter,
     WandbBayesianSweepFormatter,
-    WandbRunFormatter,
     load_best_run,
     remove_unused_runs,
     show_sweeps,
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
 
     for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
@@ -134,7 +134,7 @@ if __name__ == "__main__":
             entity, project, sweep_id, save=True, update=args.update, savedir=DATADIR
         )
         args = meta.to_dict()["config"][0]
-        WandbRunFormatter.to_tex(TEXDIR, args)
+        WandbBayesianRunFormatter.to_tex(TEXDIR, args)
 
     if args.update:  # only if online access is possible
         for sweep in show_sweeps(entity, project):
