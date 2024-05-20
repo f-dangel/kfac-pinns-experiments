@@ -1,6 +1,13 @@
 For simplicity, we present our approach for multi-layer perceptrons (MLPs) consisting of fully-connected and element-wise activation layers.
 However, the generality of Taylor-mode automatic differentiation and KFAC for linear layers with weight sharing allow our KFAC to be applied to such layers (e.g.\,fully-connected, convolution, attention) in arbitrary neural network architectures.
 
+\paragraph{Flattening \& Derivatives}
+We vectorize matrices using the \emph{first-index-varies-fastest} convention, i.e.\,column-stacking (row index varies first, column index varies second) and denote the corresponding flattening operation by $\flatten$.
+This allows to reduce derivatives of matrix- or tensor-valued objects back to the vector case by flattening a functions input and output domain before differentiation.
+The Jacobian of a vector-to-vector function $\va \mapsto \vb(\va)$ has entries $[\jac_{\va}\vb]_{i,j} = \nicefrac{\partial \evb_i}{\partial \eva_j}$.
+For a matrix-to-matrix function $\mA \mapsto \mB(\mA)$, the Jacobian is $\jac_{\mA} \mB = \jac_{\flatten \mA }\flatten\mB$.
+A useful property of $\flatten$ is $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$ for matrices $\mA, \mX, \mB$ which implies $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
+
 \paragraph{Sequential neural nets} Consider a \emph{sequential neural network} $u_{\vtheta} = f_{\vtheta^{(L)}} \circ f_{\vtheta^{(L-1)}} \circ \ldots \circ f_{\vtheta^{(1)}} $ of depth $L\in\mathbb N$. It consists of layers $f_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}\to\sR^{h^{(l)}}$, $\vz^{(l-1)}\mapsto \vz^{(l)} = f_{\vtheta^{(l)}}(\vz^{(l-1)})$ with trainable parameters $\vtheta^{(l)} \in \sR^{p^{(l)}}$ that transform an input $\vz^{(0)} \coloneqq \vx \in \mathbb R^{d \coloneqq h^{(0)}}$ into a prediction $u_\vtheta(\vx) = \vz^{(L)} \in \sR^{h^{(L)}}$ via intermediate representations $\vz^{(l)} \in \sR^{h^{(l)}}$.
 In the context of PINNs, we use networks with scalar outputs ($h^{(L)}=1$) and denote the concatenation of all parameters by $\vtheta = (\vtheta^{(1)\top}, \dots, \vtheta^{(L)\top})^{\top} \in \sR^P$.
 A common choice is to alternate fully-connected and activation layers.

@@ -1,98 +1,40 @@
 \subsection{Kronecker-factored Approximate Curvature}
 
+We review Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} in the context of maximum likelihood estimation to approximate the per-layer Fisher informationmatrix by a Kronecker product to speed up approximate natural gradient descent.
+The Fisher associated with the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u_\vtheta(\vx_n) - \vy_n \right\rVert_2^2$ is
+\begin{equation}\label{eq:fisher-mle}
+  \mF(\vtheta)
+  =
+  \frac{1}{N}
+  \sum_{n=1}^N
+  \left(\jac_{\vtheta} u_{\vtheta}(\vx_n)  \right)^\top
+  \jac_{\vtheta} u_{\vtheta}(\vx_n)
+  =
+  \frac{1}{N}
+  \sum_{n=1}^N
+  \left( \jac_{\vtheta} u_n \right)^\top
+  \jac_{\vtheta} u_n
+  \quad\in \sR^{P\times P}\,,
+\end{equation}
+where $u_n = u_\vtheta(\vx_n)$, and it coincides with the classical Gauss-Newton matrix~\citep{martens2020new}.
+The established KFAC approximates \eqref{eq:fisher-mle}.
+While the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ has the same structure as $\mF(\vtheta)$, the interior Gramian $\mG_\Omega(\vtheta)$ does not as it involves derivative rather than function evaluations of the net.
 
-We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced in~\citet{heskes2000natural, martens2015optimizing} in the context of maximum likelihood estimation to approximate the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction. 
-%We review the general principle here.
-%This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here.
-%Later, we will expand this to Gramian matrices with PDE terms.
-%In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the %Gramian $\mG(\vtheta)$ is given by
-%a popular choice as a Gramian is given by the Gauss-Newton matrix
-%\begin{equation}
-%    F_I(\vtheta)_{ij} = \sum_{x} \frac{\partial_{\vtheta_i}p_\vtheta(x)\partial_{\vtheta_j}p_\vtheta(x)}{p_\vtheta(x)} = \sum_{x} \partial_{\vtheta_i} \log p_\vtheta(x) \partial_{\vtheta_j} \log p_\vtheta(x),
-%\end{equation}
-%in which case the Riemannian metric $g$ is given by the Fisher-Rao metric~\citet{}.
-%For a supervised learning problem with training data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the (empirical) Fisher-information matrix commonly used, has entries the entries
-Here, the Fisher information matrix 
-for the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u_\vtheta(\vx_n) - \vy_n \right\rVert_2^2$ is 
-\begin{equation}
-  \mF(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n) = \frac1N\sum_{n=1}^N \jac_{\vtheta} \vu_n^\top \jac_{\vtheta} \vu_n
-  ,
- \end{equation}
-where $\vu_n = u_\vtheta(\vx_n)$, and coincides with the classic Gauss-Newton matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}.
-Note that the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ has the same structure as $\mF(\vtheta)$, but the interior Gramian $\mG_\Omega(\vtheta)$ does not as it carries information from the PDE operator. 
-
-
-
-\paragraph{Block-diagonal approximation}
-In the first step the Fisher-information matrix $\mF$ can be approximated by a block diagonal matrix with blocks corresponding to the Fisher-information matrices of the individual layers of the network, i.e., $\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$.
-Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence significantly reducing the computational complexity.
-
-\paragraph{Flattening, Jacobians, and Hessians}
-%Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
-%In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
-%We consider the following vectorization of the matrices appearing as the trainable parameters of the network.
-To vectorize %the weight
-matrices %of the linear layers
-we follow the % index convention to vectorize will be
-\emph{first-varies-fastest} convention, which corresponds to column-stacking (row index varies first, column index varies second).
-We denote the corresponding flattening operation by $\flatten(\cdot)$.
-Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$
-%\begin{equation}\label{eq:vecTrick}
-%  \flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}
-%\end{equation}
-for matrices $\mA, \mX, \mB$ %.
-%In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence
-which implies $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
-The flattening notation allows to reduce the derivatives of matrix or tensor-valued objects back to the matrix case.
-When considering the differentiation of matrix-valued functions or functions depending defined on matrices, we use the identification $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$ and $\gradsquared{\mA}\mB = \gradsquared{\flatten(\mA)} \flatten(\mB)$ for the Jacobian and Hessian, respectively.
-
-\begin{comment}
-    Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ with respect to a vector $\va$, which collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
-For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ with respect to a matrix $\mA$, we simply set $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
-Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ with respect to a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
-For the Hessian $\gradsquared{\mA} b$ of a scalar $b$  with respect to \,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
-We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scalar w.r.t.\,a matrix.
-\end{comment}
-
-\paragraph{Kronecker-factored approximation of the blocks}
-We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point.
-The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and %by the vec-trick,
-we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$ by the vec-trick.
+The first step within KFAC approximates the Fisher-information matrix $\mF$ block diagonal matrix with blocks corresponding to individual layers, i.e.\,$\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$. Next, consider a block $\mF(\vtheta^{(l)})$ for a linear layer and examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(\vx)$ for a fixed data point.
+The layer parameters $\vtheta^{(l)} = \flatten \mW^{(l)}$ enter the computation via $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$ \citep[e.g.][]{dangel2020modular}.
 The chain rule gives
-%\begin{align}
-    $\jac_{\mW^{(l)}} \vu_n%u_{\vtheta}(\vx_n)
-     = \jac_{\vz^{(l)}}  \vu_n \jac_{\mW^{(l)}} \vz_n^{(l)}%\vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n
-    = {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vu_n$. %\vz^{(L)}_n.
-%\end{align}
-%and hence
-%\begin{align}
-%    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.
-%\end{align}
-Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ %~\citep{martens2015optimizing}
- we obtain
-\begin{equation}
-    \mF(\mW^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top
-    \approx \frac1N\left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N
+$\jac_{\mW^{(l)}} u = \jac_{\vz^{(l)}}  u \jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top\otimes  \jac_{\vz^{(l)}}  u$.
+Inserting into \Cref{eq:fisher-mle}, summing over the data points, and using the expectation approximation $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ from \citet{martens2015optimizing}, we obtain
+\begin{equation}\label{eq:kfac-linear}
+  \mF(\mW^{(l)})
+  \approx
+  \frac{1}{N}
+  \left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N
     {\jac_{\vz^{(l)}}  \vu_n}^\top
     \jac_{\vz^{(l)}}  \vu_n
-    \right),
+  \right) \quad \in \sR^{ p^{(l)} \times p^{(l)} },
 \end{equation}
-see~\citep{eschenhagen2023kroneckerfactored}.
-Inverting this can be done by inverting the two factors therefore greatly reducing the computational cost.
-%the inverse of a Kronecker-factored matrix is given by the Kronecker product of the individual inverses hence reducing the computational complexity of the corresponding linear system.
-
-
-\begin{comment}
-    This means the layer will not process a single vector $\va$, but a sequence of vectors $\left\{ \va_1, \dots, \va_S \right\}$ where $S$ denotes weight sharing number.
-We can column-stack these vectors into a matrix $\mA \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\vz = \mW \mA \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG \in \sR^{D_{\text{out}} \times S}$.
-The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW} \mZ = \mA^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
-As described by \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
-We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed by~\citet{grosse2016kroneckerfactored}.
-It treats the shared axis like a batch axis,
-$\mF(\mW) \approx \nicefrac{1}{S} \sum_{s=1}^S \va_s \va_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top}$ where $\vg_s = \grad{\vz_s} \ell(\vx, \hat{\vy}, \mW)$.
-We can express this in matrix notation as $\mF(\mW) \approx \nicefrac{1}{S} \mA \mA^{\top} \otimes \mG \mG^{\top}$.
-\end{comment}
-
+with $p^{(l)} = h^{(l-1)} h^{(l)}$. \Cref{eq:kfac-linear} is cheap to store and invert, requiring inversion of the two Kronecker factors of size $h^{(l-1)} \times h^{(l-1)}$ and $h^{(l)} \times h^{(l)}$.
 
 %%% Local Variables:
 %%% mode: latex
