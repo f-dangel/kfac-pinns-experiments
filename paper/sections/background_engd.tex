@@ -1,33 +1,6 @@
-%\subsection{The Gauss-Newton Method for PINNs}
-%\begin{itemize}
-%    \item recently, energy NGs have been proposed
-%    \item one can show that they mimic Newtons method in function space
-%    \item yield very good accuracy
-%    \item
-%\end{itemize}
-
-\begin{comment}
-    Natural gradients have been introduced by~\citet{amari1998natural} and have shown great success in reinforcement learning, and other problems...
-The general idea is to replace the vanilla GD update rule by a preconditioned version
-    \[ \vtheta_{k+1} = \vtheta_k - \eta_k \mG(\vtheta_k)^{-1} \nabla L(\vtheta_k), \]
-where $\mG(\vtheta)\in\mathbb R^{p\times p}$, $\mG(\vtheta)_{ij} \coloneqq g_{u_\vtheta}(\partial_{\vtheta_i} u_\vtheta, \partial_{\vtheta_j} u_\vtheta)$ is a matrix capturing the function space geometry of the problem and its parametrization and $g$ denotes a suitable Riemannian metric.
-In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the %Gramian $\mG(\vtheta)$ is given by
-a popular choice as a Gramian is given by the Gauss-Newton matrix
-%\begin{equation}
-%    F_I(\vtheta)_{ij} = \sum_{x} \frac{\partial_{\vtheta_i}p_\vtheta(x)\partial_{\vtheta_j}p_\vtheta(x)}{p_\vtheta(x)} = \sum_{x} \partial_{\vtheta_i} \log p_\vtheta(x) \partial_{\vtheta_j} \log p_\vtheta(x),
-%\end{equation}
-%in which case the Riemannian metric $g$ is given by the Fisher-Rao metric~\citet{}.
-%For a supervised learning problem with training data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the (empirical) Fisher-information matrix commonly used, has entries the entries
-\begin{equation}
-  %\mF(\vtheta)_{ij} = \sum_{n=1}^N \partial_{\vtheta_i} u_\vtheta(\vx_n)\partial_{\vtheta_j} u_\vtheta(\vx_n) \quad \text{maybe use?}
-  \mF(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n) = \frac1N\sum_{n=1}^N \jac_{\vtheta} \vu_n^\top \jac_{\vtheta} \vu_n
-  ,
- \end{equation}
-which agrees with the (empirical) Fisher information matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}. Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$.
-\end{comment}
-
-It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\citep{cuomo2022scientific}. Still, lately, function-space-inspired methods have shown more promising results~\citep{muller2024optimization}.
-Here, we focus on, \emph{energy natural gradients (ENGD)}, which in the case of PINNs agree with the Gauss-Newton method~\citep{muller2023achieving}.
+First-order optimizers like gradient descent and Adam struggle at producing satisfactory solutions when used to train PINNs~\citep{cuomo2022scientific}.
+Instead, function-space-inspired second-order methods have lately shown promising results~\citep{muller2024optimization}.
+We focus on \emph{energy natural gradients (ENGD)} which, when applied to PINN objectives like \Cref{eq:pinn-loss}, correspond to the Gauss-Newton method~\citep{muller2023achieving}.
 ENGD mimics Newton's method up to a projection onto the tangent space of the model and a discretization error that vanishes quadratically in the step size, thus providing locally optimal updates in the residual%~\citep{muller2023achieving}
 . Alternatively, the Gauss-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauss-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}.
 
@@ -63,7 +36,7 @@ In the context of ENGD for the PINN-loss~\eqref{eq:pinn-loss}, the Gramian is gi
 
 %\paragraph{Interpretation as Gau\ss-Newton method}
 %Consider the combined residual
-Note that $\mG(\vtheta)$ is the Gauss-Newton matrix of $r(\theta) = ((2N_\Omega)^{-1/2}r_\Omega(\vtheta), (2N_{\partial\Omega})^{-1/2} r_{\partial\Omega}(\vtheta))^\top$,
+Note that $\mG(\vtheta)$ is the Gauss-Newton matrix of $r(\vtheta) = ((2N_\Omega)^{-1/2}r_\Omega(\vtheta), (2N_{\partial\Omega})^{-1/2} r_{\partial\Omega}(\vtheta))^\top$,
 %\begin{equation*}
 %    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad
 %    \vtheta
