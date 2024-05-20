@@ -2,7 +2,7 @@
 The overall Gramian matrix of ENGD is given by the sum $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$ of two Gramian matrices stemming from the PDE and the boundary term, respectively.
 A Kronecker factored approximation of the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ can be obtained just like the case of the  Fisher $\mF(\vtheta)$.
 The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section in \eqref{eq:KFAC-PINN} and \eqref{eq:KFAC-PINNs-general} for the Laplace equation and more general PDEs, respectively.
-For this, we use forward mode automatic differentiation to express the computation of higher-order derivatives as forward passes of a larger network with shared weights, for which we propose a Kronecker-factored approximation generalizing the expand approximation by~\citet{eschenhagen2023kroneckerfactored}.
+For this, we use forward mode automatic differentiation to express the computation of higher-order derivatives as forward passes of a larger network with shared weights, for which we propose a Kronecker-factored approximation generalizing the expand approximation in~\citet{eschenhagen2023kroneckerfactored}.
 The approximations of $\mG_{\Omega}(\vtheta)$ and $\mG_{\partial\Omega}(\vtheta)$ can be %combined into a single approximation or
 inverted using an explicit formula based on the individual inversions~\citep{martens2015optimizing}.
 
@@ -18,24 +18,24 @@ How to compute the function values through a forward pass is well known.
 %If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by
 %\begin{align}
        %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\
-       %\partial_{\vx_i} \partial_{\vx_j} (f \circ g)(\vx) & = \partial_{\vx_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{\vx_j} g(\vx) + \jac f(g(\vx)) \partial_{\vx_i} \partial_{\vx_j} g(\vx).
+       %\partial_{x_i} \partial_{x_j} (f \circ g)(\vx) & = \partial_{x_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{x_j} g(\vx) + \jac f(g(\vx)) \partial_{x_i} \partial_{x_j} g(\vx).
 %\end{align}
 If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz %+ \vb^{(l)}
-$ is a linear layer, then setting $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{\vx_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{\vx_i}\partial_{\vx_j}\vz^{(0)} = 0\in\mathbb R^d$, applying the chain rule gives the second-order forward pass is given by
+$ is a linear layer, then setting $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{x_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{x_i}\partial_{x_j}\vz^{(0)} = 0\in\mathbb R^d$, applying the chain rule gives the second-order forward pass is given by
 \begin{subequations}\label{eq:forward_pass}
     \begin{align}
     \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} %+ \vb^{(l)}
     \\
-    \partial_{\vx_i} \vz^{(l)} & = \mW^{(l)} \partial_{\vx_i} \vz^{(l-1)} \\
-    \partial_{\vx_i}\partial_{\vx_j} \vz^{(l)} & = \mW^{(l)} \partial_{\vx_i}\partial_{\vx_j} \vz^{(l-1)} \label{subeq:secondOrderForward-LinearLayer}.
+    \partial_{x_i} \vz^{(l)} & = \mW^{(l)} \partial_{x_i} \vz^{(l-1)} \\
+    \partial_{x_i}\partial_{x_j} \vz^{(l)} & = \mW^{(l)} \partial_{x_i}\partial_{x_j} \vz^{(l-1)} \label{subeq:secondOrderForward-LinearLayer}.
 \end{align}
 \end{subequations}
 The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$ is given by
 \begin{subequations}
     \begin{align}
     \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\
-    \partial_{\vx_i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_{\vx_i} \vz^{(l-1)} \\
-    \partial_{\vx_i}\partial_{\vx_j} \vz^{(l)} & = \partial_{\vx_i} \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_{\vx_j} \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_{\vx_i} \partial_{\vx_j} \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}.
+    \partial_{x_i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_{x_i} \vz^{(l-1)} \\
+    \partial_{x_i}\partial_{x_j} \vz^{(l)} & = \partial_{x_i} \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_{x_j} \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_{x_i} \partial_{x_j} \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}.
 \end{align}
 \end{subequations}
 
@@ -46,7 +46,7 @@ Summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrde
 %\begin{subequations}
 %    \begin{align}
 %        \Delta \vz^{(l)} & = \mW^{(l)} \Delta \vz^{(l-1)} \quad \text{and } \\
-%        \Delta \vz^{(l)} & = \sum_i \sigma''(\vz^{(l-1)}) \odot (\partial_{\vx_i} \vz^{(l-1)})^{\odot 2} + \sigma'(\vz^{(l-1)}) \odot \Delta \vz^{(l-1)}
+%        \Delta \vz^{(l)} & = \sum_i \sigma''(\vz^{(l-1)}) \odot (\partial_{x_i} \vz^{(l-1)})^{\odot 2} + \sigma'(\vz^{(l-1)}) \odot \Delta \vz^{(l-1)}
 %    \end{align}
 %\end{subequations}
 \begin{comment}
@@ -169,7 +169,7 @@ Similarly, a generalization of~\eqref{eq:forward_Laplacian_nonlinear} can be giv
 \subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}\label{sec:KFAC-Laplace}
 Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauss-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
-    \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
+    \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n \in\mathbb R^{{h^{(l-1)}}^2\times {h^{(l-1)}}^2}
 \end{align}
 Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
 \begin{align*}
@@ -198,15 +198,15 @@ Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use t
     = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
     %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
     %+
-    %\sum_{i=1}^d {\partial_{\vx_i}\vz^{(l-1)}_n}^\top \otimes \jac_{\partial_{\vx_i}\vz^{(l)}}\Delta_{\vx}\vu_n
+    %\sum_{i=1}^d {\partial_{x_i}\vz^{(l-1)}_n}^\top \otimes \jac_{\partial_{x_i}\vz^{(l)}}\Delta_{\vx}\vu_n
     %\\ & \quad
     %+
     %{\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \jac_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n.
     %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \jac_{\vz^{(l-1)}} \Delta_{\vx} \vu_n, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \jac_{\Delta_\vx\vz^{(l-1)}} \Delta_{\vx} \vu_n\right)? not quite
 \end{align*}
-where $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}$ and $S=d+2$.
+where $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}\in\mathbb R^{h^{(l)}}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}\in\mathbb R^{h^{(l)}}$ and $S=d+2$.
 Using the notation
-$\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n$ we obtain
+$\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n\in\mathbb R^{h^{(l)}}$ we obtain
 \begin{equation}\label{eq:laplace_gramian_block_exact}
     \mG_\Omega(\mW^{(l)})
     =
@@ -228,7 +228,7 @@ Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gra
 \begin{align}\label{eq:KFAC-PINN}
     \hat{\mG}_\Omega%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{S}{N^2 }
+    \coloneqq \frac{1}{N^2 S}
     \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
     \otimes
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top   \right].
@@ -316,7 +316,7 @@ Using the notation $\vg_s\coloneqq \nabla_{\vz^{(l)}_s} \vz^{L}_s$ the Gauss-New
 into a matrix $\mZ^{(l)} \in \sR^{D_{\text{in}}\times S}$, likewise for the linear layer's outputs $\mZ^{(l+1)} = \mW^{(l)} \mZ^{(l)} \in \sR^{D_{\text{out}}\times S}$ and activation gradients $\mG^{(l)} \in \sR^{D_{\text{out}} \times S}$.\todo{introduce the gradient notation}
 The output-weight Jacobian of a weight-sharing layer is $\jac_{\mW^{(l)}} \mZ^{(l+1)} = {\mZ^{(l)}}^{\top} \otimes \mI$ \cite[see e.g.][]{dangel2020modular} and the Fisher does not simplify into a Kronecker product without further approximations.
 %As described by \citet{eschenhagen2023kroneckerfactored}, there are two possible Kronecker approximations for this setup.
-We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed by~\citet{grosse2016kroneckerfactored}.
+We will focus on the \emph{expand} approximation, which yields the Kronecker approximation for convolutional layers proposed in~\citet{grosse2016kroneckerfactored}.
 It treats the shared axis like a batch axis,
 \begin{align}
     \mF(\mW^{(l)}) = \frac1S \sum_{s=1}^S (\vz_s^{(l)} \otimes {\vg_s^{(l)}}^\top)({\vz_s^{(l)}}^{\top}\otimes \vg_s^{(l)}) \approx \frac{1}{S} \sum_{s=1}^S \vz_s \vz_s^{\top} \otimes \sum_{s=1}^S \vg_s \vg_s^{\top}. %, %\quad \text{where } \vg_s = ...%\grad{\vz_s} \ell(\vx, \hat{\vy}, \mW).
@@ -362,7 +362,7 @@ Writing $v_\vtheta(\vx)\coloneqq (%u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla
 u(\vx), \partial u(\vx), \dots, \partial^{(k)} u(\vx))$
 we can express the block corresponding to the $l$-th layer of the Gauss-Newton matrix as
 \begin{align}
-    \mG(\mW^{(l)}) & = \frac1N\sum_{n=1}^N \jac_{\mW^{(l)}} v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mA_n}  \jac_{\mW^{(l)}} v_\vtheta(\vx_n),
+    \mG(\mW^{(l)}) & = \frac1N\sum_{n=1}^N \jac_{\mW^{(l)}} v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mLambda_n}  \jac_{\mW^{(l)}} v_\vtheta(\vx_n),
 \end{align}
 and $v_\vtheta$ is a forward network with shared weights.
 %The reduce approximation is then given by
@@ -381,11 +381,11 @@ The generalization of%the approximation
 \begin{align}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{\binom{d+k}{d}}{N^2}
+    \coloneqq \frac{1}{N^2\binom{d+k}{d}}
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top
     \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mA_n \mJ^{(l)}_{n,\alpha} \right],
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mLambda_n \mJ^{(l)}_{n,\alpha} \right],
 \end{align}
 \end{tcolorbox}
 %where $\mZ^{(l)}_{n,\alpha} = \partial_\vx^\alpha \vz_n^{(l)}$ and
@@ -394,7 +394,7 @@ where $\mJ^{(l)}_{n,\alpha} = %\nabla
 $.
 A detailed derivation can be found in \Cref{app:derivations}.
 %
-This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}.
+This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} in~\citet{eschenhagen2023kroneckerfactored}.
 %\jm{Note that other Kronecker-factored approximations for weight-sharing architectures have been proposed, but due to the superior performance in our experiments, we focus on the expand approximation?}
 
 %\todo[inline]{striking remark how that this can be applied for any Gramian involving PDE terms}
@@ -424,7 +424,7 @@ where $\ell\colon\mathbb R^K\to\mathbb R$ is a convex function.
 %which covers general PINNs but also variational problems.
 %Then the Gauss-Newton matrix is given by
 We can perceive this problem as a special case of the setting described above with $\Psi = \operatorname{id}$ and hence the KFAC approximation~\eqref{eq:KFAC-PINNs-general} remains meaningful %approximation of the discretized Gauss-Newton matrix
-if $\mA_n$ is replaced by $\mA_n = \nabla^2\ell(u(\vx_n), \partial u(\vx_n), \dots, \partial^{(k)}u(\vx_n))$.
+if $\mLambda_n$ is replaced by $\mLambda_n = \nabla^2\ell(u(\vx_n), \partial u(\vx_n), \dots, \partial^{(k)}u(\vx_n))$.
 In particular, our approximation can be used for the \emph{deep Ritz method} and other variational approaches to solve PDEs~\citep{yu2018deep}.
 
 \begin{comment}
@@ -489,7 +489,30 @@ Like in ENGD, we use a logarithmic grid line search along
 leading to the update
 $\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where
 $\alpha_{\star} = \argmin_{\alpha} \gL(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
-KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}, see also~\Cref{sec:experimental_details}.
+KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}. 
+It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
+The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
+\begin{align}
+  \begin{pmatrix}
+    \alpha^{\star} \\ \mu^{\star}
+  \end{pmatrix}
+  =
+  -
+  \begin{pmatrix}
+    \vDelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vDelta_t \right\rVert^2
+    & \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
+    \\
+    \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
+    &
+      \vdelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vdelta_t \right\rVert^2
+  \end{pmatrix}^{-1}
+  \begin{pmatrix}
+    \vDelta_t \nabla_{\vtheta_t} \gL
+    \\
+    \vdelta_t \nabla_{\vtheta_t} \gL
+  \end{pmatrix}\,.
+\end{align}
+The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}. 
 
 %%% Local Variables:
 %%% mode: latex

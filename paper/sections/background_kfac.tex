@@ -1,7 +1,7 @@
 \subsection{Kronecker-factored Approximate Curvature}
 
 
-We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} as an approximation of the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction.
+We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced in~\citet{heskes2000natural, martens2015optimizing} in the context of maximum likelihood estimation to approximate the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction. 
 %We review the general principle here.
 %This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here.
 %Later, we will expand this to Gramian matrices with PDE terms.
@@ -12,16 +12,15 @@ We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was 
 %\end{equation}
 %in which case the Riemannian metric $g$ is given by the Fisher-Rao metric~\citet{}.
 %For a supervised learning problem with training data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the (empirical) Fisher-information matrix commonly used, has entries the entries
-Here, the Fisher information matrix with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ is given by
+Here, the Fisher information matrix 
+for the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u_\vtheta(\vx_n) - \vy_n \right\rVert_2^2$ is 
 \begin{equation}
-  %\mF(\vtheta)_{ij} = \sum_{n=1}^N \partial_{\vtheta_i} u_\vtheta(\vx_n)\partial_{\vtheta_j} u_\vtheta(\vx_n) \quad \text{maybe use?}
   \mF(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n) = \frac1N\sum_{n=1}^N \jac_{\vtheta} \vu_n^\top \jac_{\vtheta} \vu_n
   ,
  \end{equation}
-where $\vu_n = u_\vtheta(\vx_n)$, which agrees with the %(empirical) Fisher information matrix~
-classic Gauss-Newton matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}.
-%Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$.
-To distinguish between the Gauss-Newton matrix $\mG(\vtheta)$ for PINNs, we refer to the Gauss-Newton matrix $\mF(\vtheta)$ as the Fisher matrix or Fisher.
+where $\vu_n = u_\vtheta(\vx_n)$, and coincides with the classic Gauss-Newton matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}.
+Note that the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ has the same structure as $\mF(\vtheta)$, but the interior Gramian $\mG_\Omega(\vtheta)$ does not as it carries information from the PDE operator. 
+
 
 
 \paragraph{Block-diagonal approximation}
@@ -79,7 +78,7 @@ Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-
     \right),
 \end{equation}
 see~\citep{eschenhagen2023kroneckerfactored}.
-Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost.
+Inverting this can be done by inverting the two factors therefore greatly reducing the computational cost.
 %the inverse of a Kronecker-factored matrix is given by the Kronecker product of the individual inverses hence reducing the computational complexity of the corresponding linear system.
 
 

@@ -19,16 +19,15 @@ To address this, we build on the idea of Kronecker-factored approximate curvatur
 \end{itemize}
 
 \paragraph{Related work}
-Various approaches aim to improve the optimization of PINNs, e.g.\,adaptive re-weighting of individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for discretizing the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}, and using quasi-Newton methods like L-BFGS~\citep{markidis2021old}.
-\todo{Felix: I don't understand this sentence.}
-However, none of this yields approximations of an accuracy comparable to the approximation error of the network.
-There has been a recent trend towards second-order methods for PINNs and more specifically methods that use the function space geometry to design meaningful preconditioners, \cite[see][]{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning, jnini2024gauss,chen2024teng, zampini2024petscml}, with unified view on these approaches given by~\citet{muller2024optimization}.
+Various approaches were developed to improve the optimization of PINNs such as adaptive re-weighting of individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for discretizing the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, and curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}. 
+Further, L-BFGS is known to outperform first-order optimizers~\citep{markidis2021old}. 
+Recently, other second-order methods that design meaningful preconditioners that respect the problems geometry have significantly outperformed L-BFGS, \cite[see][]{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning, jnini2024gauss,chen2024teng, zampini2024petscml}, with unified view on these approaches given in~\citet{muller2024optimization}.
 These methods greatly improve the accuracy of PINNs but come with a significant per-iteration cost as one needs to solve a linear system in the network's high-dimensional parameter space, which is only feasible for small networks when done naively.
 One approach is to use matrix-free methods to approximately compute Gauss-Newton directions by introducing an inner optimization loop, see~\cite{schraudolph2002fast,martens2010deep} for supervised learning problems and~\cite{zeng2022competitive,bonfanti2024challenges, jnini2024gauss,zampini2024petscml} for PINNs.
 Instead, our KFAC-based approach uses an explicit structured curvature representation which can be updated over iterations and inverted at much lower cost.
 
-The preconditioner matrices we propose to approximate with KFAC appear in the neural Galerkin schemes introduced by~\citet{bruna2024neural}.
-We build on the literature on Kronecker-factored approximate curvature (KFAC), which was initially introduced by~\citet{heskes2000natural,martens2010deep} as an approximation of the per-layer Fisher matrix to perform approximate natural gradient descent.
+The preconditioner matrices we propose to approximate with KFAC appear in the neural Galerkin schemes introduced in~\citet{bruna2024neural}.
+We build on the literature on Kronecker-factored approximate curvature (KFAC), which was initially introduced in~\citet{heskes2000natural,martens2010deep} as an approximation of the per-layer Fisher matrix to perform approximate natural gradient descent.
 Later, KFAC was extended to convolutional~\citep{grosse2016kroneckerfactored}, recurrent~\citep{martens2018kroneckerfactored}, attention~\citep{zhang2019algorithmic,pauloski2021kaisa,osawa2023pipefisher,grosse2023studying}, and recently to general linear layers with weight sharing~\cite{eschenhagen2023kroneckerfactored}.
 These works do not address preconditioners for loss functions with contributions from differential operators, as is the case for PINN losses.
 Kronecker-factored approximations have been used for variational Monte-Carlo methods, where despite the objective function involving a Laplacian term, the approximated preconditioner does not~\citep{pfau2020ab,drissi2024second}.

@@ -1,26 +1,4 @@
-It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
-The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
-\begin{align}
-  \begin{pmatrix}
-    \alpha^{\star} \\ \mu^{\star}
-  \end{pmatrix}
-  =
-  -
-  \begin{pmatrix}
-    \vDelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vDelta_t \right\rVert^2
-    & \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
-    \\
-    \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
-    &
-      \vdelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vdelta_t \right\rVert^2
-  \end{pmatrix}^{-1}
-  \begin{pmatrix}
-    \vDelta_t \nabla_{\vtheta_t} \gL
-    \\
-    \vdelta_t \nabla_{\vtheta_t} \gL
-  \end{pmatrix}\,.
-\end{align}
-The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}. 
+
 
 
 \subsection{Hyper-Parameter Tuning Protocol}\label{sec:tuning-protocol}
@@ -36,22 +14,20 @@ In all our experiments, we tune the following optimizer hyper-parameters and oth
 \item \textbf{KFAC*:} factor of the exponential moving average applied to the Kronecker factors, damping, initialization of the Kronecker factors (zero or identity matrix)
 \end{itemize}
 
-Depending on the optimizer and experiment we use grid, random, or Bayesian search from Weights \& Biases.
-Each individual run is executed in double precision and allowed to run for a given time budget, and the best run within a search is given by that with lowest final $L_2$ error on a fixed evaluation data set.
-All runs are executed on RTX 6000 GPUs with 24\,GiB of RAM to be comparable.
-For grid and random searches, we use a round-based approach.
+Depending on the optimizer and experiment we use grid, random, or Bayesian search from Weights \& Biases to determine the hyper-parameters.
+Each individual run is executed in double precision and allowed to run for a given time budget, and we rank runs by the final $L_2$ error on a fixed evaluation data set. To allow comparison, all runs are executed on RTX 6000 GPUs with 24\,GiB of RAM. For grid and random searches, we use a round-based approach.
 First, we choose a relatively wide search space and limit to approximately 50 runs.
-In a second, round, we narrow down the hyper-parameter space based on the first round, then re-run for another approximately 50 runs.
+In a second round, we narrow down the hyper-parameter space based on the first round, then re-run for another approximately 50 runs.
 We will release the details of all hyper-parameter search spaces, as well as the hyper-parameters for the best runs in our implementation.
 
 \subsection{2d Poisson Equation}
 
-\paragraph{Setup} We consider a two-dimensional Poisson equation $-\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
+\paragraph{Setup} We consider a two-dimensional Poisson equation $-\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right-hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
 We choose a single set of training points with $N_{\Omega} = 900, N_{\partial\Omega} = 120$.
-The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points using the known solution $u_{\star}(x, y) = \sin(x) \sin(y)$.
-Each run is limited to $\num{1000}\,\text{s}$.
-We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$.
-For the biggest architecture, full and per-layer ENGD lead to out-of-memory errors.
+The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points using the known solution $u^{\star}(x, y) = \sin(\pi x) \sin(\pi y)$.
+Each run is limited to a compute time of $\num{1000}\,\text{s}$.
+We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$ trainable parameters, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$ trainable parameters, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$ trainable parameters.
+For the biggest architecture, full and per-layer ENGD lead to out-of-memory errors and are thus not tested in the experiments.
 \Cref{fig:poisson2d-appendix} visualizes the results.
 
 \begin{figure}[!h]
@@ -161,15 +137,15 @@ The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hype
 
 \subsection{5d Poisson Equation}
 
-\paragraph{Setup} We consider a five-dimensional Poisson equation $-\Delta u(\vx) = \pi^2 \sum_{i=1}^5 \cos(\pi \evx_i)$ on the five-dimensional unit square $\vx \in [0, 1]^5$ with cosine sum right hand side and boundary conditions $u(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$ for $\vx \in \partial [0,1]^5$.
-We sample training batches of size $N_{\Omega} = \num{3000}, N_{\partial\Omega} = 500$ and evaluate the $L_2$ error on a separate set of $\num{30000}$ data points using the known solution $u_{\star}(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$.
+\paragraph{Setup} We consider a five-dimensional Poisson equation $-\Delta u(\vx) = \pi^2 \sum_{i=1}^5 \cos(\pi \evx_i)$ on the five-dimensional unit square $\vx \in [0, 1]^5$ with cosine sum right-hand side and boundary conditions $u(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$ for $\vx \in \partial [0,1]^5$.
+We sample training batches of size $N_{\Omega} = \num{3000}, N_{\partial\Omega} = 500$ and evaluate the $L_2$ error on a separate set of $\num{30000}$ data points using the known solution $u^{\star}(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$.
 All optimizers except for KFAC sample a new training batch each iteration.
-KFAC only re-samples every 100 iterations because we noticed it works significantly better with multiple iterations on a fixed batch.
+KFAC only re-samples every 100 iterations because we noticed  significant improvement with multiple iterations on a fixed batch.
 To make sure that this does not lead to an unfair advantage of KFAC, we conduct an additional experiment where we also tune the batch sampling frequency, as well as other hyper-parameters; see \Cref{sec:high-dimensional-poissons-app}.
 The results presented in this section are consistent with this additional experiment (compare the rightmost column of \Cref{fig:poisson5d-appendix} and the leftmost column of \Cref{fig:poisson-bayes-appendix}).
 Each run is limited to 3000\,s.
-We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $5\to 64\to 1$ MLP with $D=449$, a five layer $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$, and a five layer $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116864}$.
-For the biggest architecture, full and layer-wise ENGD lead to out-of-memory errors.
+We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $5\to 64\to 1$ MLP with $D=449$ trainable parameters, a five layer $5 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{10065}$ trainable parameters, and a five layer $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116864}$ trainable parameters.
+For the biggest architecture, full and layer-wise ENGD lead to out-of-memory errors and are thus not tested in the experiments.
 \Cref{fig:poisson5d-appendix} visualizes the results.
 
 \begin{figure}[!h]
@@ -279,15 +255,15 @@ The runs shown in \Cref{fig:poisson5d-appendix} correspond to the following hype
 
 \subsection{5/10/100-d Poisson Equations with Bayesian Search}\label{sec:high-dimensional-poissons-app}
 
-\paragraph{Setup} Here, we consider three Poisson equations $- \Delta u(\vx) = f(\vx)$ with different right hand sides and boundary conditions on the unit square $\vx \in [0, 1]^d$:
+\paragraph{Setup} Here, we consider three Poisson equations $- \Delta u(\vx) = f(\vx)$ with different right-hand sides and boundary conditions on the unit square $\vx \in [0, 1]^d$:
 \begin{itemize}
-\item $d=5$ with cosine sum right hand side $f(\vx) = \pi^2 \sum_{i=1}^d \cos(\pi \evx_i)$, boundary conditions $u(\vx) = \sum_{i=1}^d \cos(\pi \evx_i)$ for $\vx \in \partial [0,1]^d$, and known solution $u_{\star}(\vx) = \sum_{i=1}^d \cos(\pi \evx_i)$.
+\item $d=5$ with cosine sum right-hand side $f(\vx) = \pi^2 \sum_{i=1}^d \cos(\pi \evx_i)$, boundary conditions $u(\vx) = \sum_{i=1}^d \cos(\pi \evx_i)$ for $\vx \in \partial [0,1]^d$, and known solution $u^{\star}(\vx) = \sum_{i=1}^d \cos(\pi \evx_i)$.
   We assign each run a budget of $\num{3000}\,\text{s}$.
 
-\item $d=10$ with zero right hand side $f(\vx) = 0$, harmonic mixed second order polynomial boundary conditions $u(\vx) = \sum_{i=1}^{\nicefrac{d}{2}} \evx_{2i-1} \evx_{2i}$ for $\vx \in \partial [0,1]^d$, and known solution $u_{\star}(\vx) =  \sum_{i=1}^{\nicefrac{d}{2}} \evx_{2i-1} \evx_{2i}$.
+\item $d=10$ with zero right-hand side $f(\vx) = 0$, harmonic mixed second order polynomial boundary conditions $u(\vx) = \sum_{i=1}^{\nicefrac{d}{2}} \evx_{2i-1} \evx_{2i}$ for $\vx \in \partial [0,1]^d$, and known solution $u^{\star}(\vx) =  \sum_{i=1}^{\nicefrac{d}{2}} \evx_{2i-1} \evx_{2i}$.
   We assign each run a budget of $\num{6000}\,\text{s}$.
 
-\item $d=100$ with constant non-zero right hand side $f(\vx) = -2 d$, square norm boundary conditions $u(\vx) = \left\lVert \vx \right\rVert_2^2$ for $\vx \in \partial [0,1]^d$, and known solution $u_{\star}(\vx) =  \left\lVert \vx \right\rVert_2^2$.
+\item $d=100$ with constant non-zero right-hand side $f(\vx) = -2 d$, square norm boundary conditions $u(\vx) = \left\lVert \vx \right\rVert_2^2$ for $\vx \in \partial [0,1]^d$, and known solution $u^{\star}(\vx) =  \left\lVert \vx \right\rVert_2^2$.
   We assign each run a budget of $\num{10000}\,\text{s}$.
 \end{itemize}
 We tune the optimizer-hyperparameters described in \Cref{sec:tuning-protocol}, as well as the batch sizes $N_{\Omega}, N_{\partial \Omega}$, and their associated re-sampling frequencies using Bayesian search.

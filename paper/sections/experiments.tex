@@ -10,13 +10,13 @@ We chose this because there is a fully-featured implementation from~\citet{tatze
 As first order-optimizers, we consider SGD with a tuned learning rate and momentum, as well as Adam with a tuned learning rate.
 %
 %\paragraph{Experimental setup}
-We tune all hyper-parameters including step-sizes, momentum, the exponential-moving-average\todo{tba} parameter using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance.
+We tune all hyper-parameters including step-sizes, momentum, the exponential-moving-average\todo{to be checked; refer to appendix} parameter using Weights \& Biases~\citep{wandb} via random search, where we will make the runs and choices available after acceptance.
 All experiments are run on a compute cluster with RTX 6000 GPUs (24\,GiB RAM).
 
 
 \paragraph{A pedagogical example: 2d Poisson equation}
 
-We consider a low-dimensional Poisson equation used to demonstrate the efficacy of energy natural gradients by~\cite{muller2023achieving}
+We consider a low-dimensional Poisson equation used to demonstrate the efficacy of energy natural gradients in~\cite{muller2023achieving}
 as we can use it as a baseline here for its KFAC approximation.
 The %problems are given by the two-dimensional
 Poisson equation is given by
@@ -66,15 +66,18 @@ In contrast to ENGD which relies on an exact solution of the preconditioning ste
 
 To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
 \begin{align}\label{eq:4D-heat}
-     \partial_t u(t,x)-\kappa\Delta_x u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in [0,1]^{4} \\
-    u(0,x) & = \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
-     x\in [0,1]^{4}
+     \partial_t u(t,\vx)-\kappa\Delta_\vx u(t,\vx) & = 0 \quad \text{for } t\in[0,1], \vx\in [0,1]^{4} \\
+    u(0,\vx) & = \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
+     \vx\in [0,1]^{4}
      \\
-     u(t,x) & = \exp(-t) \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for } t\in[0,1], x\in\partial[0,1]^{4}
+     u(t,\vx) & = \exp(-t) \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for } t\in[0,1], \vx\in\partial[0,1]^{4}
 \end{align}
 with $\kappa = 1/4$. Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
 We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.
-Due to the higher spatial dimension, we use mini-batches in the evaluation of the loss and the preconditioner, where for KFAC, we keep the same batch for $100$ iterations.\todo{for the other optimizers?} 
+%Due to the higher spatial dimension, we use mini-batches in the evaluation of the loss and the preconditioner, where for KFAC, we keep the same batch for $100$ iterations\todo{copy from the appendix; later, we add this as a tunable hp}. 
+All optimizers except for KFAC sample a new training batch each iteration.
+KFAC only re-samples every 100 iterations because we noticed  significant improvement with multiple iterations on a fixed batch.
+To make sure that this does not lead to an unfair advantage of KFAC, we conduct an additional experiment where we also tune the batch sampling frequency, as well as other hyper-parameters; see \Cref{sec:high-dimensional-poissons-app}.
 Again, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics. 
 \begin{figure}
     \centering
@@ -85,12 +88,12 @@ Again, we observe that KFAC offers competitive performance compared with other s
 
 
 \paragraph{High-dimensional Poisson equations}
-We consider Poisson equations in dimensions $d=5,10,100$ on the problems used by~\cite{yu2018deep, muller2023achieving}, which admit the solutions 
+We consider Poisson equations in dimensions $d=5,10,100$ on the problems used in~\cite{yu2018deep, muller2023achieving}, which admit the solutions 
 \begin{align}\label{eq:solutions_poisson}
     \begin{split}
-        u^\star(x) & = \sum_{i=1}^5 \cos(\pi x_i)? \quad \text{for } x\in [0,1]^{5}, \\
-        u^\star(x) & = \sum_{k=1}^5 x_{2k-1}x_{2k},  \quad \text{for } x\in [0,1]^{10} \\ 
-        u^\star(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in [0,1]^{100}, 
+        u^\star(\vx) & = \sum_{i=1}^5 \cos(\pi x_i)? \quad \text{for } \vx\in [0,1]^{5}, \\
+        u^\star(\vx) & = \sum_{k=1}^5 x_{2k-1}x_{2k},  \quad \text{for } \vx\in [0,1]^{10} \\ 
+        u^\star(\vx) & = \lVert \vx \rVert_2^2 \quad \text{for } \vx\in [0,1]^{100}, 
     \end{split}
 \end{align}
 respectively. 
@@ -117,7 +120,8 @@ respectively.
 %We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ and 
 Here, we select the hyper-parameters via a Bayesian optimization procedure. 
 Again, we use mini-batches for $100$ iterations before drawing news samples. 
-\todo{add verdict}
+We see a similar picture as before with KFAC consistently outperforming first-order methods and offering competitive performance amongst the second-order methods. 
+Here, we expect a high variance due to the Bayesian optimization, as a grid search provided better accuracy of KFAC for the 10d problem, see \Cref{fig:?}. 
 
 
 \begin{figure}

@@ -535,7 +535,7 @@ We can just do that in the same way as the original KFAC paper, which gives us
 
 \subsection{$L^2$ aka Gauss-Newton matrix aka empirical Fisher}
 
-In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the Gramian $\mG(\vtheta)$ is chosen as the (empirical) Fisher information matrix given by~\citep{martens2020new, eschenhagen2023kroneckerfactored}
+In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the Gramian $\mG(\vtheta)$ is chosen as the (empirical) Fisher information matrix given in~\citep{martens2020new, eschenhagen2023kroneckerfactored}
 \begin{equation}
   \mG(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n).
  \end{equation}
@@ -569,7 +569,7 @@ One can also consider the empirical empirical Fisher
 
 \subsection{Quantum Gramian / Quantum Natural Gradient}
 
-The \emph{Quantum natural gradient} was introduced by~\cite{stokes2020quantum} in the context of variational Monte-Carlo methods. Here, one parametrizes wave functions $\psi_\vtheta$ of some Quantum system  %$p_\vtheta\propto \psi_\vtheta^2$, where $\psi_\vtheta$ is computed by some neural network, i.e.,
+The \emph{Quantum natural gradient} was introduced in~\cite{stokes2020quantum} in the context of variational Monte-Carlo methods. Here, one parametrizes wave functions $\psi_\vtheta$ of some Quantum system  %$p_\vtheta\propto \psi_\vtheta^2$, where $\psi_\vtheta$ is computed by some neural network, i.e.,
 and consequently considers the corresponding probability density functions
 \begin{align}
     p_\vtheta(\vx) = \frac{\psi_\vtheta^2(\vx)}{\lVert \psi_\vtheta \rVert_2^2}.
@@ -598,7 +598,7 @@ and hence the Gramian simplifies to
 However, it is not clear to me how this can be enforced for a neural network architecture.
 
 \subsection{Rayleigh-Gauss-Newton}
-This was introduced by~\cite{webber2022rayleigh} and leads to a Gramian that incorporates PDE / Hamiltonian terms.
+This was introduced in~\cite{webber2022rayleigh} and leads to a Gramian that incorporates PDE / Hamiltonian terms.
 An important task in computational quantum mechanics is to minimize the Rayleigh quotient
 \begin{align}
     \mathcal E(\psi) = \frac{\langle \psi, \mathcal H \psi \rangle}{\langle \psi, \psi \rangle},

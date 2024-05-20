@@ -56,7 +56,7 @@ Now we can use any Kronecker-factored approximation for feedforward networks wit
 %\paragraph{Kronecker approximation of the PDE Gramian}
 
 %\paragraph{Individual steps}
-Using the crude approximation $M^{-1}\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx \sum_{m=1}^M \mA_m \mB_m$ we compute
+Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx \sum_{m=1}^M \mA_m \mB_m$ we compute
 \begin{align*}
     & \sum_{n=1}^N
     \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
@@ -64,13 +64,13 @@ Using the crude approximation $M^{-1}\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \appro
     \sum_{s=1}^S \left( \mZ
     ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
     \\ \approx & \;
-    S\sum_{n=1}^N
+    \sum_{n=1}^N
     \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
     \cdot
     \left( \mZ
     ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
     \\ = & \;
-    S\sum_{n=1}^N
+    \sum_{n=1}^N
     \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}{\mZ
     ^{(l-1)}_{n,s}}^\top\otimes \vg_{n,s}^{(l)}{\vg_{n,s}^{(l)}}^\top \right)
     \right]
@@ -86,7 +86,7 @@ which gives the approximation
 \begin{align*}\label{eq:KFAC-PINN}
     \hat{\mG}_\Omega%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{1}{N^2 S}
+    \coloneqq \frac{1}{N^2S}
     \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
     \otimes
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top \right].
@@ -146,7 +146,7 @@ Using the notation $\mJ^{(l)}_{n,\alpha} = \jac_{\partial_\vx^\alpha \vz_n^{(l)}
     \mA_n
     \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)^\top\right].
 \end{equation}
-Using the crude approximation $M^{-1}\sum_{m=1}^M \mB_m\sum_{m=1}^M \mC_m \approx \sum_{m=1}^M \mB_m \mC_m$ we compute
+Using the crude approximation $\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx \sum_{m=1}^M \mA_m \mB_m$ we compute
 \begin{align}
     \begin{split}
         & \sum_{n=1}^N
@@ -154,16 +154,16 @@ Using the crude approximation $M^{-1}\sum_{m=1}^M \mB_m\sum_{m=1}^M \mC_m \appro
     \mA_n
     \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha {\vz^{(l-1)}_n}^\top\otimes \mJ_{n,\alpha}^{(l)} \right)\right]
     \\ \approx & \;
-    \binom{d+k}{d} \sum_{n=1}^N
+    \sum_{n=1}^N
     \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \mJ_{n,\alpha}^{(l)} \right)
     \mA_n
     \left( \partial_\vx^\alpha {\vz^{(l-1)}_n}^\top \otimes \mJ_{n,\alpha}^{(l)} \right)\right]
     \\ = & \;
-    \binom{d+k}{d}\sum_{n=1}^N
+    \sum_{n=1}^N
     \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\right) \otimes \left({\mJ_{n,\alpha}^{(l)}}^\top \mA_n{\mJ_{n,\alpha}^{(l)}}\right)
     \right]
     \\ \approx & \;
-    \frac{\binom{d+k}{d}}{N}\left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top \right]
+    \frac{1}{N\binom{d+k}{d} }\left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top \right]
     \otimes
     \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} {\mJ^{(l)}_{n,\alpha}}^\top\mA_n{\mJ^{(l)}_{n,\alpha}} \right],
     \end{split}
@@ -173,7 +173,7 @@ which gives the approximation
 \begin{align*}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{\binom{d+k}{d}}{N^2}
+    \coloneqq \frac{1}{N^2\binom{d+k}{d} }
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top
     \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right]
     \otimes
@@ -182,20 +182,8 @@ which gives the approximation
 \end{tcolorbox}
 
 
-This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}.
+This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} in~\citet{eschenhagen2023kroneckerfactored}.
 
-
-
-
-\begin{equation*}
-    \mG_\Omega(\mW^{(l)})
-    =
-    \frac1N\sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \sum_{s=1}^S \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
-\end{equation*}
 
 %
 %\paragraph{Kronecker approximation of the PDE Gramian}
@@ -210,7 +198,7 @@ Approximating the sum of Kronecker products (running over $s$) by the Kronecker 
     \otimes
     \left[\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}} \right)^\top \right]
 \end{align*}
-This approximation agrees with the \emph{reduce} setting described by~\citet{eschenhagen2023kroneckerfactored}.
+This approximation agrees with the \emph{reduce} setting described in~\citet{eschenhagen2023kroneckerfactored}.
 
 \paragraph{Individual steps} Can be moved to the appendix or deleted:
 
@@ -281,7 +269,7 @@ the Kronecker-factored approximation takes the form
 \begin{align*}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
-    \coloneqq \frac{\binom{d+k}{d}}{N^2}
+    \coloneqq \frac{1}{N^2\binom{d+k}{d} }
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top
     c_\alpha^2\partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right]
     \otimes
