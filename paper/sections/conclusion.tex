@@ -1,9 +1,22 @@
 
-We provide KFAC approximations for preconditioners involving general PDE terms
-This builds on an interpretation of the input-derivatives of a network via Taylor-mode automatic differentiation as a weight-sharing network. 
-We provide an efficient implementation of the proposed KFAC method and demonstrate that it...? 
+%We provide KFAC approximations for preconditioners involving general PDE terms
+%This builds on an interpretation of the input-derivatives of a network via Taylor-mode automatic differentiation as a weight-sharing network. 
+%We provide an efficient implementation of the proposed KFAC method and demonstrate that i t...? 
+We propose KFAC-methods for PINN losses that greatly reduces the computational cost and allows scaling to much larger networks.
+Our approach goes beyond the popular KFAC for traditional deep learning problems as it captures contributions from a PDE's differential operator that are crucial for optimization. 
+To establish KFAC for such losses, we use Taylor-mode automatic differentiation to describe the differential operator's computation graph as a forward network with shared weights which allows us to apply a variant of KFAC for networks with weight-sharing. 
+Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods.
 
-\paragraph{Limitations}
+\paragraph{Limitations and future directions}
+Currently, our KFAC approximations can only handle feedforward architectures, where it is natural to extend them to more general architectures in the future. 
+Further, optimizing our implementation using inverse-free KFAC update~\citep{lin2023simplifying}, structured Kronecker factors~\citep{lin2023structured}, and more sophisticated heuristics would likely improve the proposed method. 
+It remains to test the performance of our proposed approximation when applied to the optimization of larger networks and more PDEs including nonlinear problems. 
+\begin{itemize}
+    \item improve heuristics
+    \item 
+\end{itemize}
+
+
 \paragraph{Studying further KFAC heuristics} The original KFAC optimizer introduces many additional techniques to improve performance and stability, e.g.\,adaptive damping and heuristics for splitting up the damping onto the different Kronecker factors.
 Our algorithms borrow components, but we did not explore all bells and whistles.
 We believe they can help to either reduce the number of hyper-parameters that need to be tuned, or improve performance.
@@ -17,11 +30,6 @@ As pointed out in \citep{martens2015optimizing}, the requested Gramian projectio
 One could also merge the backward pass for each Gramian with that of its loss into a single backward traversal rather than two sequential ones, e.g.\,as done by~\cite{dangel2020backpack}.
 However, then one needs to manually implement the additional backpropagation (through both the normal forward pass, but also through the forward Laplacian pass).
 
-\paragraph{Future work}
-%\paragraph{Future directions}
-Currently, our KFAC approximations can only handle feedforward architectures, where it is natural to extend them to more general architectures in the future. 
-Further, optimizing our implementation using inverse-free KFAC update~\citep{lin2023simplifying}, structured Kronecker factors~\citep{lin2023structured}, and more sophisticated heuristics would likely improve the proposed method. 
-It remains to test the performance of our proposed approximation when applied to the optimization of larger networks and more PDEs including nonlinear problems. 
 
 
 

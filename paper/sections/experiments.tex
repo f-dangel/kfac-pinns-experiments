@@ -47,7 +47,7 @@ As the equation admits a closed-form explicit solutions, we report the relative 
 %We are able to reproduce the results of~\cite{muller2023achieving} 
 For networks of small size, we can reproduce the results of~\cite{muller2023achieving}, where exact ENGD achieves high accuracy, but in terms of computation time KFAC is competitive with the second-order optimizers. 
 In contrast to ENGD which relies on an exact solution of the preconditioning step, KFAC scales to larger networks and is again competitive to other second-order optimizers that use much more sophisticated heuristics. 
-\begin{figure}
+\begin{figure}[t]
     \centering
     \includegraphics{../kfac_pinns_exp/exp17_groupplot_poisson2d/l2_error_over_time.pdf}
     \caption{We report the performance of different optimizers on the 2D Poisson equation~\eqref{eq:2D-Poisson} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
@@ -62,11 +62,9 @@ In contrast to ENGD which relies on an exact solution of the preconditioning ste
 \end{figure}
 \end{comment}
 
-
 \paragraph{An evolutionary problem: (4+1)d heat equation}
 
 To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
-\todo{This is what we implement}
 \begin{align}\label{eq:4D-heat}
      \partial_t u(t,x)-\kappa\Delta_x u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in [0,1]^{4} \\
     u(0,x) & = \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
@@ -77,7 +75,7 @@ To demonstrate that our method can also be applied to other problems as the Pois
 with $\kappa = 1/4$. Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
 We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.
 Due to the higher spatial dimension, we use mini-batches in the evaluation of the loss and the preconditioner, where for KFAC, we keep the same batch for $100$ iterations.\todo{for the other optimizers?} 
-Like in the two-dimensional example, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics. 
+Again, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics. 
 \begin{figure}
     \centering
     \includegraphics{../kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
@@ -87,21 +85,46 @@ Like in the two-dimensional example, we observe that KFAC offers competitive per
 
 
 \paragraph{High-dimensional Poisson equations}
-To test KFAC on a high-dimensional PDE, we consider the Poisson equation used by~\cite{yu2018deep} to evalute the performance of the deep Ritz method, which is given by\todo{5d is cos sum solution, 10d is weinan product solution, only 100d is norm squared} 
-\begin{align}\label{eq:high_dimensional_poisson}
+We consider Poisson equations in dimensions $d=5,10,100$ on the problems used by~\cite{yu2018deep, muller2023achieving}, which admit the solutions 
+\begin{align}\label{eq:solutions_poisson}
     \begin{split}
-        -\Delta u(x) & = -2d \quad \text{for } x\in [0,1]^{d} \\
-    u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{d}
+        u^\star(x) & = \sum_{i=1}^5 \cos(\pi x_i)? \quad \text{for } x\in [0,1]^{5}, \\
+        u^\star(x) & = \sum_{k=1}^5 x_{2k-1}x_{2k},  \quad \text{for } x\in [0,1]^{10} \\ 
+        u^\star(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in [0,1]^{100}, 
     \end{split}
 \end{align}
-We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ and select the hyper-parameters via a Bayesian optimization procedure. 
-Again, we use mini-batches that we use for $100$ iterations before drawing news samples. 
+respectively. 
+\begin{comment}
+    \begin{align}\label{eq:5d_poisson}
+    \begin{split}
+        -\Delta u(x) & = -\sum_{i=1}^5 \cos(\pi x_i)? \quad \text{for } x\in [0,1]^{5} \\
+    u(x) & = 0 \quad \text{for } x\in \partial[0,1]^{5}
+    \end{split}
+\end{align}
+\begin{align}\label{eq:10d_poisson}
+    \begin{split}
+        -\Delta u(x) & = 0 \quad \text{for } x\in [0,1]^{10} \\
+    u(x) & = \sum_{k=1}^5 x_{2k-1}x_{2k} \quad \text{for } x\in \partial[0,1]^{10}
+    \end{split}
+\end{align}
+\begin{align}\label{eq:high_dimensional_poisson}
+    \begin{split}
+        -\Delta u(x) & = -2d \quad \text{for } x\in [0,1]^{100} \\
+    u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{100}. 
+    \end{split}
+\end{align}
+\end{comment}
+%We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ and 
+Here, we select the hyper-parameters via a Bayesian optimization procedure. 
+Again, we use mini-batches for $100$ iterations before drawing news samples. 
+\todo{add verdict}
+
 
 \begin{figure}
     \centering
     \includegraphics{../kfac_pinns_exp/exp33_poisson_bayes_groupplot/l2_error_over_time.pdf}
     \caption{
-    We report the performance of different optimizers on the Poisson equation~\eqref{eq:high_dimensional_poisson} in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $D$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
+    We report the performance of different optimizers on Poisson equations in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $D$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
     }
     \label{fig:10D-Poisson}
 \end{figure}

@@ -1,3 +1,28 @@
+It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
+The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
+\begin{align}
+  \begin{pmatrix}
+    \alpha^{\star} \\ \mu^{\star}
+  \end{pmatrix}
+  =
+  -
+  \begin{pmatrix}
+    \vDelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vDelta_t \right\rVert^2
+    & \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
+    \\
+    \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
+    &
+      \vdelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vdelta_t \right\rVert^2
+  \end{pmatrix}^{-1}
+  \begin{pmatrix}
+    \vDelta_t \nabla_{\vtheta_t} \gL
+    \\
+    \vdelta_t \nabla_{\vtheta_t} \gL
+  \end{pmatrix}\,.
+\end{align}
+The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}. 
+
+
 \subsection{Hyper-Parameter Tuning Protocol}\label{sec:tuning-protocol}
 
 In all our experiments, we tune the following optimizer hyper-parameters and otherwise use the PyTorch default values:

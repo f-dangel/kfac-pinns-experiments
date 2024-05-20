@@ -134,38 +134,38 @@ and hence, we can perceive the computational graph of $v_\vtheta$ as a feedforwa
 Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
 \begin{align*}
     \jac_{\mW^{(l)}} \vv_n & = \sum_{\lvert \alpha \rvert\le k}\jac_{\partial_\vx^\alpha \vz^{(l-1)}}\vv_n \jac_{\mW^{(l)}} \partial_\vx^\alpha \vz^{(l)} = 
-    \left(\sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \nabla_{\partial_\vx^\alpha \vz^{(l-1)}} \vv_n\right)^\top,
+    \left(\sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\jac_{\partial_\vx^\alpha \vz^{(l-1)}} \vv_n}^\top\right)^\top,
 \end{align*}
 where $\vv_n = v_\vtheta(\vx_n)$. 
-Using the notation $\vg^{(l)}_{n,\alpha} = \nabla_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ we obtain
+Using the notation $\mJ^{(l)}_{n,\alpha} = \jac_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ we obtain
 \begin{equation}\label{eq:laplace_gramian_block_exact}
     \mG_\Omega(\mW^{(l)})
     =
     \frac1N\sum_{n=1}^N
-    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,s}^{(l)} \right)
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)
     \mA_n 
-    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]. 
+    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)^\top\right]. 
 \end{equation}
 Using the crude approximation $M^{-1}\sum_{m=1}^M \mB_m\sum_{m=1}^M \mC_m \approx \sum_{m=1}^M \mB_m \mC_m$ we compute 
 \begin{align}
     \begin{split}
         & \sum_{n=1}^N
-    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes \vg_{n,\alpha}^{(l)} \right)
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)
     \mA_n
-    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n\otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
+    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha {\vz^{(l-1)}_n}^\top\otimes \mJ_{n,\alpha}^{(l)} \right)\right]
     \\ \approx & \;
     \binom{d+k}{d} \sum_{n=1}^N
-    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \mJ_{n,\alpha}^{(l)} \right)
     \mA_n
-    \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes \vg_{n,\alpha}^{(l)} \right)^\top\right]
+    \left( \partial_\vx^\alpha {\vz^{(l-1)}_n}^\top \otimes \mJ_{n,\alpha}^{(l)} \right)\right]
     \\ = & \;
     \binom{d+k}{d}\sum_{n=1}^N
-    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\right) \otimes \left(\vg_{n,\alpha}^{(l)} \mA_n{\vg_{n,\alpha}^{(l)}}^\top \right)
+    \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top\right) \otimes \left({\mJ_{n,\alpha}^{(l)}}^\top \mA_n{\mJ_{n,\alpha}^{(l)}}\right)
     \right]
     \\ \approx & \;
     \frac{\binom{d+k}{d}}{N}\left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n{\partial_\vx^\alpha \vz^{(l-1)}_n}^\top \right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} \vg^{(l)}_{n,\alpha}\mA_n{\vg^{(l)}_{n,\alpha}}^\top \right],
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} {\mJ^{(l)}_{n,\alpha}}^\top\mA_n{\mJ^{(l)}_{n,\alpha}} \right],
     \end{split}
 \end{align}
 which gives the approximation 
@@ -177,7 +177,7 @@ which gives the approximation
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
     \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} \mA_n {\vg^{(l)}_{n,\alpha}}^\top \right]. 
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mA_n {\mJ^{(l)}_{n,\alpha}} \right]. 
 \end{align*}
 \end{tcolorbox}
 
@@ -285,7 +285,7 @@ the Kronecker-factored approximation takes the form
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
     c_\alpha^2\partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} {\vg^{(l)}_{n,\alpha}}^\top \right]. 
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top {\mJ^{(l)}_{n,\alpha}} \right]. 
 \end{align*}
 \end{tcolorbox}
 

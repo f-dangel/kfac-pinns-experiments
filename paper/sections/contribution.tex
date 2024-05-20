@@ -385,13 +385,12 @@ The generalization of%the approximation
     \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
     \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} \vg^{(l)}_{n,\alpha} \mA_n {\vg^{(l)}_{n,\alpha}}^\top   \right],
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mA_n \mJ^{(l)}_{n,\alpha} \right],
 \end{align}
 \end{tcolorbox}
-
-
 %where $\mZ^{(l)}_{n,\alpha} = \partial_\vx^\alpha \vz_n^{(l)}$ and 
-where $\vg^{(l)}_{n,\alpha} = \nabla_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ and $\vv_n = v_\vtheta(\vx_n) %= (\partial^\beta_\vx \vz_{n}^{L})_{\lvert \beta \rvert \le k}
+where $\mJ^{(l)}_{n,\alpha} = %\nabla
+\jac_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ and $\vv_n = v_\vtheta(\vx_n) %= (\partial^\beta_\vx \vz_{n}^{L})_{\lvert \beta \rvert \le k}
 $. 
 A detailed derivation can be found in \Cref{app:derivations}.
 %
@@ -490,31 +489,8 @@ Like in ENGD, we use a logarithmic grid line search along
 leading to the update 
 $\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where 
 $\alpha_{\star} = \argmin_{\alpha} \gL(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
-KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}.
-\todo{can potentially be moved to the appendix from here on is we need more space}
-It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
-The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
-\begin{align}
-  \begin{pmatrix}
-    \alpha^{\star} \\ \mu^{\star}
-  \end{pmatrix}
-  =
-  -
-  \begin{pmatrix}
-    \vDelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vDelta_t \right\rVert^2
-    & \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
-    \\
-    \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
-    &
-      \vdelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vdelta_t \right\rVert^2
-  \end{pmatrix}^{-1}
-  \begin{pmatrix}
-    \vDelta_t \nabla_{\vtheta_t} \gL
-    \\
-    \vdelta_t \nabla_{\vtheta_t} \gL
-  \end{pmatrix}\,.
-\end{align}
-The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}. 
+KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}, see also~\Cref{sec:experimental_details}.
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
