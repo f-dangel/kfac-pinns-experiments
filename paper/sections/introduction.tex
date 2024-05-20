@@ -3,7 +3,6 @@ The idea to train network parameters to minimize the residual of a PDE traces ba
 PINNs are arguably one of the most popular network-based approaches to the numerical solution of PDEs as they are easy to implement, seamlessly incorporate data, and promise to work well in high dimensions.
 Despite their immense popularity, PINNs are notoriously difficult to optimize \citep{wang2021understanding} and fail to provide satisfactory accuracy when trained with first-order methods, even for simple problems~\citep{zeng2022competitive, muller2023achieving}.
 Recently, second-order methods that use the function space geometry to design preconditioners have shown remarkable promise in addressing the training difficulties of PINNs~\citep{zeng2022competitive, muller2023achieving, de2023operator,jnini2024gauss, muller2024optimization}.
-% For example, \emph{energy natural gradient descent} (ENGD) as proposed in \cite{muller2023achieving} emulates Newton's method \emph{in function space} and is able to achieve highly accurate PINN solutions in few iterations.
 However, these methods require solving a linear system in the network's high-dimensional parameter space at cubic computational iteration cost, which prohibits scaling such approaches.
 To address this, we build on the idea of Kronecker-factored approximate curvature (KFAC) and apply it to Gauss-Newton matrices of PINN losses which greatly reduces the computational cost:
 \begin{itemize}
@@ -32,13 +31,6 @@ Later, KFAC was extended to convolutional~\citep{grosse2016kroneckerfactored}, r
 These works do not address preconditioners for loss functions with contributions from differential operators, as is the case for PINN losses.
 Kronecker-factored approximations have been used for variational Monte-Carlo methods, where despite the objective function involving a Laplacian term, the approximated preconditioner does not~\citep{pfau2020ab,drissi2024second}.
 Our interpretation via Taylor mode makes the computation graph of such losses explicit, and allows us to establish KFAC based on its generalization to linear weight sharing layers~\cite{eschenhagen2023kroneckerfactored}.
-
-% \paragraph{Notation?}
-
-% \begin{itemize}
-% \item OG KFAC papers: \cite{martens2015optimizing}, \cite{martens2018kroneckerfactored}, double check similarities to RNNs
-% \item KFAC for Rayleigh quotients:
-% \end{itemize}
 
 %%% Local Variables:
 %%% mode: latex

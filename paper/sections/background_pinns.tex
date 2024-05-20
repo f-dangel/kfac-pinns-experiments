@@ -1,37 +1,13 @@
-We work with the following standard feedforward networks.
+For simplicity, we present our approach for multi-layer perceptrons (MLPs) consisting of fully-connected and elementwise non-linear activation layers.
+The generality of Taylor-mode automatic differentiation and KFAC for linear layers with weight sharing allow our KFAC to be applied to such layers (e.g.\,fully-connected, convolution, attention) in arbitrary neural network architectures.
 
-\paragraph{Sequential neural networks} Consider a \emph{sequential neural network} $%u_{\vtheta} = f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
-u_{\vtheta} = f_{\vtheta^{(L)}} \circ f_{\vtheta^{(L-1)}} \circ \ldots \circ f_{\vtheta^{(1)}}
-$ with depth $L\in\mathbb N$ that consists of layers %$f^{(l)}_{\vtheta^{(l)}}$
-$f_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}\to\sR^{h^{(l)}}$, $\vz^{(l-1)}\mapsto \vz^{(l)} = f_{\vtheta^{(l)}}(\vz^{(l-1)})$
-%\begin{align}
-%  \begin{split}
-    %u_{\vtheta}
-    %&=
-    %f^{(L)}_{\vtheta^{(L)}} \circ f^{(L-1)}_{\vtheta^{(L-1)}} \circ \ldots \circ f^{(1)}_{\vtheta^{(1)}}
-    %\\
-    %f%^{(l)}
-    %_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}
-    %&\to
-    %  \sR^{h^{(l)}}\,,
-    %\\
-    %\quad 
-    %\vz^{(l-1)}
-    %&
-    %\mapsto
-    %  \vz^{(l)} = f%^{(l)}
-    %  _{\vtheta^{(l)}}(\vz^{(l-1)})
-  %\end{split}
-%\end{align}
-with trainable parameters $\vtheta^{(l)} \in \sR^{p^{(l)}}%, l=1,\dots, L,
-$ that transform an input $\vz_0=\vx \in \mathbb R^{d_{\operatorname{in}}}$ into a prediction $\vu = \vz^{(L)}\in \sR^{d_{\operatorname{out}}}$ via intermediate representations $\vz^{(l)} \in \sR^{h^{(l)}}%, l= 0, \dots, L
-$.
-%where $\vz^{(0)} \coloneqq \vx$, $\vz^{(L)} \coloneqq \vu$, and
-By $\vtheta = ({\vtheta^{(1)}}^{\top}, \dots, {\vtheta^{(L)}}^{\top})^{\top}$ we denote the concatenation of the parameters of the individual layers.
-% A parameter might be empty, e.g.\,if the layer is an activation layer.
-Here, we consider networks with alternating  linear and nonlinear layers.
-Here, the weights of the linear layers are trainable and we denote them by $\vtheta^{(l)} = \mW^{(l)}$, where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
-The nonlinear layers are given by $\vz\mapsto \sigma(\vz)$ componentwise for a (typically smooth) activation function $\sigma\colon\mathbb R\to\mathbb R$.
+\paragraph{Sequential neural nets} Consider a \emph{sequential neural network} $u_{\vtheta} = f_{\vtheta^{(L)}} \circ f_{\vtheta^{(L-1)}} \circ \ldots \circ f_{\vtheta^{(1)}} $ with depth $L\in\mathbb N$ that consists of layers $f_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}\to\sR^{h^{(l)}}$, $\vz^{(l-1)}\mapsto \vz^{(l)} = f_{\vtheta^{(l)}}(\vz^{(l-1)})$ with trainable parameters $\vtheta^{(l)} \in \sR^{p^{(l)}}$ that transform an input $\vz^{(0)}= \vx \in \mathbb R^d$ into a prediction $\vu = \vz^{(L)}\in \sR^C$ with $C=1$ for most PINN settings via intermediate representations $\vz^{(l)} \in \sR^{h^{(l)}}$.
+We denote the concatenation of all parameters by $\vtheta = (\vtheta^{(1)\top}, \dots, \vtheta^{(L)\top})^{\top} \in \sR^P$.
+A common choice is to alternate fully-connected and activation layers.
+The weights of a linear layer are trainable and we denote them by $\vtheta^{(l)} = \flatten\mW^{(l)}$, where the layer maps $\vz^{(l-1)} \mapsto \vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
+Bias terms can be added as an additional column of the weight matrix and by appending a $1$ to the layer input.
+Activation layers map $\vz^{(l-1)}\mapsto \vz^{(l)} \sigma(\vz^{(l-1)})$ component-wise for a (typically smooth) function $\sigma\colon\mathbb R\to\mathbb R$.
+
 %We denote the parameters of a linear layer by $\vtheta^{(l)} = \mW^{(l)}$ where the layer is given by $\vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$.
 
 \subsection{Energy Natural Gradients for Physics-Informed Neural Networks}
@@ -54,7 +30,7 @@ Here, $\mathcal{L}$ denotes a differential operator, e.g., the \emph{Laplacian} 
 %  \[ E(u) = \frac{1}{2} \int_\Omega (\Delta u + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u-g)^2 \mathrm ds, \]
 %which is designed such that $u$ is a solution of~\eqref{eq:PE} if and only if $E(u)=0$.
 %Hence, we discretize the integral and use the following loss function t
-In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a neural network and train its parameters $\vtheta$ to minimize the loss 
+In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a neural network and train its parameters $\vtheta$ to minimize the loss
   %\[ L(\theta) \coloneqq E(u_\theta) = \frac{1}{2} \int_\Omega (\Delta u_\theta + f)^2 \mathrm dx + \frac12 \int_{\partial\Omega} (u_\theta-g)^2 \mathrm ds. \]
 %Indeed, one can show that $L$ controls the error, i.e., $\lVert u_\theta - u^\star \rVert_{H^{1/2}(\Omega)} \le c_{\operatorname{reg}} \sqrt{L(\theta)}$, where $c_{\operatorname{reg}}$ denotes the regularity constant of the PDE, see~\cite{?}.
 %In practice, we have to discretize the integrals in the PINN loss, and obtain the empirical loss function %with discretized integrals, is
@@ -68,19 +44,7 @@ In \emph{Physics-informed neural networks (PINNs)}, we parametrize $u$ using a n
   %=
     \underbrace{\frac{1}{2N_\Omega} \sum_{i=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_i) + f(\vx_i))^2}_{\eqqcolon L_\Omega(\vtheta)} + \underbrace{\frac{1}{2N_{\partial\Omega}}\sum_{i=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^b_i) - g(\vx^b_i))^2}_{\eqqcolon L_{\partial\Omega}(\vtheta)},
 \end{align}
-where $(\vx_n)_{n=1}^{N_\Omega}$ and  $(\vx^b_n)_{n=1}^{N_{\partial\Omega}}$ are points in the interior and on the boundary of $\Omega$ respectively.\footnote{Adding additional information, including measurement data can be included via a regression loss that can be treated analogously to the boundary loss.} 
-
-%Whereas we choose the Poisson equation for the sake of simplicity, this approach can easily be generalized to other PDEs. 
-%The Kronecker-factored approximations derived in~\Cref{?} are formulated for general PDEs. 
-%The number and choice of the points can be controlled by the practitioner, where different sampling strategies have been developed~\cite[text]{keylist}.
-%This approach is simple and intuitive and is usually associated with the possibility to work well for high-dimensional PDEs.
-%However, it is well documented in the literature that first-order optimizers fail to produce satisfactory accuracy even for low-dimensional problems~\cite{}.
-
-%\begin{itemize}
-%    \item If you run GD / Adam you get no good accuracy~\cite{?}
-%    \item L-BFGS improves things, but is not super satisfactory
-%    \item recently, function space inspired methods and preconditioners have been used with promising success~\cite[text]{CPINNs, ENG, preconditioning?, FS paper, Navier-Stokes}; we describe the approach we use here in more detail
-%\end{itemize}
+where $(\vx_n)_{n=1}^{N_\Omega}$ and  $(\vx^b_n)_{n=1}^{N_{\partial\Omega}}$ are points in the interior and on the boundary of $\Omega$ respectively.\footnote{Adding additional information, including measurement data can be included via a regression loss that can be treated analogously to the boundary loss.}
 
 %%% Local Variables:
 %%% mode: latex
