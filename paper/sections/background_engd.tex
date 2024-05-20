@@ -1,4 +1,4 @@
-%\subsection{The Gauß-Newton Method for PINNs} 
+%\subsection{The Gauss-Newton Method for PINNs}
 %\begin{itemize}
 %    \item recently, energy NGs have been proposed
 %    \item one can show that they mimic Newtons method in function space
@@ -11,8 +11,8 @@
 The general idea is to replace the vanilla GD update rule by a preconditioned version
     \[ \vtheta_{k+1} = \vtheta_k - \eta_k \mG(\vtheta_k)^{-1} \nabla L(\vtheta_k), \]
 where $\mG(\vtheta)\in\mathbb R^{p\times p}$, $\mG(\vtheta)_{ij} \coloneqq g_{u_\vtheta}(\partial_{\vtheta_i} u_\vtheta, \partial_{\vtheta_j} u_\vtheta)$ is a matrix capturing the function space geometry of the problem and its parametrization and $g$ denotes a suitable Riemannian metric.
-In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the %Gramian $\mG(\vtheta)$ is given by 
-a popular choice as a Gramian is given by the Gauß-Newton matrix 
+In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the %Gramian $\mG(\vtheta)$ is given by
+a popular choice as a Gramian is given by the Gauss-Newton matrix
 %\begin{equation}
 %    F_I(\vtheta)_{ij} = \sum_{x} \frac{\partial_{\vtheta_i}p_\vtheta(x)\partial_{\vtheta_j}p_\vtheta(x)}{p_\vtheta(x)} = \sum_{x} \partial_{\vtheta_i} \log p_\vtheta(x) \partial_{\vtheta_j} \log p_\vtheta(x),
 %\end{equation}
@@ -23,21 +23,21 @@ a popular choice as a Gramian is given by the Gauß-Newton matrix
   \mF(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n) = \frac1N\sum_{n=1}^N \jac_{\vtheta} \vu_n^\top \jac_{\vtheta} \vu_n
   ,
  \end{equation}
-which agrees with the (empirical) Fisher information matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}. Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$. 
+which agrees with the (empirical) Fisher information matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}. Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$.
 \end{comment}
 
-It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\citep{cuomo2022scientific}. Still, lately, function-space-inspired methods have shown more promising results~\citep{muller2024optimization}. 
-Here, we focus on, \emph{energy natural gradients (ENGD)}, which in the case of PINNs agree with the Gauß-Newton method~\citep{muller2023achieving}. 
+It is well-documented that first-order optimizers like gradient descent and Adam fail to produce satisfactory results when used to train PINNs~\citep{cuomo2022scientific}. Still, lately, function-space-inspired methods have shown more promising results~\citep{muller2024optimization}.
+Here, we focus on, \emph{energy natural gradients (ENGD)}, which in the case of PINNs agree with the Gauss-Newton method~\citep{muller2023achieving}.
 ENGD mimics Newton's method up to a projection onto the tangent space of the model and a discretization error that vanishes quadratically in the step size, thus providing locally optimal updates in the residual%~\citep{muller2023achieving}
-. Alternatively, the Gauß-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauß-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}. 
+. Alternatively, the Gauss-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauss-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}.
 
 %To account for the PDE terms in the loss function in PINNs,
 %the models $u_\vtheta$ are functions rather than probability measures %$p_\vtheta$
 %and the loss involves PDE terms.
 %In order to adjust the definition of
 %To capture the geometric properties of this specific problem we consider the following Fisher / Gramian matrix %to this problemThe energy natural gradient is for this example to use the Fischer/Gramian of the form
-Natural gradient methods perform parameter updates via a preconditioned gradient descent scheme $\vtheta_{t+1} = \vtheta_t - \alpha_t \mG(\vtheta_t)^+\nabla L(\vtheta_t)$, where $\mG(\vtheta)^+$ denotes the pseudo-inverse of a suitable \emph{Gramian matrix} $\mG(\vtheta)$. 
-In the context of ENGD for the PINN-loss~\eqref{eq:pinn-loss}, the Gramian is given by 
+Natural gradient methods perform parameter updates via a preconditioned gradient descent scheme $\vtheta_{t+1} = \vtheta_t - \alpha_t \mG(\vtheta_t)^+\nabla L(\vtheta_t)$, where $\mG(\vtheta)^+$ denotes the pseudo-inverse of a suitable \emph{Gramian matrix} $\mG(\vtheta)$.
+In the context of ENGD for the PINN-loss~\eqref{eq:pinn-loss}, the Gramian is given by
 \begin{equation}\label{eq:gramian}
   \mG(\vtheta) = %\mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta) =
   \underbrace{\frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)^\top \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)}_{\eqqcolon \mG_\Omega(\vtheta)} + \underbrace{\frac1{{N_{\partial\Omega}}} \sum_{n=1}^{N_{\partial\Omega}} \jac_{\vtheta} u_\vtheta(\vx_n^b)^\top \jac_{\vtheta} u_\vtheta (\vx_n^b)}_{\eqqcolon \mG_{\partial\Omega}(\vtheta)}.
@@ -59,25 +59,25 @@ In the context of ENGD for the PINN-loss~\eqref{eq:pinn-loss}, the Gramian is gi
 
 %The energy natural gradient method mimics Newton's method up to a projection onto the tangent space of the model and a discretization error that vanishes quadratically in the step size
 %and improves the accuracy of PINNs by several orders of magnitude when compared to GD, Adam, or BFGS~\citep{muller2023achieving, ?}.
-%The Gramian matrix $\mG(\theta)$ can be interpreted as the Gauß-Newton matrix of the residual function, see~\cite{} and Appendix....
+%The Gramian matrix $\mG(\theta)$ can be interpreted as the Gauss-Newton matrix of the residual function, see~\cite{} and Appendix....
 
 %\paragraph{Interpretation as Gau\ss-Newton method}
 %Consider the combined residual
-Note that $\mG(\vtheta)$ is the Gauß-Newton matrix of $r(\theta) = ((2N_\Omega)^{-1/2}r_\Omega(\vtheta), (2N_{\partial\Omega})^{-1/2} r_{\partial\Omega}(\vtheta))^\top$, 
+Note that $\mG(\vtheta)$ is the Gauss-Newton matrix of $r(\theta) = ((2N_\Omega)^{-1/2}r_\Omega(\vtheta), (2N_{\partial\Omega})^{-1/2} r_{\partial\Omega}(\vtheta))^\top$,
 %\begin{equation*}
-%    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad 
-%    \vtheta 
-%    \mapsto 
+%    r\colon\mathbb R^p\to\mathbb R^{N_\Omega+N_{\partial\Omega}}, \quad
+%    \vtheta
+%    \mapsto
 %    \begin{pmatrix}
-%        (2N_\Omega)^{-1/2}r_\Omega(\vtheta) \\ 
+%        (2N_\Omega)^{-1/2}r_\Omega(\vtheta) \\
 %        (2N_{\partial\Omega})^{-1/2}r_{\partial\Omega}(\vtheta)
 %    \end{pmatrix},
 %\end{equation*}
-where $r_{\Omega}(\vtheta)_n = \Delta u_\vtheta(\vx_n) + f(\vx_n)$ and $r_{\Omega}(\vtheta)_n = u_\vtheta(\vx_n^b) - g(\vx_n^b)$, respectively. 
+where $r_{\Omega}(\vtheta)_n = \Delta u_\vtheta(\vx_n) + f(\vx_n)$ and $r_{\Omega}(\vtheta)_n = u_\vtheta(\vx_n^b) - g(\vx_n^b)$, respectively.
 %Then %(with the right choice of the inner product)
 %$L(\vtheta) = \frac12 \lVert r(\vtheta) \rVert_2^2$ and hence the Gau\ss-Newton matrix is given by
 %\begin{equation*}
-%    \jac_\vtheta r(\vtheta)^\top \jac_\vtheta r(\vtheta) = \jac_\vtheta r_\Omega(\vtheta)^T \jac_\vtheta r_\Omega(\vtheta) + \jac_\vtheta r_{\partial\Omega}(\theta)^T \jac_\vtheta r_{\partial\Omega}(\vtheta) = \mG(\vtheta). 
+%    \jac_\vtheta r(\vtheta)^\top \jac_\vtheta r(\vtheta) = \jac_\vtheta r_\Omega(\vtheta)^T \jac_\vtheta r_\Omega(\vtheta) + \jac_\vtheta r_{\partial\Omega}(\theta)^T \jac_\vtheta r_{\partial\Omega}(\vtheta) = \mG(\vtheta).
 %\end{equation*}
 
 %%% Local Variables:

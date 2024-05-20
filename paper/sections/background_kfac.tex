@@ -1,39 +1,39 @@
 \subsection{Kronecker-factored Approximate Curvature}
 
 
-We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} as an approximation of the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction. 
-%We review the general principle here. 
-%This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here. 
-%Later, we will expand this to Gramian matrices with PDE terms. 
-%In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the %Gramian $\mG(\vtheta)$ is given by 
-%a popular choice as a Gramian is given by the Gauß-Newton matrix 
+We review the idea of Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} as an approximation of the per-layer Fisher information by a Kronecker product to speed up the computation of the natural gradient direction.
+%We review the general principle here.
+%This approach was introduced in the context of maximum likelihood estimation with a neural network and we reivew its basic principles here.
+%Later, we will expand this to Gramian matrices with PDE terms.
+%In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the %Gramian $\mG(\vtheta)$ is given by
+%a popular choice as a Gramian is given by the Gauss-Newton matrix
 %\begin{equation}
 %    F_I(\vtheta)_{ij} = \sum_{x} \frac{\partial_{\vtheta_i}p_\vtheta(x)\partial_{\vtheta_j}p_\vtheta(x)}{p_\vtheta(x)} = \sum_{x} \partial_{\vtheta_i} \log p_\vtheta(x) \partial_{\vtheta_j} \log p_\vtheta(x),
 %\end{equation}
 %in which case the Riemannian metric $g$ is given by the Fisher-Rao metric~\citet{}.
 %For a supervised learning problem with training data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the (empirical) Fisher-information matrix commonly used, has entries the entries
-Here, the Fisher information matrix with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ is given by 
+Here, the Fisher information matrix with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ is given by
 \begin{equation}
   %\mF(\vtheta)_{ij} = \sum_{n=1}^N \partial_{\vtheta_i} u_\vtheta(\vx_n)\partial_{\vtheta_j} u_\vtheta(\vx_n) \quad \text{maybe use?}
   \mF(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n) = \frac1N\sum_{n=1}^N \jac_{\vtheta} \vu_n^\top \jac_{\vtheta} \vu_n
   ,
  \end{equation}
 where $\vu_n = u_\vtheta(\vx_n)$, which agrees with the %(empirical) Fisher information matrix~
-classic Gauß-Newton matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}. 
-%Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$. 
-To distinguish between the Gauß-Newton matrix $\mG(\vtheta)$ for PINNs, we refer to the Gauß-Newton matrix $\mF(\vtheta)$ as the Fisher matrix or Fisher. 
+classic Gauss-Newton matrix~\citep{martens2020new, eschenhagen2023kroneckerfactored}.
+%Here, we have used the suggestive short-hand notation $\vu_n = u_\vtheta(\vx_n)$.
+To distinguish between the Gauss-Newton matrix $\mG(\vtheta)$ for PINNs, we refer to the Gauss-Newton matrix $\mF(\vtheta)$ as the Fisher matrix or Fisher.
 
 
 \paragraph{Block-diagonal approximation}
-In the first step the Fisher-information matrix $\mF$ can be approximated by a block diagonal matrix with blocks corresponding to the Fisher-information matrices of the individual layers of the network, i.e., $\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$. 
-Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence significantly reducing the computational complexity. 
+In the first step the Fisher-information matrix $\mF$ can be approximated by a block diagonal matrix with blocks corresponding to the Fisher-information matrices of the individual layers of the network, i.e., $\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$.
+Note that a block diagonal linear system can be solved by solving the subsystems corresponding to the individual blocks, hence significantly reducing the computational complexity.
 
 \paragraph{Flattening, Jacobians, and Hessians}
 %Above, we assumed all quantities ($\vz^{(l)}, \vtheta^{(l)}$) to be vectors.
 %In case of tensor-valued quantities, we can first flatten them into vectors to reduce to the vector case.
 %We consider the following vectorization of the matrices appearing as the trainable parameters of the network.
-To vectorize %the weight 
-matrices %of the linear layers 
+To vectorize %the weight
+matrices %of the linear layers
 we follow the % index convention to vectorize will be
 \emph{first-varies-fastest} convention, which corresponds to column-stacking (row index varies first, column index varies second).
 We denote the corresponding flattening operation by $\flatten(\cdot)$.
@@ -42,13 +42,13 @@ Very useful is the so-called \emph{vec-trick} stating that $\flatten(\mA\mX\mB) 
 %  \flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}
 %\end{equation}
 for matrices $\mA, \mX, \mB$ %.
-%In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence 
+%In particular, this shows that $\mB^\top\otimes \mA$ is the matrix representing the linear mapping $\mX\mapsto \mA\mX\mB$ and hence
 which implies $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
 The flattening notation allows to reduce the derivatives of matrix or tensor-valued objects back to the matrix case.
-When considering the differentiation of matrix-valued functions or functions depending defined on matrices, we use the identification $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$ and $\gradsquared{\mA}\mB = \gradsquared{\flatten(\mA)} \flatten(\mB)$ for the Jacobian and Hessian, respectively. 
+When considering the differentiation of matrix-valued functions or functions depending defined on matrices, we use the identification $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$ and $\gradsquared{\mA}\mB = \gradsquared{\flatten(\mA)} \flatten(\mB)$ for the Jacobian and Hessian, respectively.
 
 \begin{comment}
-    Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ with respect to a vector $\va$, which collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$. 
+    Consider the Jacobian $\jac_{\va}\vb$ of a vector $\vb$ with respect to a vector $\va$, which collects all partial derivatives as $[\mJ_{\va}\vb]_{i,j} = \nicefrac{\partial [\vb]_i}{\partial [\va]_j}$.
 For the Jacobian $\jac_{\mA}\mB$ of a matrix $\mB$ with respect to a matrix $\mA$, we simply set $\jac_{\mA} \mB = \jac_{\flatten( \mA )}\flatten(\mB)$.
 Likewise, the Hessian $\gradsquared{\va}b$ of a scalar $b$ with respect to a vector $\va$ collects the second-order partial derivatives according to $[\gradsquared{\va}b]_{i,j} = \nicefrac{\partial^2 b}{\partial [\va]_i \partial [\va]_j}$.
 For the Hessian $\gradsquared{\mA} b$ of a scalar $b$  with respect to \,a matrix $\mA$, we simply have $\gradsquared{\mA} b = \gradsquared{\flatten(\mA)}b$.
@@ -56,31 +56,31 @@ We also have $\grad{\mA} b = \grad{\flatten(\mA)} b$ for the gradient of a scala
 \end{comment}
 
 \paragraph{Kronecker-factored approximation of the blocks}
-We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point. 
-The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and %by the vec-trick, 
-we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$ by the vec-trick. 
-The chain rule gives  
+We now consider the individual blocks $\mF(\vtheta^{(l)})$, for which we examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(x_n)$ for a fixed data point.
+The parameters $\vtheta^{(l)} = \mW^{(l)}$ of the $l$-th layer appears in the computational graph by $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and %by the vec-trick,
+we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$ by the vec-trick.
+The chain rule gives
 %\begin{align}
-    $\jac_{\mW^{(l)}} \vu_n%u_{\vtheta}(\vx_n) 
-     = \jac_{\vz^{(l)}}  \vu_n \jac_{\mW^{(l)}} \vz_n^{(l)}%\vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n 
-    = {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vu_n$. %\vz^{(L)}_n. 
+    $\jac_{\mW^{(l)}} \vu_n%u_{\vtheta}(\vx_n)
+     = \jac_{\vz^{(l)}}  \vu_n \jac_{\mW^{(l)}} \vz_n^{(l)}%\vz^{(L)}_n = %(\vz^{(l-1)}_n\otimes I) \nabla_{\vz^{(l)}}  \vz^{(L)}_n
+    = {\vz^{(l-1)}_n}^\top\otimes  \jac_{\vz^{(l)}}  \vu_n$. %\vz^{(L)}_n.
 %\end{align}
-%and hence 
+%and hence
 %\begin{align}
-%    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.  
+%    \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top = (\vz^{(l-1)}_n\otimes \vz^{(l-1)}_n) \nabla_{\vz^{(l)}}  \vz^{(L)}_n\nabla_{\vz^{(l)}}  \vz^{(L)}_n^\top.
 %\end{align}
-Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ %~\citep{martens2015optimizing} 
- we obtain 
+Summing over the data points and using  $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ %~\citep{martens2015optimizing}
+ we obtain
 \begin{equation}
-    \mF(\mW^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top 
+    \mF(\mW^{(l)}) %= \sum_{n=1}^N \nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)\nabla_{\vtheta^{(l)}} u_{\vtheta}(x_n)^\top
     \approx \frac1N\left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N
     {\jac_{\vz^{(l)}}  \vu_n}^\top
     \jac_{\vz^{(l)}}  \vu_n
     \right),
 \end{equation}
-see~\citep{eschenhagen2023kroneckerfactored}. 
-Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost. 
-%the inverse of a Kronecker-factored matrix is given by the Kronecker product of the individual inverses hence reducing the computational complexity of the corresponding linear system. 
+see~\citep{eschenhagen2023kroneckerfactored}.
+Solving a Kronecker-factored linear system is only as expensive as solving two systems of the sizes of the two factors therefore greatly reducing the computational cost.
+%the inverse of a Kronecker-factored matrix is given by the Kronecker product of the individual inverses hence reducing the computational complexity of the corresponding linear system.
 
 
 \begin{comment}

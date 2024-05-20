@@ -1,7 +1,7 @@
 
 \subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}
 
-Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauß-Newton matrix, which for the Poisson equation, are given by
+Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauss-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
     \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
 \end{align}
@@ -25,10 +25,10 @@ Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use t
     %    {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
     %    {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
     %\end{pmatrix}
-    %\\ & 
-    %= 
+    %\\ &
+    %=
     %\sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
-    %\\ & 
+    %\\ &
     = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
     %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
     %+
@@ -55,8 +55,8 @@ Now we can use any Kronecker-factored approximation for feedforward networks wit
 %
 %\paragraph{Kronecker approximation of the PDE Gramian}
 
-%\paragraph{Individual steps} 
-Using the crude approximation $M^{-1}\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx \sum_{m=1}^M \mA_m \mB_m$ we compute 
+%\paragraph{Individual steps}
+Using the crude approximation $M^{-1}\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \approx \sum_{m=1}^M \mA_m \mB_m$ we compute
 \begin{align*}
     & \sum_{n=1}^N
     \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
@@ -80,9 +80,9 @@ Using the crude approximation $M^{-1}\sum_{m=1}^M \mA_m\sum_{m=1}^M \mB_m \appro
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top \right],
 \end{align*}
 %\paragraph{The expand approximation}
-%Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products\todo{can we justify this?}, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain 
-which gives the approximation 
-\begin{tcolorbox}[colframe=kfac, title={KFAC for Gauß-Newton with the Laplace operator},bottom=0mm,top=0mm,middle=0mm]
+%Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products\todo{can we justify this?}, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain
+which gives the approximation
+\begin{tcolorbox}[colframe=kfac, title={KFAC for Gauss-Newton with the Laplace operator},bottom=0mm,top=0mm,middle=0mm]
 \begin{align*}\label{eq:KFAC-PINN}
     \hat{\mG}_\Omega%^{\textup{exp}}
     (\mW^{(l)})
@@ -93,9 +93,9 @@ which gives the approximation
 \end{align*}
 \end{tcolorbox}
 
-\subsection{KFAC for Gauß-Newton matrices involving general PDE terms}
+\subsection{KFAC for Gauss-Newton matrices involving general PDE terms}
 
-Here, we provide the derivation of the general Kronecker-factored approximation of the Gauß-Newton matrix. 
+Here, we provide the derivation of the general Kronecker-factored approximation of the Gauss-Newton matrix.
 Recall that we consider the general PDE
 \begin{equation}
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
@@ -105,12 +105,12 @@ By $r_\vtheta(\vx)\coloneqq \Psi(u(\vx), \partial u(\vx), \dots, \partial^{(k)} 
 \begin{equation}
     L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
 \end{equation}
-where $\ell\colon\mathbb R^M\to\mathbb R$ is a smooth convex function with definite Hessian $\nabla^2\ell\succ0$ that typically has a unique minimizer at $0$. 
-We consider the Gauß-Newton matrix
+where $\ell\colon\mathbb R^M\to\mathbb R$ is a smooth convex function with definite Hessian $\nabla^2\ell\succ0$ that typically has a unique minimizer at $0$.
+We consider the Gauss-Newton matrix
 \begin{align}
     \mG(\vtheta) & \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
 \end{align}
-where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ denotes the Hessian of the per-sample loss. 
+where $\mLambda(r)\coloneqq \nabla^2 \ell(r)$ denotes the Hessian of the per-sample loss.
 
 Typically, in PINNs, one chooses $\ell = \frac12\lVert \cdot \rVert_2^2$ to be the squared Euclidean distance, such that $\mLambda = \mI$.
 Note, however, that in contrast to a regression problem, the residual $r_\vtheta$ involves PDE terms and not only function evaluations.
@@ -119,34 +119,34 @@ We obtain this via higher-order forward mode automatic differentiation.
 
 Writing $v_\vtheta(\vx)\coloneqq (%u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx)
 u(\vx), \partial u(\vx), \dots, \partial^{(k)} u(\vx))$
-we can express the block corresponding to the $l$-th layer of the Gauß-Newton matrix as 
+we can express the block corresponding to the $l$-th layer of the Gauss-Newton matrix as
 \begin{align}
     \mG(\mW^{(l)}) & = \frac1N\sum_{n=1}^N \jac_{\mW^{(l)}} v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mA_n}  \jac_{\mW^{(l)}} v_\vtheta(\vx_n),
 \end{align}
 and $v_\vtheta$ is a forward network with shared weights.
 
-Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives 
+Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives
 \begin{align}
-    \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)} 
+    \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)}
 \end{align}
 and hence, we can perceive the computational graph of $v_\vtheta$ as a feedforward network with weight sharing over the multi-indices $\alpha\in\mathbb N$ with $\lvert \alpha \rvert \le k$.
 
 Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
 \begin{align*}
-    \jac_{\mW^{(l)}} \vv_n & = \sum_{\lvert \alpha \rvert\le k}\jac_{\partial_\vx^\alpha \vz^{(l-1)}}\vv_n \jac_{\mW^{(l)}} \partial_\vx^\alpha \vz^{(l)} = 
+    \jac_{\mW^{(l)}} \vv_n & = \sum_{\lvert \alpha \rvert\le k}\jac_{\partial_\vx^\alpha \vz^{(l-1)}}\vv_n \jac_{\mW^{(l)}} \partial_\vx^\alpha \vz^{(l)} =
     \left(\sum_{\lvert \alpha \rvert\le k} \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\jac_{\partial_\vx^\alpha \vz^{(l-1)}} \vv_n}^\top\right)^\top,
 \end{align*}
-where $\vv_n = v_\vtheta(\vx_n)$. 
+where $\vv_n = v_\vtheta(\vx_n)$.
 Using the notation $\mJ^{(l)}_{n,\alpha} = \jac_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ we obtain
 \begin{equation}\label{eq:laplace_gramian_block_exact}
     \mG_\Omega(\mW^{(l)})
     =
     \frac1N\sum_{n=1}^N
     \left[\sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)
-    \mA_n 
-    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)^\top\right]. 
+    \mA_n
+    \sum_{\lvert \alpha \rvert\le k} \left( \partial_\vx^\alpha \vz^{(l-1)}_n \otimes {\mJ_{n,\alpha}^{(l)}}^\top \right)^\top\right].
 \end{equation}
-Using the crude approximation $M^{-1}\sum_{m=1}^M \mB_m\sum_{m=1}^M \mC_m \approx \sum_{m=1}^M \mB_m \mC_m$ we compute 
+Using the crude approximation $M^{-1}\sum_{m=1}^M \mB_m\sum_{m=1}^M \mC_m \approx \sum_{m=1}^M \mB_m \mC_m$ we compute
 \begin{align}
     \begin{split}
         & \sum_{n=1}^N
@@ -168,21 +168,21 @@ Using the crude approximation $M^{-1}\sum_{m=1}^M \mB_m\sum_{m=1}^M \mC_m \appro
     \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert\le k} {\mJ^{(l)}_{n,\alpha}}^\top\mA_n{\mJ^{(l)}_{n,\alpha}} \right],
     \end{split}
 \end{align}
-which gives the approximation 
+which gives the approximation
 \begin{tcolorbox}[colframe=kfac, title={KFAC with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
 \begin{align*}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
     \coloneqq \frac{\binom{d+k}{d}}{N^2}
-    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
-    \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
+    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top
+    \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mA_n {\mJ^{(l)}_{n,\alpha}} \right]. 
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mA_n {\mJ^{(l)}_{n,\alpha}} \right].
 \end{align*}
 \end{tcolorbox}
 
 
-This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}. 
+This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}.
 
 
 
@@ -246,7 +246,7 @@ Alternatively, approximating the inner matrix product of sums in equation~\eqref
     \otimes
     \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top   \right].
 \end{align*}
-which coincides with the \emph{expand} setting of \cite{eschenhagen2023kroneckerfactored}. 
+which coincides with the \emph{expand} setting of \cite{eschenhagen2023kroneckerfactored}.
 
 \paragraph{Forward KFAC}
 One downside of our approach is that we need to store the full computation graph of the forward Laplacian framework to compute the grad-output-based Kronecker factors.
@@ -264,28 +264,27 @@ Some works find that if setting this factor to $\mI$, the resulting input-based 
 
 \paragraph{Empirical KFAC}
 \begin{itemize}
-    \item write the Hessian as the expectation with log-likelihood and Gaussian noise 
-    \item then approximate the expectation with empirical samples 
-    \item this reduces computation time...? 
+    \item write the Hessian as the expectation with log-likelihood and Gaussian noise
+    \item then approximate the expectation with empirical samples
+    \item this reduces computation time...?
 \end{itemize}
 \end{comment}
 
 \paragraph{KFAC for linear PDEs}
 
-For the specific case of a linear PDE 
+For the specific case of a linear PDE
 \begin{align}
     \sum_{\lvert \alpha \rvert\le k} c_\alpha \partial^\alpha u = f
 \end{align}
-the Kronecker-factored approximation takes the form 
+the Kronecker-factored approximation takes the form
 \begin{tcolorbox}[colframe=kfac, title={KFAC for ENGD for a general linear PDE},bottom=0mm,top=0mm,middle=0mm]
 \begin{align*}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
     \coloneqq \frac{\binom{d+k}{d}}{N^2}
-    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
-    c_\alpha^2\partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
+    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top
+    c_\alpha^2\partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top {\mJ^{(l)}_{n,\alpha}} \right]. 
+    \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top {\mJ^{(l)}_{n,\alpha}} \right].
 \end{align*}
 \end{tcolorbox}
-

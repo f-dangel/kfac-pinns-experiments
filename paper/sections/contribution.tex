@@ -1,9 +1,9 @@
 
 The overall Gramian matrix of ENGD is given by the sum $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$ of two Gramian matrices stemming from the PDE and the boundary term, respectively.
 A Kronecker factored approximation of the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ can be obtained just like the case of the  Fisher $\mF(\vtheta)$.
-The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section in \eqref{eq:KFAC-PINN} and \eqref{eq:KFAC-PINNs-general} for the Laplace equation and more general PDEs, respectively. 
+The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section in \eqref{eq:KFAC-PINN} and \eqref{eq:KFAC-PINNs-general} for the Laplace equation and more general PDEs, respectively.
 For this, we use forward mode automatic differentiation to express the computation of higher-order derivatives as forward passes of a larger network with shared weights, for which we propose a Kronecker-factored approximation generalizing the expand approximation by~\citet{eschenhagen2023kroneckerfactored}.
-The approximations of $\mG_{\Omega}(\vtheta)$ and $\mG_{\partial\Omega}(\vtheta)$ can be %combined into a single approximation or 
+The approximations of $\mG_{\Omega}(\vtheta)$ and $\mG_{\partial\Omega}(\vtheta)$ can be %combined into a single approximation or
 inverted using an explicit formula based on the individual inversions~\citep{martens2015optimizing}.
 
 \subsection{Higher-order Forward Mode Automatic Differentiation as Weight Sharing}
@@ -40,7 +40,7 @@ The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$
 \end{subequations}
 
 \paragraph{Forward Laplacian}
-To compute not the full Hessian but only the Laplacian, we can simplify the forward pass only to propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}. 
+To compute not the full Hessian but only the Laplacian, we can simplify the forward pass only to propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}.
 Summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ we obtain the Laplacian forward pass for linear layers by
 %We obtain the Laplacian forward pass by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ which yields
 %\begin{subequations}
@@ -123,14 +123,14 @@ and for nonlinear layers by
 \end{align}
 \end{comment}
 \begin{align}\label{eq:forward_Laplacian_nonlinear}
-    \Delta_\vx\vz^{(l)} = \sigma'(\vz^{(l-1)})\odot\Delta_x\vz^{(l-1)} + \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}^{\odot 2}. 
+    \Delta_\vx\vz^{(l)} = \sigma'(\vz^{(l-1)})\odot\Delta_x\vz^{(l-1)} + \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}^{\odot 2}.
 \end{align}
 This greatly reduces the computational complexity of the forward pass, but is restricted to PDEs that involve second-order derivatives only via the Laplacian. %, i.e., for PDEs of the form $\Psi(u, \partial u, \Delta u)=0$.
 %In matrix form, higher-order forward mode automatic differentiation is given by
 %or $\mT^f=\tilde{\mW}\mT^h$. \todo{do we need this notation?}
 %for linear and nonlinear layers, respectively, where $\tilde{\mW}^{(l)} = \operatorname{diag}(\mW^{(l)}, \dots, \mW^{(l)})$ is a block diagonal matrix.
-We can interpret this formula as a forward pass through a larger neural network with weight-sharing. 
-%in the spirit of \cite{eschenhagen2023kroneckerfactored}  
+We can interpret this formula as a forward pass through a larger neural network with weight-sharing.
+%in the spirit of \cite{eschenhagen2023kroneckerfactored}
 \begin{comment}
     by introducing the vector $\mZ^{(l)}\coloneqq  \begin{pmatrix}
     \vz^{(l)}
@@ -143,8 +143,8 @@ We can interpret this formula as a forward pass through a larger neural network 
     &
     %\partial_i\partial_j
     \Delta_\vx\vz^{(l)}
-\end{pmatrix}\in \mathbb R^{(d+2)h^{(l)}}$. 
-     with 
+\end{pmatrix}\in \mathbb R^{(d+2)h^{(l)}}$.
+     with
 $\mZ^{(0)}=  \begin{pmatrix}
     \vx
     &
@@ -159,15 +159,15 @@ $\mZ^{(0)}=  \begin{pmatrix}
 Rearranging $\mZ^{(l)}$ as a matrix of shape $(d+2)\times h^{(l)}$ and yields $\mZ^{(l)} = \mZ^{(l-1)}{\mW^{(l)}}^\top$ for linear layers.
 \end{comment}
 
-\paragraph{Forward propagation for linear PDEs} 
-A similar reduction of the complexity of the forward pass similar to the forward Laplacian can be achieved for other linear PDEs. 
-Indeed, for a second order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, we obtain the forward pass $\mathcal L \vz^{(l)} = \mW^{(l)}\mathcal L \vz^{(l-1)}$ generalizing~\eqref{eq:forward_Laplacian_linear} for linear layers. 
-Similarly, a generalization of~\eqref{eq:forward_Laplacian_nonlinear} can be given. 
+\paragraph{Forward propagation for linear PDEs}
+A similar reduction of the complexity of the forward pass similar to the forward Laplacian can be achieved for other linear PDEs.
+Indeed, for a second order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, we obtain the forward pass $\mathcal L \vz^{(l)} = \mW^{(l)}\mathcal L \vz^{(l-1)}$ generalizing~\eqref{eq:forward_Laplacian_linear} for linear layers.
+Similarly, a generalization of~\eqref{eq:forward_Laplacian_nonlinear} can be given.
 %\todo{asdf}
 
 
 \subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}\label{sec:KFAC-Laplace}
-Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauß-Newton matrix, which for the Poisson equation, are given by
+Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauss-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
     \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n
 \end{align}
@@ -191,10 +191,10 @@ Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use t
     %    {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
     %    {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
     %\end{pmatrix}
-    %\\ & 
-    %= 
+    %\\ &
+    %=
     %\sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
-    %\\ & 
+    %\\ &
     = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
     %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
     %+
@@ -223,7 +223,7 @@ Now we can use any Kronecker-factored approximation for feedforward networks wit
 
 
 %\paragraph{The expand approximation}
-Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain 
+Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gramian_block_exact} by the sum of matrix products, simplifying, and approximating the sum of Kroneckers by the Kronecker of the sum we obtain
 \begin{tcolorbox}[colframe=kfac, title={KFAC for ENGD with the Laplace operator},bottom=0mm,top=0mm,middle=0mm]
 \begin{align}\label{eq:KFAC-PINN}
     \hat{\mG}_\Omega%^{\textup{exp}}
@@ -308,7 +308,7 @@ The parameter Jacobian is consequently given by the
     \end{pmatrix}.
     \label{eq:forward-laplacian-linear-layer-compact}
 \end{align}
-Using the notation $\vg_s\coloneqq \nabla_{\vz^{(l)}_s} \vz^{L}_s$ the Gauß-Newton matrix is given by
+Using the notation $\vg_s\coloneqq \nabla_{\vz^{(l)}_s} \vz^{L}_s$ the Gauss-Newton matrix is given by
 \begin{align}
     \mF(\mW^{(l)}) = {\jac_{\mW^{(l)}} \mZ^{(L)}}^\top \jac_{\mW^{(l)}} \mZ^{(L)}
 \end{align}
@@ -325,7 +325,7 @@ We can express this in matrix notation as $\mF(\mW^{(l)}) \approx \nicefrac{1}{S
 \end{comment}
 %\subsection{Discussion and generalizations}
 
-\subsection{KFAC for Gauß-Newton matrices involving general PDE terms} \label{sec:KFAC-general}
+\subsection{KFAC for Gauss-Newton matrices involving general PDE terms} \label{sec:KFAC-general}
 %\paragraph{Setting}
 We consider the general %second-order
 PDE
@@ -333,7 +333,7 @@ PDE
     %\Psi(u, \nabla u, \nabla^{2} u) = 0,
     \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
 \end{equation}
-where $\Psi\colon \mathbb R^{K}\to\mathbb R^M,K=\binom{d+k}{d}$ is smooth. 
+where $\Psi\colon \mathbb R^{K}\to\mathbb R^M,K=\binom{d+k}{d}$ is smooth.
 %We write $\mathcal D u \coloneqq (u, \partial u, \dots, \partial^{(k)} u)$
 %Set $v_\vtheta(x)\coloneqq (u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx))$
 %and
@@ -344,8 +344,8 @@ we denote the residual and consider the PINN loss
     %\frac1N\sum_{n=1}^N \ell(\Psi(\mathcal Du_\vtheta(\vx_n)),
     L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
 \end{equation}
-where $\ell\colon\mathbb R^K\to\mathbb R$ is a smooth convex function with definite Hessian $\nabla^2\ell\succ0$ that typically has a unique minimizer at $0$. 
-We consider the Gauß-Newton matrix
+where $\ell\colon\mathbb R^K\to\mathbb R$ is a smooth convex function with definite Hessian $\nabla^2\ell\succ0$ that typically has a unique minimizer at $0$.
+We consider the Gauss-Newton matrix
 \begin{align}
     \mG(\vtheta) & \coloneqq \frac1N\sum_{n=1}^N \jac_\vtheta r_\vtheta(\vx_n)^\top \mLambda(r_\vtheta(\vx_n)) \jac_\vtheta r_\vtheta(\vx_n),
     %\\ & = \frac1N\sum_{n=1}^N \jac_\vtheta v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mA(\vtheta, \vx)}  \jac_\vtheta v_\vtheta(\vx_n),
@@ -360,7 +360,7 @@ We obtain this via higher-order forward mode automatic differentiation.
 
 Writing $v_\vtheta(\vx)\coloneqq (%u_\vtheta(\vx), \nabla u_\vtheta(\vx), \nabla^{2} u_\vtheta(\vx)
 u(\vx), \partial u(\vx), \dots, \partial^{(k)} u(\vx))$
-we can express the block corresponding to the $l$-th layer of the Gauß-Newton matrix as 
+we can express the block corresponding to the $l$-th layer of the Gauss-Newton matrix as
 \begin{align}
     \mG(\mW^{(l)}) & = \frac1N\sum_{n=1}^N \jac_{\mW^{(l)}} v_\vtheta(\vx_n)^\top \underbrace{\jac \Psi(v_\vtheta(\vx_n))^\top \mLambda(r_\vtheta(\vx_n)) \jac \Psi(v_\vtheta(\vx_n))}_{\eqqcolon \mA_n}  \jac_{\mW^{(l)}} v_\vtheta(\vx_n),
 \end{align}
@@ -370,32 +370,32 @@ and $v_\vtheta$ is a forward network with shared weights.
 %    \hat{\mG}(\mW^{(l)}) \coloneqq \left(\sum_{n=1}^N \left( \sum_{s=1}^S \vz^{(l)}_{n,s} \right) \left(\sum_{s=1}^S {\vz^{(l)}_{n,s}}^\top\right)\right)\otimes\left(\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \mH(\vtheta, \vx_n) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}}^\top \right) \right)?
 %\end{align}
 
-Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives 
+Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives
 \begin{align}
-    \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)} 
+    \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)}
 \end{align}
 and hence, we can perceive the computational graph of $v_\vtheta$ as a feedforward network with weight sharing over the multi-indices $\alpha\in\mathbb N$ with $\lvert \alpha \rvert \le k$.
 The generalization of%the approximation
-~\eqref{eq:KFAC-PINN} is given by 
+~\eqref{eq:KFAC-PINN} is given by
 \begin{tcolorbox}[colframe=kfac, title={KFAC with general PDE terms},bottom=0mm,top=0mm,middle=0mm]
 \begin{align}\label{eq:KFAC-PINNs-general}
     \hat{\mG}%^{\textup{exp}}
     (\mW^{(l)})
     \coloneqq \frac{\binom{d+k}{d}}{N^2}
-    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top 
-    \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right] 
+    \left[\sum_{n=1}^N \sum_{\lvert \alpha \rvert \le k} %\mZ^{(l-1)}_{n,\alpha}{\mZ^{(l-1)}_{n,\alpha}}^\top
+    \partial_\vx^\alpha \vz_n^{(l-1)} {\partial_\vx^\alpha \vz_n^{(l-1)}}^\top\right]
     \otimes
     \left[\sum_{n=1}^N\sum_{\lvert \alpha \rvert \le k} {\mJ^{(l)}_{n,\alpha}}^\top \mA_n \mJ^{(l)}_{n,\alpha} \right],
 \end{align}
 \end{tcolorbox}
-%where $\mZ^{(l)}_{n,\alpha} = \partial_\vx^\alpha \vz_n^{(l)}$ and 
+%where $\mZ^{(l)}_{n,\alpha} = \partial_\vx^\alpha \vz_n^{(l)}$ and
 where $\mJ^{(l)}_{n,\alpha} = %\nabla
 \jac_{\partial_\vx^\alpha \vz_n^{(l)}} \vv_n$ and $\vv_n = v_\vtheta(\vx_n) %= (\partial^\beta_\vx \vz_{n}^{L})_{\lvert \beta \rvert \le k}
-$. 
+$.
 A detailed derivation can be found in \Cref{app:derivations}.
 %
-This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}. 
-%\jm{Note that other Kronecker-factored approximations for weight-sharing architectures have been proposed, but due to the superior performance in our experiments, we focus on the expand approximation?} 
+This approximation can be stated for a large class of weight-sharing architectures in which case it generalizes the \emph{expand approximation} by~\citet{eschenhagen2023kroneckerfactored}.
+%\jm{Note that other Kronecker-factored approximations for weight-sharing architectures have been proposed, but due to the superior performance in our experiments, we focus on the expand approximation?}
 
 %\todo[inline]{striking remark how that this can be applied for any Gramian involving PDE terms}
 %There are some challenges we need to overcome to define a Kronecker-factored approximation of the Gramian from \Cref{eq:gramian}:
@@ -412,20 +412,20 @@ This approximation can be stated for a large class of weight-sharing architectur
 %\end{itemize}
 
 \paragraph{KFAC for variational problems}
-Our proposed KFAC approximation is not limited to PINNs and can be used for variational problems of the form  
+Our proposed KFAC approximation is not limited to PINNs and can be used for variational problems of the form
 \begin{align}
     \min_u \int_\Omega \ell(u, \partial u, \dots, \partial^{(k)} u) \mathrm{d}x,
 \end{align}
-where $\ell\colon\mathbb R^K\to\mathbb R$ is a convex function. 
-%The discretization of this is given by 
+where $\ell\colon\mathbb R^K\to\mathbb R$ is a convex function.
+%The discretization of this is given by
 %\begin{align}
 %    L(\vtheta) = \frac1N \sum_{n=1}^N \ell(u(\vx_n), \partial u(\vx_n), \dots, \partial^{(k)}u(\vx_n)),
 %\end{align}
-%which covers general PINNs but also variational problems. 
-%Then the Gauß-Newton matrix is given by 
-We can perceive this problem as a special case of the setting described above with $\Psi = \operatorname{id}$ and hence the KFAC approximation~\eqref{eq:KFAC-PINNs-general} remains meaningful %approximation of the discretized Gauß-Newton matrix 
-if $\mA_n$ is replaced by $\mA_n = \nabla^2\ell(u(\vx_n), \partial u(\vx_n), \dots, \partial^{(k)}u(\vx_n))$. 
-In particular, our approximation can be used for the \emph{deep Ritz method} and other variational approaches to solve PDEs~\citep{yu2018deep}. 
+%which covers general PINNs but also variational problems.
+%Then the Gauss-Newton matrix is given by
+We can perceive this problem as a special case of the setting described above with $\Psi = \operatorname{id}$ and hence the KFAC approximation~\eqref{eq:KFAC-PINNs-general} remains meaningful %approximation of the discretized Gauss-Newton matrix
+if $\mA_n$ is replaced by $\mA_n = \nabla^2\ell(u(\vx_n), \partial u(\vx_n), \dots, \partial^{(k)}u(\vx_n))$.
+In particular, our approximation can be used for the \emph{deep Ritz method} and other variational approaches to solve PDEs~\citep{yu2018deep}.
 
 \begin{comment}
     \subsection{Computational complexity}
@@ -444,14 +444,14 @@ In particular, our approximation can be used for the \emph{deep Ritz method} and
 We provide the additional components that form our KFAC-based optimization algorithms, which are influenced by ENGD and the original KFAC algorithm.
 See \Cref{app:pseudo} for pseudo-code.
 
-\paragraph{Exponential moving averages and damping} %Given a combination of interior and condition loss, $\gL_{\Omega},\gL_{\partial\Omega}$ we 
-First, we approximate the interior and boundary Gramians at iteration $t$  according to~\eqref{eq:KFAC-PINN} and~\eqref{eq:KFAC-PINNs-general} and the classic KFAC approximation, respectively, giving 
-$\mG_{\Omega,t}^{(l)} \approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ and $\mG_{\partial \Omega, t}^{(l)}\approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ . 
-Here, we replace $\mA^{(l)}_{\bullet,t}$ with an exponential moving average $\hat{\mA}^{(l)}_{\bullet,t} = \beta \hat{\mA}^{(l)}_{\bullet,t-1} + (1 - \beta) \mA^{(l)}_{\bullet,t}$ 
+\paragraph{Exponential moving averages and damping} %Given a combination of interior and condition loss, $\gL_{\Omega},\gL_{\partial\Omega}$ we
+First, we approximate the interior and boundary Gramians at iteration $t$  according to~\eqref{eq:KFAC-PINN} and~\eqref{eq:KFAC-PINNs-general} and the classic KFAC approximation, respectively, giving
+$\mG_{\Omega,t}^{(l)} \approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ and $\mG_{\partial \Omega, t}^{(l)}\approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ .
+Here, we replace $\mA^{(l)}_{\bullet,t}$ with an exponential moving average $\hat{\mA}^{(l)}_{\bullet,t} = \beta \hat{\mA}^{(l)}_{\bullet,t-1} + (1 - \beta) \mA^{(l)}_{\bullet,t}$
 and identically for $\hat{\mB}^{(l)}_{\bullet, t}$ for some $\beta\in[0,1)$.
 Further, we add constant damping of strength $\lambda>0$ to all Kronecker factors, obtaining $\tilde{\mA}_{\bullet,t} = \hat{\mA}^{(l)}_{\bullet,t} + \lambda \mI$ and $\tilde{\mB}_{\bullet,t} = \hat{\mB}^{(l)}_{\bullet,t} + \lambda \mI$
-leading to the 
- block-diagonal Kronecker-factored approximation 
+leading to the
+ block-diagonal Kronecker-factored approximation
 \begin{align*}
   \mG_{\bullet, t}
   &\approx
@@ -467,27 +467,27 @@ leading to the
 
 \paragraph{Gradient pre-conditioning% and damping
 }
-Given the current mini-batch gradient $\vg^{(l)}$ for layer $l$, we obtain the update direction $\vDelta_t^{(l)} = -(\tilde{\mA}_{\Omega} \otimes \tilde{\mB}_{\Omega} + \tilde{\mA}_{\partial\Omega} \otimes \tilde{\mB}_{\partial\Omega})^{-1} \vg^{(l)}$ by 
+Given the current mini-batch gradient $\vg^{(l)}$ for layer $l$, we obtain the update direction $\vDelta_t^{(l)} = -(\tilde{\mA}_{\Omega} \otimes \tilde{\mB}_{\Omega} + \tilde{\mA}_{\partial\Omega} \otimes \tilde{\mB}_{\partial\Omega})^{-1} \vg^{(l)}$ by
 pre-condition with our Kronecker-factored approximate Gramian.
 %First, we add constant damping of strength $\lambda>0$ to all Kronecker factors, obtaining $\tilde{\mA}_{\bullet,t} = \hat{\mA}^{(l)}_{\bullet,t} + \lambda \mI$ and $\tilde{\mB}_{\bullet,t} = \hat{\mB}^{(l)}_{\bullet,t} + \lambda \mI$.
-%Then, we multiply the inverse of the sum of Kronecker products onto the gradient to obtain the update direction 
-This can be done without building up the full matrix utilizing a generalized eigendecomposition of the individual Kronecker factors, where we use the procedure described in \cite[Appendix I]{martens2015optimizing}. 
+%Then, we multiply the inverse of the sum of Kronecker products onto the gradient to obtain the update direction
+This can be done without building up the full matrix utilizing a generalized eigendecomposition of the individual Kronecker factors, where we use the procedure described in \cite[Appendix I]{martens2015optimizing}.
 
 %\paragraph{Combining PDE and boundary approximations}
-%The boundary Gramian matrix $\mG_{\partial\Omega}(\mW^{(l)})$ is a classic Gauß-Newton matrix and thus we can use a classic KFAC approximation $\hat{\mG}_{\partial\Omega}(\mW^{(l)})$. 
+%The boundary Gramian matrix $\mG_{\partial\Omega}(\mW^{(l)})$ is a classic Gauss-Newton matrix and thus we can use a classic KFAC approximation $\hat{\mG}_{\partial\Omega}(\mW^{(l)})$.
 %To invert the sum $\hat{\mG}_\Omega(\mW^{(l)}) + \hat{\mG}_{\partial\Omega}(\mW^{(l)})$ of the two Kronecker approximations we use the procedure described in \cite[Appendix I]{martens2015optimizing}.
 
 \paragraph{Learning rate and momentum}
 We consider two different updates $ \vtheta_{t+1} = \vtheta_t + \vdelta_{t}$ at iteration $t$ from the pre-conditioned gradient $\vDelta_t$, which we call as `KFAC' and `KFAC*'.
-KFAC uses momentum %buffer of all previous updates, 
+KFAC uses momentum %buffer of all previous updates,
 $\hat{\vdelta}_t = \mu \vdelta_{t-1} + \vDelta_t$ %(similar to momentum in SGD).
 %The
 where the parameter $\mu$ can be chosen by the practitioner.
-Like in ENGD, we use a logarithmic grid line search along 
+Like in ENGD, we use a logarithmic grid line search along
 %$\hat{\vdelta}_t$, i.e.\,
-%choosing 
-leading to the update 
-$\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where 
+%choosing
+leading to the update
+$\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where
 $\alpha_{\star} = \argmin_{\alpha} \gL(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
 KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}, see also~\Cref{sec:experimental_details}.
 

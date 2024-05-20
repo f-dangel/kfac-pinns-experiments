@@ -363,7 +363,7 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
       \right]
   \end{align}
 
-    I came to the following approximation, but also do not fully understand the notation in~\cite{eschenhagen2023kroneckerfactored}: 
+    I came to the following approximation, but also do not fully understand the notation in~\cite{eschenhagen2023kroneckerfactored}:
   \begin{align}
     \mG(\flatten(\tilde{\mW}^{(i)})
     &\approx
@@ -379,7 +379,7 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
       \left(
       \frac{\partial \mT_n^{(L)}}{\partial \mT_n^{(i)}}
       \right)^{\top}
-      \nabla^2 \ell_n(\mT_n^{(i)}) 
+      \nabla^2 \ell_n(\mT_n^{(i)})
       \frac{\partial \mT_n^{(L)}}{\partial \mT_n^{(i)}}
       \right]
   \end{align}
@@ -419,12 +419,12 @@ This formulation makes it easy to formulate KFAC, because we can simply borrow t
 \subsection{Questions and thoughts:}
 
 \begin{itemize}
-    \item Should we formulate things with Taylor AD for general PDEs? Then we could treat general $k$-th order PDEs of the form     
+    \item Should we formulate things with Taylor AD for general PDEs? Then we could treat general $k$-th order PDEs of the form
     \begin{equation*}
-        \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0. 
+        \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0.
     \end{equation*}
-    Maybe we first present things for second order PDEs since then the chain rules are still quite manageable, see~\eqref{eq:hessianChainRule}? 
-    \item If we do this, should we formulate things for the Gauß-Newton rather than ENG?
+    Maybe we first present things for second order PDEs since then the chain rules are still quite manageable, see~\eqref{eq:hessianChainRule}?
+    \item If we do this, should we formulate things for the Gauss-Newton rather than ENG?
 \end{itemize}
 
 \section{Old KFAC intro}
@@ -513,17 +513,17 @@ In the presence of multiple data points, the sum over per-datum Kronecker produc
 
 \begin{comment}
     \paragraph{Alternating linear and nonlinear layers}
-In particular, if $f$ is a linear and $g$ a nonlinear layer, we obtain 
+In particular, if $f$ is a linear and $g$ a nonlinear layer, we obtain
 \begin{align}
-    \partial_i (f\circ g)(\vz) & = \mW \ve_i\sigma'(\vz_i) \quad \text{or } \jac (f\circ g)(\vz) = \mW \operatorname{diag}(\sigma'(\vz))  \\ 
-    \partial_i\partial_j (f\circ g)(\vz) & = \mW \ve_i\delta_{ij} \sigma''(\vz_i). 
+    \partial_i (f\circ g)(\vz) & = \mW \ve_i\sigma'(\vz_i) \quad \text{or } \jac (f\circ g)(\vz) = \mW \operatorname{diag}(\sigma'(\vz))  \\
+    \partial_i\partial_j (f\circ g)(\vz) & = \mW \ve_i\delta_{ij} \sigma''(\vz_i).
 \end{align}
-On the other hand, if $f$ is a nonlinear and $g$ a layer, we obtain 
+On the other hand, if $f$ is a nonlinear and $g$ a layer, we obtain
 \begin{align}
-    \partial_i (f\circ g)(\vz) & =  \sigma'(\mW\vz + \vb) \odot \mW\ve_i\\ 
-    \partial_i\partial_j (f\circ g)(\vz) & = \mW\ve_i \odot \sigma''(\mW\vz + \vb) \odot \mW\ve_j. 
+    \partial_i (f\circ g)(\vz) & =  \sigma'(\mW\vz + \vb) \odot \mW\ve_i\\
+    \partial_i\partial_j (f\circ g)(\vz) & = \mW\ve_i \odot \sigma''(\mW\vz + \vb) \odot \mW\ve_j.
 \end{align}
-Maybe, this doesn't really make all that much sense 
+Maybe, this doesn't really make all that much sense
 \end{comment}
 
 %%% Local Variables:
