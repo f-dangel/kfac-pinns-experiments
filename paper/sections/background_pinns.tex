@@ -21,7 +21,7 @@ We parametrize $u$ using a neural network and train its parameters $\vtheta$ to 
   &=
     \underbrace{\frac{1}{2N_\Omega} \sum_{n=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_i) + f(\vx_n))^2}_{\eqqcolon L_\Omega(\vtheta)} + \underbrace{\frac{1}{2N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^\text{b}_n) - g(\vx^\text{b}_n))^2}_{\eqqcolon L_{\partial\Omega}(\vtheta)},
 \end{align}
-with points $\{\vx_n \in \Omega \}_{n=1}^{N_\Omega}$ from the domain's interior, and points $\{\vx^\text{b}_n \in \partial\Omega \}_{n=1}^{N_{\partial\Omega}}$ on its boundary.\footnote{Adding additional information, including measurement data can be included via a regression loss that can be treated analogously to the boundary loss.}
+with points $\{\vx_n \in \Omega \}_{n=1}^{N_\Omega}$ from the domain's interior, and points $\{\vx^\text{b}_n \in \partial\Omega \}_{n=1}^{N_{\partial\Omega}}$ on its boundary.\footnote{The second regression loss can also include other constraints like measurement data.}
 
 %%% Local Variables:
 %%% mode: latex
