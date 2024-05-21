@@ -101,8 +101,10 @@ if __name__ == "__main__":
                 # adjust legend to not overlap with xlabel
                 bbox_to_anchor=(0.5, -0.13),
                 # shorter lines so legend fits into a single line in the main text
-                handlelength=1.2,
-                ncols=7,
+                handlelength=1.35,
+                # reduce space between columns to fit into a single line
+                ncols=8,
+                columnspacing=0.9,
             )
             HEREDIR = path.dirname(path.abspath(__file__))
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
