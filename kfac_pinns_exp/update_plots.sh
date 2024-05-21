@@ -1,4 +1,5 @@
 # Update all plots
+echo "Updating non-Bayesian plots"
 
 # Update individual plots
 for DIR in ./exp09_reproduce_poisson2d/ \
@@ -17,14 +18,21 @@ for DIR in ./exp09_reproduce_poisson2d/ \
                                       ./exp28_heat4d_medium/ \
                                       ./exp29_heat4d_big/; do
     echo "Updating plots in $DIR"
-    cd $DIR && python plot.py && cd -
+    cd $DIR
+    python plot.py &
+    cd -
 done
+
+wait
 
 for DIR in ./exp17_groupplot_poisson2d/ \
                                       ./exp18_groupplot_poisson5d/ \
                                       ./exp24_heat1d_groupplot/ \
                                       ./exp30_heat4d_groupplot/; do
     echo "Updating group plot in $DIR"
-    cd $DIR && python plot.py && cd -
+    cd $DIR
+    python plot.py &
+    cd -
 
-    bash update_bayes_plots.sh
+echo "Updating Bayesian plots"
+bash update_bayes_plots.sh
