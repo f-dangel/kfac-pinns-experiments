@@ -17,9 +17,9 @@ To address this, we build on the idea of Kronecker-factored approximate curvatur
 \item Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods (\Cref{sec:experiments}).
 \end{itemize}
 
-\paragraph{Related work}
-Various approaches were developed to improve the optimization of PINNs such as adaptive re-weighting of individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for discretizing the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, and curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}. 
-Further, L-BFGS is known to outperform first-order optimizers~\citep{markidis2021old}. 
+\textbf{Related work}
+Various approaches were developed to improve the optimization of PINNs such as adaptive re-weighting of individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for discretizing the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, and curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}.
+Further, L-BFGS is known to outperform first-order optimizers~\citep{markidis2021old}.
 Recently, other second-order methods that design meaningful preconditioners that respect the problems geometry have significantly outperformed L-BFGS, \cite[see][]{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning, jnini2024gauss,chen2024teng, zampini2024petscml}, with unified view on these approaches given in~\citet{muller2024optimization}.
 These methods greatly improve the accuracy of PINNs but come with a significant per-iteration cost as one needs to solve a linear system in the network's high-dimensional parameter space, which is only feasible for small networks when done naively.
 One approach is to use matrix-free methods to approximately compute Gauss-Newton directions by introducing an inner optimization loop, see~\cite{schraudolph2002fast,martens2010deep} for supervised learning problems and~\cite{zeng2022competitive,bonfanti2024challenges, jnini2024gauss,zampini2024petscml} for PINNs.

@@ -8,4 +8,3 @@ sbatch SGD.sh
 sbatch Adam.sh
 sbatch LBFGS.sh
 sbatch HessianFree.sh
-sbatch ENGD_diagonal.sh
