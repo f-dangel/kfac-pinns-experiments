@@ -78,7 +78,9 @@ Concretely, by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{s
   \end{align}
 \end{subequations}
 This reduces computational cost, but is restricted to PDEs that involve second-order derivatives only via the Laplacian, or a partial Laplacian over a sub-set of input coordinates (e.g.\,heat equation, \Cref{sec:experiments}).
-\todo{Felix: I do not understand this notation. There seems to be a sum over coordinates $i,j$ missing here}
+\todo{Felix: I do not understand this notation.
+  There seems to be a sum over coordinates $i,j$ missing here.
+  Maybe $\sum_{i,j=1}^d c_{i,j} \partial^2_{\evx_i, \evx_j}$?}
 For a more general second-order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}.
 
 Importantly, the computation of higher-order derivatives for linear layers boils down to a forward pass through the layer with weight sharing over the different partial derivatives (\Cref{eq:forward_pass}), and weight sharing can potentially be reduced depending on the differential operator's structure (\Cref{eq:forward_Laplacian_linear}).
