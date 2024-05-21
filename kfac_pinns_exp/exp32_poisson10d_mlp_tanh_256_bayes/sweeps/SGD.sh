@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --time=04:00:00
 #SBATCH --mem-per-cpu=8G
-#SBATCH --array=1-64%1
+#SBATCH --array=1-100%1
 
 echo "[DEBUG] Host name: " `hostname`
 
