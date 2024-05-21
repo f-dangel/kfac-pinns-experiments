@@ -82,60 +82,47 @@ This reduces computational cost, but is restricted to PDEs that involve second-o
   There seems to be a sum over coordinates $i,j$ missing here.
   Maybe $\sum_{i,j=1}^d c_{i,j} \partial^2_{\evx_i, \evx_j}$?}
 For a more general second-order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}.
+This is similar to \cite{li2024dof}, which transforms the input space using an eigen-decomposition of $c_{i,j}$ to a basis where it is diagonal with entries $\{0, \pm 1\}$, reducing the computation to two standard forward Laplacians.
 
 Importantly, the computation of higher-order derivatives for linear layers boils down to a forward pass through the layer with weight sharing over the different partial derivatives (\Cref{eq:forward_pass}), and weight sharing can potentially be reduced depending on the differential operator's structure (\Cref{eq:forward_Laplacian_linear}).
-Therefore, we can use the concept of KFAC in the presence of weight sharing to derive a principled Kronecker approximation.
+Therefore, we can use the concept of KFAC in the presence of weight sharing to derive a principled Kronecker approximation for Gramians containing differential operator terms.
 
-\subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}\label{sec:KFAC-Laplace}
-Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauss-Newton matrix, which for the Poisson equation, are given by
+\subsection{A Kronecker-factored Approximation for ENGD with the Laplace Operator}\label{sec:KFAC-Laplace}
+Let's consider the interior Gramian block for a linear layer and the Poisson equation,
 \begin{align}
-  \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n \in\mathbb R^{{h^{(l-1)}}^2\times {h^{(l-1)}}^2}
+  \mG^{(l)}_\Omega(\vtheta)
+  =
+  \frac{1}{N_\Omega} \sum_{n=1}^{N_\Omega}
+  \left(
+  \jac_{\mW^{(l)}} \Delta_\vx u_n  \right)^\top
+  \jac_{\mW^{(l)}} \Delta_\vx u_n\,.
 \end{align}
-Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
+Because we made the Laplacian computation explicit through Taylor-mode autodiff (\Cref{sec:taylor-mode-AD}, specifically \Cref{eq:forward_Laplacian_linear}), we can stack all output vectors that share the layer's weight into a matrix
+$\mZ_n^{(l)} \in \sR^{h^{(l)} \times S}$ with $S = d+2$ and columns $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_\vx\vz_n^{(l)}$ (likewise $\mZ_n^{(l-1)} \in \sR^{h^{(l-1)} \times S}$ for the layer inputs), then apply the chain rule
 \begin{align*}
-  \jac_{\mW^{(l)}} \Delta_\vx \vu_n & = \jac_{\mZ^{(l)}}\Delta_\vx \vu_n \jac_{\mW^{(l)}} \mZ^{(l)} %=
-  % \jac_{\mW^{(l)}} \mZ^{(l)} \jac_{\mZ^{(l)}}\mZ^{(L)}\jac_{\mZ^{(L)}}\Delta_\vx \vu_n.
-  % \\ & =
-  % \operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \mI, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \mI\right) \jac_{\mZ^{(l)}}\Delta_\vx \vu_n
-  % \begin{pmatrix}
-      %       \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\
-  %   \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\
-  %   \vdots \\
-  %   \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\
-  %   \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\
-  % \end{pmatrix}^\top
-  % \begin{pmatrix}
-  %   {\vz^{(l-1)}_n}^\top \otimes \mI \\
-  %   {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\
-  %   \vdots \\
-  %   {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
-  %   {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
-  % \end{pmatrix}
-  % \\ &
-  % =
-  % \sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
-  % \\ &
-    = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
-    %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
-    %+
-    %\sum_{i=1}^d {\partial_{x_i}\vz^{(l-1)}_n}^\top \otimes \jac_{\partial_{x_i}\vz^{(l)}}\Delta_{\vx}\vu_n
-    %\\ & \quad
-    %+
-    %{\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \jac_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n.
-    %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \jac_{\vz^{(l-1)}} \Delta_{\vx} \vu_n, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \jac_{\Delta_\vx\vz^{(l-1)}} \Delta_{\vx} \vu_n\right)? not quite
-\end{align*}
-where $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}\in\mathbb R^{h^{(l)}}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_x\vz_n^{(l)}\in\mathbb R^{h^{(l)}}$ and $S=d+2$.
-Using the notation
-$\vg_{n, s}^{(l)} = \nabla_{\mZ_{s}^{(l)}} \Delta_\vx\vu_n\in\mathbb R^{h^{(l)}}$ we obtain
-\begin{equation}\label{eq:laplace_gramian_block_exact}
-    \mG_\Omega(\mW^{(l)})
+  \jac_{\mW^{(l)}} \Delta_\vx u_n
+  &=
+    (\jac_{\mZ_n^{(l)}}\Delta_\vx u_n) \jac_{\mW^{(l)}} \mZ_n^{(l)}
     =
-    \frac1N\sum_{n=1}^N
-    \left[\sum_{s=1}^S \left( \mZ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)
-    \cdot
-    \sum_{s=1}^S \left( \mZ
-    ^{(l-1)}_{n,s}\otimes \vg_{n,s}^{(l)} \right)^\top\right]
+    \sum_{s=1}^S
+    {
+    \underbrace{\mZ^{(l-1)}_{n,s}}_{\in \sR^{h^{(l-1)}}}
+    }^{\top}
+    \otimes
+    \underbrace{\jac_{\mZ^{(l)}_{n,s}} \Delta_{\vx}u_n}_{\eqqcolon \vg_{n,s}^{(l)} \in \sR^{h^{(l)}}}\,,
+\end{align*}
+which has similar structure than the Jacobian in \Cref{sec:kfac-background}, but with an additional sum over the shared vectors. With that, we can now express the exact interior Gramian as
+\begin{equation}\label{eq:laplace_gramian_block_exact}
+    \mG^{(l)}_\Omega(\vtheta)
+    =
+    \frac{1}{N}
+    \sum_{n=1}^N
+    \sum_{s=1}^S
+    \sum_{s'=1}^S
+    \mZ^{(l-1)}_{n,s} \mZ^{(l-1)\top}_{n,s'} \otimes \vg_{n,s}^{(l)} \vg_{n,s'}^{(l)\top}.
 \end{equation}
+% TODO
+% To avoid ...
 Now we can use any Kronecker-factored approximation for feedforward networks with weight sharing, where we choose to work with the following.
 
 %
@@ -151,7 +138,10 @@ Approximating the inner matrix product of sums in equation~\eqref{eq:laplace_gra
     \coloneqq \frac{1}{N^2 S}
     \left[\sum_{n=1}^N \sum_{s=1}^S \mZ^{(l-1)}_{n,s}{\mZ^{(l-1)}_{n,s}}^\top \right]
     \otimes
-    \left[\sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top   \right].
+  \left[
+  \frac{1}{N}
+  \sum_{n=1}^N\sum_{s=1}^S \vg^{(l)}_{n,s}{\vg^{(l)}_{n,s}}^\top
+  \right].
 \end{align}
 \end{tcolorbox}
 

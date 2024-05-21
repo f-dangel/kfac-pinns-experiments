@@ -1,4 +1,4 @@
-\subsection{Kronecker-factored Approximate Curvature}
+\subsection{Kronecker-factored Approximate Curvature}\label{sec:kfac-background}
 
 We review Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} in the context of maximum likelihood estimation to approximate the per-layer Fisher information matrix by a Kronecker product to speed up approximate natural gradient descent~\cite{amari1998natural}.
 The Fisher associated with the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u_\vtheta(\vx_n) - \vy_n \right\rVert_2^2$ is
@@ -29,12 +29,16 @@ Inserting into $\mF^{(l)}(\vtheta)$, summing over data points, and using the exp
   \mF^{(l)}(\vtheta)
   \approx
   \underbrace{
-    \frac{1}{N}
-    \left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)
+    \left(
+      \frac{1}{N}
+      \sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top
+    \right)
   }_{\eqqcolon \mA^{(l)} \in \sR^{h^{(l-1)} \times h^{(l-1)}}}
   \otimes
   \underbrace{
-    \left(\sum_{n=1}^N
+    \left(
+      \frac{1}{N}
+      \sum_{n=1}^N
       \left(\jac_{\vz^{(l)}}  u_n \right)^\top
       \jac_{\vz^{(l)}}  u_n
     \right)
