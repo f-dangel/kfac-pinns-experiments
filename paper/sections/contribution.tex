@@ -1,200 +1,118 @@
 
-The overall Gramian matrix of ENGD is given by the sum $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$ of two Gramian matrices stemming from the PDE and the boundary term, respectively.
-A Kronecker factored approximation of the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ can be obtained just like the case of the  Fisher $\mF(\vtheta)$.
-The interior Gramian $\mG_\Omega(\vtheta)$, which involves PDE terms, requires a different approximation that we provide in this section in \eqref{eq:KFAC-PINN} and \eqref{eq:KFAC-PINNs-general} for the Laplace equation and more general PDEs, respectively.
-For this, we use forward mode automatic differentiation to express the computation of higher-order derivatives as forward passes of a larger network with shared weights, for which we propose a Kronecker-factored approximation generalizing the expand approximation in~\citet{eschenhagen2023kroneckerfactored}.
-The approximations of $\mG_{\Omega}(\vtheta)$ and $\mG_{\partial\Omega}(\vtheta)$ can be %combined into a single approximation or
-inverted using an explicit formula based on the individual inversions~\citep{martens2015optimizing}.
+ENGD's Gramian is a sum of PDE and boundary Gramians, $\mG(\vtheta)= \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)$.
+We will approximate each Gramian separately with a block diagonal matrix with Kronecker-factored blocks, $\mG_{\bullet}(\vtheta) \approx \diag(\mG^{(1)}_{\bullet}(\vtheta), \dots, \mG^{(L)}_{\bullet}(\vtheta))$ for $\bullet \in \{\Omega, \partial\Omega\}$ with $\mG^{(l)}_{\bullet}(\vtheta) \approx \mA^{(l)}_{\bullet} \otimes \mB^{(l)}_{\bullet}$.
+For the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$, we can re-use the established KFAC from~\Cref{eq:kfac-linear} as its loss corresponds to regression over the network's output.
+The interior Gramian $\mG_\Omega(\vtheta)$, however, involves PDE terms in the form of network derivatives and therefore \emph{cannot} be approximated with the existing KFAC.
+It requires a new approximation that we develop here for the running example of the Poisson equation and more general PDEs (\Cref{eq:KFAC-PINN,eq:KFAC-PINNs-general}).
+To do so, we need to make the dependency between the weights and the differential operator $\mathcal{L}u$ explicit.
+We use Taylor-mode automatic differentiation to express this computation of higher-order derivatives as forward passes of a larger net with shared weights, for which we then propose a Kronecker-factored approximation, building on KFAC's recently-proposed generalization to linear layers with weight sharing~\cite{eschenhagen2023kroneckerfactored}.
 
 \subsection{Higher-order Forward Mode Automatic Differentiation as Weight Sharing}
 \label{sec:taylor-mode-AD}
 
-Here, we review higher-order forward mode differentiation, also known as {Taylor-mode automatic differentiation}~\citep{griewank1996algorithm, griewank2008evaluating, bettencourt2019taylor}.
-Many PDEs only incorporate first and second partial derivatives and we focus our discussion here on second-order automatic differentiation for the sake of simplicity of the presentation.
-However, a completely analogous approach can be taken for higher-order PDEs.
+Here, we review higher-order forward mode, also known as \emph{Taylor-mode}, automatic differentiation~\citep{griewank1996algorithm, griewank2008evaluating, bettencourt2019taylor}.
+Many PDEs only incorporate first- and second-order partial derivatives and we focus our discussion on second-order Taylor mode for MLPs to keep the presentation light.
+However, one can treat higher-order PDEs and arbitrary network architectures completely analogously.
 
-How to compute the function values through a forward pass is well known.
-%The computation of the gradient through forward mode differentiation uses the chain rule $\jac (f\circ g) = \jac f (g) \jac g$.
-%If we want to compute the Hessian in a forward-mode style, we use the \emph{Hessian chain rule}, which is given by
-%\begin{align}
-       %\nabla^2 (f\circ g) & = (\jac g)^\top\cdot \nabla^2 f(g) \cdot \jac g + \sum_{k} \partial_{k} f(g) \cdot \nabla^2 g_k \\
-       %\partial_{x_i} \partial_{x_j} (f \circ g)(\vx) & = \partial_{x_i} g(\vx)^\top \nabla^2f(g(\vx))\partial_{x_j} g(\vx) + \jac f(g(\vx)) \partial_{x_i} \partial_{x_j} g(\vx).
-%\end{align}
-If $f_{\vtheta^{(l)}}(\vz) = \mW^{(l)} \vz %+ \vb^{(l)}
-$ is a linear layer, then setting $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{x_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial_{x_i}\partial_{x_j}\vz^{(0)} = 0\in\mathbb R^d$, applying the chain rule gives the second-order forward pass is given by
+Taylor-mode propagates directional (higher-order) derivatives.
+We now recap the forward propagation rules for MLPs consisting of fully-connected and element-wise activation layers.
+Our goal is to evaluate first-and second-order partial derivatives of the form $\partial_{\evx_i}u, \partial^2_{\evx_i, \evx_j}u$ for $i,j = 1, \dots, d$.
+At the first layer, set $\vz^{(0)} = \vx\in\mathbb R^d, \partial_{x_i}\vz^{(0)} = \ve_i\in\mathbb R^d$, i.e., the $i$-th basis vector and $\partial^2_{x_i,x_j}\vz^{(0)} = \vzero \in\mathbb R^d$.
+
+For a linear layer $f_{\vtheta^{(l)}}(\vz^{(l-1)}) = \mW^{(l)} \vz^{(l-1)}$, applying the chain rule yields the propagation rule
 \begin{subequations}\label{eq:forward_pass}
-    \begin{align}
-    \vz^{(l)} & = \mW^{(l)} \vz^{(l-1)} %+ \vb^{(l)}
-    \\
-    \partial_{x_i} \vz^{(l)} & = \mW^{(l)} \partial_{x_i} \vz^{(l-1)} \\
-    \partial_{x_i}\partial_{x_j} \vz^{(l)} & = \mW^{(l)} \partial_{x_i}\partial_{x_j} \vz^{(l-1)} \label{subeq:secondOrderForward-LinearLayer}.
-\end{align}
-\end{subequations}
-The second-order forward pass through a nonlinear layer $\vz\mapsto \sigma(\vz)$ is given by
-\begin{subequations}
-    \begin{align}
-    \vz^{(l)} & = \sigma(\vz^{(l-1)}) \\
-    \partial_{x_i} \vz^{(l)} & = \sigma'(\vz^{(l-1)}) \odot \partial_{x_i} \vz^{(l-1)} \\
-    \partial_{x_i}\partial_{x_j} \vz^{(l)} & = \partial_{x_i} \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_{x_j} \vz^{(l-1)} + \sigma'(\vz^{(l-1)}) \odot \partial_{x_i} \partial_{x_j} \vz^{(l-1)} \label{subeq:secondOrderForward-nonlinearLayer}.
-\end{align}
-\end{subequations}
-
-\paragraph{Forward Laplacian}
-To compute not the full Hessian but only the Laplacian, we can simplify the forward pass only to propagate the Laplacian which is known as \emph{forward Laplacian}~\citep{li2023forward}.
-Summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ we obtain the Laplacian forward pass for linear layers by
-%We obtain the Laplacian forward pass by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$ which yields
-%\begin{subequations}
-%    \begin{align}
-%        \Delta \vz^{(l)} & = \mW^{(l)} \Delta \vz^{(l-1)} \quad \text{and } \\
-%        \Delta \vz^{(l)} & = \sum_i \sigma''(\vz^{(l-1)}) \odot (\partial_{x_i} \vz^{(l-1)})^{\odot 2} + \sigma'(\vz^{(l-1)}) \odot \Delta \vz^{(l-1)}
-%    \end{align}
-%\end{subequations}
-\begin{comment}
-    \begin{align}
-  %\nonumber
-  \mZ^{(l)}\coloneqq %\underbrace{
-  \begin{pmatrix}
+  \begin{align}
     \vz^{(l)}
+    &=
+      \mW^{(l)} \vz^{(l-1)} \quad \in \sR^{h^{(l)}}\,,
     \\
-    \partial_{\vx_1} \vz^{(l)}
+    \partial_{x_i} \vz^{(l)}
+    &=
+      \mW^{(l)} \partial_{x_i} \vz^{(l-1)}  \quad \in \sR^{h^{(l)}}\,,
     \\
-    \vdots
-    \\
-    \partial_{\vx_d} \vz^{(l)}
-    \\
-    %\partial_i\partial_j
-    \Delta_\vx\vz^{(l)}
-  \end{pmatrix}
-  %}_{\eqqcolon %\mT^f
-  %\in \sR^{D_{\text{out}} \times (D+2)}
-  %\mZ^{(l)}}
-  & =
-    %\begin{pmatrix}
-      %\mW^{(l)} %& \vb^{(l)}
-    %\end{pmatrix}
-    %\underbrace{
-    %\begin{pmatrix}
-    %  \vz^{(l-1)}
-    %  &
-    %  \partial_{i} \vz^{(l-1)}
-    %  &
-    %    \partial_i\partial_j \vz^{(l-1)}
-      %\\1 & 0 & 0
-    %\end{pmatrix}
-    %}_{\eqqcolon \mT^h \in \sR^{(D_{\text{in}} +1) \times (D+2)}}\,,
-    %\shortintertext{or, in compact form,}
-    %\mT^f
-  %&=
-    %\tilde{\mW}
-    %\mT^h\,.
-    \begin{pmatrix}
-    \mW^{(l)}\vz^{(l-1)}
-    \\
-    \mW^{(l)}\partial_{\vx_1} \vz^{(l-1)}
-    \\
-    \vdots
-    \\
-    \mW^{(l)}\partial_{\vx_d} \vz^{(l-1)}
-    \\
-    %\partial_i\partial_j
-    \mW^{(l)}\Delta_\vx\vz^{(l-1)}
-  \end{pmatrix}
-     %= \tilde{\mW}^{(l)}\mZ^{(l-1)},
-     %\quad \mZ^{(l)} = F(\mZ^{(l-1)})
-    \label{eq:forward-laplacian-linear-layer-compact}
-\end{align}
-\end{comment}
-\begin{align}\label{eq:forward_Laplacian_linear}
-    \Delta_\vx\vz^{(l)} = \mW^{(l)}\Delta_\vx\vz^{(l-1)}
-\end{align}
-and for nonlinear layers by
-\begin{comment}
-    \begin{align}
-    \mZ^{(l)}
-    =
-     \begin{pmatrix}
-         \sigma(\vz^{(l-1)}) \\
-         \sigma'(\vz^{(l-1)})\odot \partial_{x_1}\vz^{(l-1)} \\
-         \vdots \\
-         \sigma'(\vz^{(l-1)})\odot \partial_{x_d}\vz^{(l-1)} \\
-         \sigma'(\vz^{(l-1)})\odot\Delta_x\vz^{(l-1)} + \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}^{\odot 2}
-     \end{pmatrix}
-     \label{eq:forward-laplacian-nonlinear-layer-compact}
-\end{align}
-\end{comment}
-\begin{align}\label{eq:forward_Laplacian_nonlinear}
-    \Delta_\vx\vz^{(l)} = \sigma'(\vz^{(l-1)})\odot\Delta_x\vz^{(l-1)} + \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}^{\odot 2}.
-\end{align}
-This greatly reduces the computational complexity of the forward pass, but is restricted to PDEs that involve second-order derivatives only via the Laplacian. %, i.e., for PDEs of the form $\Psi(u, \partial u, \Delta u)=0$.
-%In matrix form, higher-order forward mode automatic differentiation is given by
-%or $\mT^f=\tilde{\mW}\mT^h$. \todo{do we need this notation?}
-%for linear and nonlinear layers, respectively, where $\tilde{\mW}^{(l)} = \operatorname{diag}(\mW^{(l)}, \dots, \mW^{(l)})$ is a block diagonal matrix.
-We can interpret this formula as a forward pass through a larger neural network with weight-sharing.
-%in the spirit of \cite{eschenhagen2023kroneckerfactored}
-\begin{comment}
-    by introducing the vector $\mZ^{(l)}\coloneqq  \begin{pmatrix}
+    \label{subeq:secondOrderForward-LinearLayer}
+    \partial^2_{x_i,x_j} \vz^{(l)}
+    &=
+      \mW^{(l)} \partial^2_{x_i,x_j} \vz^{(l-1)}  \quad \in \sR^{h^{(l)}}\,.
+  \end{align}
+\end{subequations}
+The propagation rule through a nonlinear element-wise activation layer $\vz^{(l-1)}\mapsto \sigma(\vz^{(l-1)})$ is
+\begin{subequations}\label{eq:taylor-forward-activation}
+  \begin{align}
     \vz^{(l)}
-    &
-    \partial_{\vx_1} \vz^{(l)}
-    &
-    \dots
-    &
-    \partial_{\vx_d} \vz^{(l)}
-    &
-    %\partial_i\partial_j
+    &=
+      \sigma(\vz^{(l-1)})\quad \in \sR^{h^{(l)}}\,,
+    \\
+    \partial_{x_i} \vz^{(l)}
+    &=
+      \sigma'(\vz^{(l-1)}) \odot \partial_{x_i} \vz^{(l-1)}\quad \in \sR^{h^{(l)}}\,,
+    \\
+    \label{subeq:secondOrderForward-nonlinearLayer}
+    \partial^2_{x_i,x_j} \vz^{(l)}
+    &=
+      \partial_{x_i} \vz^{(l-1)} \odot \sigma''(\vz^{(l-1)}) \odot \partial_{x_j} \vz^{(l-1)}
+      +
+      \sigma'(\vz^{(l-1)}) \odot \partial^2_{x_i,x_j} \vz^{(l-1)}\quad \in \sR^{h^{(l)}}\,.
+  \end{align}
+\end{subequations}
+
+\paragraph{Forward Laplacian} For differential operators of special structure, we can fuse the Taylor-mode forward propagation of individual directional derivatives in \Cref{eq:forward_pass,eq:taylor-forward-activation} and obtain a more efficient computation.
+E.g., to compute not the full Hessian but only the Laplacian, we can simplify the forward pass, which yields the \emph{forward Laplacian} framework of~\citet{li2023forward}.
+To the best of our knowledge, this connection has not been pointed out in the literature.
+Concretely, by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{subeq:secondOrderForward-nonlinearLayer} over $i=j$, we obtain the Laplacian forward pass for linear and activation layers
+\begin{subequations}\label{eq:forward-laplacian-main}
+  \begin{align}
+    \label{eq:forward_Laplacian_linear}
     \Delta_\vx\vz^{(l)}
-\end{pmatrix}\in \mathbb R^{(d+2)h^{(l)}}$.
-     with
-$\mZ^{(0)}=  \begin{pmatrix}
-    \vx
-    &
-    \ve_1
-    &
-    \dots
-    &
-    \ve_d
-    &
-    0
-\end{pmatrix}\in \mathbb R^{(d+2)d}$.
-Rearranging $\mZ^{(l)}$ as a matrix of shape $(d+2)\times h^{(l)}$ and yields $\mZ^{(l)} = \mZ^{(l-1)}{\mW^{(l)}}^\top$ for linear layers.
-\end{comment}
+    &=
+      \mW^{(l)}\Delta_\vx\vz^{(l-1)}
+      \quad \in \sR^{h^{(l)}}\,,
+    \\
+    \label{eq:forward_Laplacian_nonlinear}
+    \Delta_\vx\vz^{(l)}
+    &=
+      \sigma'(\vz^{(l-1)})\odot\Delta_\vx\vz^{(l-1)}
+      +
+      \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot (\partial_{x_i}{\vz^{(l-1)}})^{\odot 2}
+      \quad \in \sR^{h^{(l)}}\,.
+  \end{align}
+\end{subequations}
+This reduces computational cost, but is restricted to PDEs that involve second-order derivatives only via the Laplacian, or a partial Laplacian over a sub-set of input coordinates (e.g.\,heat equation, \Cref{sec:experiments}).
+\todo{Felix: I do not understand this notation. There seems to be a sum over coordinates $i,j$ missing here}
+For a more general second-order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}.
 
-\paragraph{Forward propagation for linear PDEs}
-A similar reduction of the complexity of the forward pass similar to the forward Laplacian can be achieved for other linear PDEs.
-Indeed, for a second order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, we obtain the forward pass $\mathcal L \vz^{(l)} = \mW^{(l)}\mathcal L \vz^{(l-1)}$ generalizing~\eqref{eq:forward_Laplacian_linear} for linear layers.
-Similarly, a generalization of~\eqref{eq:forward_Laplacian_nonlinear} can be given.
-%\todo{asdf}
-
+Importantly, the computation of higher-order derivatives for linear layers boils down to a forward pass through the layer with weight sharing over the different partial derivatives (\Cref{eq:forward_pass}), and weight sharing can potentially be reduced depending on the differential operator's structure (\Cref{eq:forward_Laplacian_linear}).
+Therefore, we can use the concept of KFAC in the presence of weight sharing to derive a principled Kronecker approximation.
 
 \subsection{A Kronecker-factored approximation for ENGD with the Laplace operator}\label{sec:KFAC-Laplace}
 Just like in the case of the classic KFAC algorithm, we only consider the diagonal blocks of the Gauss-Newton matrix, which for the Poisson equation, are given by
 \begin{align}
-    \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n \in\mathbb R^{{h^{(l-1)}}^2\times {h^{(l-1)}}^2}
+  \mG_\Omega(\mW^{(l)}) = \frac1{{N_\Omega}} \sum_{n=1}^{N_\Omega} \jac_{\mW^{(l)}} \Delta_\vx \vu_n^\top \jac_{\mW^{(l)}} \Delta_\vx \vu_n \in\mathbb R^{{h^{(l-1)}}^2\times {h^{(l-1)}}^2}
 \end{align}
 Just like in the case of the block Fisher matrices $\mF(\vtheta^{(l)})$ we use the chain rule and compute
 \begin{align*}
-    \jac_{\mW^{(l)}} \Delta_\vx \vu_n & = \jac_{\mZ^{(l)}}\Delta_\vx \vu_n \jac_{\mW^{(l)}} \mZ^{(l)} %=
-    %\jac_{\mW^{(l)}} \mZ^{(l)} \jac_{\mZ^{(l)}}\mZ^{(L)}\jac_{\mZ^{(L)}}\Delta_\vx \vu_n.
-    %\\ & =
-    %\operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \mI, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \mI\right) \jac_{\mZ^{(l)}}\Delta_\vx \vu_n
-    %\begin{pmatrix}
-    %    \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\
-    %    \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\
-    %    \vdots \\
-    %    \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\
-    %    \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\
-    %\end{pmatrix}^\top
-    %\begin{pmatrix}
-    %    {\vz^{(l-1)}_n}^\top \otimes \mI \\
-    %    {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\
-    %    \vdots \\
-    %    {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
-    %    {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
-    %\end{pmatrix}
-    %\\ &
-    %=
-    %\sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
-    %\\ &
+  \jac_{\mW^{(l)}} \Delta_\vx \vu_n & = \jac_{\mZ^{(l)}}\Delta_\vx \vu_n \jac_{\mW^{(l)}} \mZ^{(l)} %=
+  % \jac_{\mW^{(l)}} \mZ^{(l)} \jac_{\mZ^{(l)}}\mZ^{(L)}\jac_{\mZ^{(L)}}\Delta_\vx \vu_n.
+  % \\ & =
+  % \operatorname{diag}\left({\vz^{(l-1)}}^\top \otimes \mI, \dots, {\Delta_\vx\vz^{(l-1)}}^\top \otimes \mI\right) \jac_{\mZ^{(l)}}\Delta_\vx \vu_n
+  % \begin{pmatrix}
+      %       \nabla_{\vz^{(l)}} \Delta_{\vx}\vu_n \\
+  %   \nabla_{\partial_{\vx_1}\vz^{(l)}}\Delta_{\vx}\vu_n \\
+  %   \vdots \\
+  %   \nabla_{\partial_{\vx_d}\vz^{(l)}} \Delta_{\vx}\vu_n  \\
+  %   \nabla_{\Delta_{\vx}\vz^{(l)}} \Delta_{\vx}\vu_n \\
+  % \end{pmatrix}^\top
+  % \begin{pmatrix}
+  %   {\vz^{(l-1)}_n}^\top \otimes \mI \\
+  %   {\partial_{\vx_1}\vz^{(l-1)}_n}^\top \otimes \mI \\
+  %   \vdots \\
+  %   {\partial_{\vx_d}\vz^{(l-1)}_n}^\top \otimes \mI \\
+  %   {\Delta_{\vx}\vz^{(l-1)}_n}^\top \otimes \mI \\
+  % \end{pmatrix}
+  % \\ &
+  % =
+  % \sum_{s=1}^S (\nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n)^\top  ({\mZ^{(l-1)}_{n,s}}^\top \otimes \mI)?
+  % \\ &
     = \left(\sum_{s=1}^S \mZ^{(l-1)}_{n,s} \otimes \nabla_{\mZ^{(l)}_s} \Delta_{\vx}\vu_n\right)^\top,
     %{\vz^{(l-1)}_n}^\top \otimes \jac_{\vz^{(l)}} \Delta_{\vx}\vu_n
     %+
@@ -489,7 +407,7 @@ Like in ENGD, we use a logarithmic grid line search along
 leading to the update
 $\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where
 $\alpha_{\star} = \argmin_{\alpha} \gL(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
-KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}. 
+KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}.
 It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
 The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
 \begin{align}
@@ -512,7 +430,7 @@ The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are 
     \vdelta_t \nabla_{\vtheta_t} \gL
   \end{pmatrix}\,.
 \end{align}
-The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}. 
+The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}.
 
 %%% Local Variables:
 %%% mode: latex

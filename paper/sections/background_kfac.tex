@@ -1,6 +1,6 @@
 \subsection{Kronecker-factored Approximate Curvature}
 
-We review Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} in the context of maximum likelihood estimation to approximate the per-layer Fisher informationmatrix by a Kronecker product to speed up approximate natural gradient descent.
+We review Kronecker-factored Approximate Curvature (KFAC) which was introduced by~\citet{heskes2000natural, martens2015optimizing} in the context of maximum likelihood estimation to approximate the per-layer Fisher information matrix by a Kronecker product to speed up approximate natural gradient descent~\cite{amari1998natural}.
 The Fisher associated with the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u_\vtheta(\vx_n) - \vy_n \right\rVert_2^2$ is
 \begin{equation}\label{eq:fisher-mle}
   \mF(\vtheta)
@@ -20,21 +20,27 @@ where $u_n = u_\vtheta(\vx_n)$, and it coincides with the classical Gauss-Newton
 The established KFAC approximates \eqref{eq:fisher-mle}.
 While the boundary Gramian $\mG_{\partial\Omega}(\vtheta)$ has the same structure as $\mF(\vtheta)$, the interior Gramian $\mG_\Omega(\vtheta)$ does not as it involves derivative rather than function evaluations of the net.
 
-The first step within KFAC approximates the Fisher-information matrix $\mF$ block diagonal matrix with blocks corresponding to individual layers, i.e.\,$\mF(\vtheta) \approx \operatorname{diag}(\mF(\vtheta^{(1)}), \dots, \mF(\vtheta^{(L)}))$. Next, consider a block $\mF(\vtheta^{(l)})$ for a linear layer and examine $\jac_{\vtheta^{(l)}} u_{\vtheta}(\vx)$ for a fixed data point.
+KFAC tackles the Fisher's per-layer block diagonal, $\mF(\vtheta) \approx \operatorname{diag}(\mF^{(1)}(\vtheta), \dots, \mF^{(L)}(\vtheta))$ with $\mF^{(l)}(\vtheta) = \nicefrac{1}{N} \sum_{n=1}^N (\jac_{\vtheta^{(l)}} u_n)^{\top} \jac_{\vtheta^{(l)}} u_n \in \sR^{ p^{(l)} \times p^{(l)} }$.
+For a fully-connected layer's block, let's examine the term $\jac_{\vtheta^{(l)}} u_{\vtheta}(\vx)$ from \Cref{eq:fisher-mle} for a fixed data point.
 The layer parameters $\vtheta^{(l)} = \flatten \mW^{(l)}$ enter the computation via $\vz^{(l)} = \mW^{(l)}\vz^{(l-1)}$ and we have $\jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top \otimes \mI$ \citep[e.g.][]{dangel2020modular}.
-The chain rule gives
-$\jac_{\mW^{(l)}} u = \jac_{\vz^{(l)}}  u \jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top\otimes  \jac_{\vz^{(l)}}  u$.
-Inserting into \Cref{eq:fisher-mle}, summing over the data points, and using the expectation approximation $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ from \citet{martens2015optimizing}, we obtain
+Further, the chain rule gives the decomposition $\jac_{\mW^{(l)}} u = (\jac_{\vz^{(l)}} u) \jac_{\mW^{(l)}} \vz^{(l)} = {\vz^{(l-1)}}^\top\otimes \jac_{\vz^{(l)}} u$.
+Inserting into $\mF^{(l)}(\vtheta)$, summing over data points, and using the expectation approximation $\sum_n \mA_n \otimes \mB_n \approx N^{-1}(\sum_n \mA_n) \otimes (\sum_n \mB_n)$ from \citet{martens2015optimizing}, we obtain the KFAC approximation for linear layers in supervised square loss regression with a network's output,
 \begin{equation}\label{eq:kfac-linear}
-  \mF(\mW^{(l)})
+  \mF^{(l)}(\vtheta)
   \approx
-  \frac{1}{N}
-  \left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)\otimes \left(\sum_{n=1}^N
-    {\jac_{\vz^{(l)}}  \vu_n}^\top
-    \jac_{\vz^{(l)}}  \vu_n
-  \right) \quad \in \sR^{ p^{(l)} \times p^{(l)} },
+  \underbrace{
+    \frac{1}{N}
+    \left(\sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top \right)
+  }_{\eqqcolon \mA^{(l)} \in \sR^{h^{(l-1)} \times h^{(l-1)}}}
+  \otimes
+  \underbrace{
+    \left(\sum_{n=1}^N
+      \left(\jac_{\vz^{(l)}}  u_n \right)^\top
+      \jac_{\vz^{(l)}}  u_n
+    \right)
+  }_{\eqqcolon \mB^{(l)} \in \sR^{h^{(l)} \times h^{(l)} }}\,.
 \end{equation}
-with $p^{(l)} = h^{(l-1)} h^{(l)}$. \Cref{eq:kfac-linear} is cheap to store and invert, requiring inversion of the two Kronecker factors of size $h^{(l-1)} \times h^{(l-1)}$ and $h^{(l)} \times h^{(l)}$.
+It is cheap to store and invert by inverting the two Kronecker factors.
 
 %%% Local Variables:
 %%% mode: latex
