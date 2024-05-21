@@ -78,10 +78,7 @@ Concretely, by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{s
   \end{align}
 \end{subequations}
 This reduces computational cost, but is restricted to PDEs that involve second-order derivatives only via the Laplacian, or a partial Laplacian over a sub-set of input coordinates (e.g.\,heat equation, \Cref{sec:experiments}).
-\todo{Felix: I do not understand this notation.
-  There seems to be a sum over coordinates $i,j$ missing here.
-  Maybe $\sum_{i,j=1}^d c_{i,j} \partial^2_{\evx_i, \evx_j}$?}
-For a more general second-order linear PDE operator $\mathcal L = \sum_{\lvert \alpha \rvert=2}c_\alpha \partial^\alpha_\vx$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}.
+For a more general second-order linear PDE operator $\sum_{i,j=1}^d c_{i,j} \partial^2_{\evx_i,\evx_j}$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}.
 This is similar to \cite{li2024dof}, which transforms the input space using an eigen-decomposition of $c_{i,j}$ to a basis where it is diagonal with entries $\{0, \pm 1\}$, reducing the computation to two standard forward Laplacians.
 
 Importantly, the computation of higher-order derivatives for linear layers boils down to a forward pass through the layer with weight sharing over the different partial derivatives (\Cref{eq:forward_pass}), and weight sharing can potentially be reduced depending on the differential operator's structure (\Cref{eq:forward_Laplacian_linear}).
@@ -280,7 +277,7 @@ and $v_\vtheta$ is a forward network with shared weights.
 %    \hat{\mG}(\mW^{(l)}) \coloneqq \left(\sum_{n=1}^N \left( \sum_{s=1}^S \vz^{(l)}_{n,s} \right) \left(\sum_{s=1}^S {\vz^{(l)}_{n,s}}^\top\right)\right)\otimes\left(\sum_{n=1}^N\left(\sum_{s=1}^S \vg^{(l)}_{n,s} \right) \mH(\vtheta, \vx_n) \left( \sum_{s=1}^S {\vg^{(l)}_{n,s}}^\top \right) \right)?
 %\end{align}
 
-Note that the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives
+Using common multi-index notation, the forward pass in~\eqref{eq:forward_pass} extends to higher-order partial derivatives
 \begin{align}
     \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)}
 \end{align}
