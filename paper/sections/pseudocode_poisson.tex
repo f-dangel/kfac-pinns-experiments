@@ -1,74 +1,79 @@
-\begin{figure}
+\begin{algorithm}[!h]
   \centering
-\begin{algorithmic}
-  \Require \\
-  Neural network $u_{\vtheta}$ with parameters $\vtheta = (\mW^{(1)}, \vb^{(1)}, \dots, \mW^{(L)}, \vb^{(L)}) $, \\
-  interior data $\{(\vx^{\Omega}_n, \vy^{\Omega}_n) \}_{n=1}^{N_{\Omega}}$, \\
-  boundary data $\{(\vx^{\partial\Omega}_n, \vy^{\partial\Omega}_n) \}_{n=1}^{N_{\partial\Omega}}$ \\
-  exponential moving average $\beta$, momentum $\mu$, Damping $\delta$
+  \begin{small}
+    \begin{algorithmic}
+      \Require \\
+      MLP $u_{\vtheta}$ with parameters $\vtheta_0 = (\vtheta_0^{(1)}, \dots, \vtheta_0^{(L)}) = (\flatten \mW_0^{(1)}, \dots, \flatten \mW_0^{(L)}) $, \\
+      interior data $\{(\vx_n, y_n) \}_{n=1}^{N_{\Omega}}$, \\
+      boundary data $\{(\vx^{\text{b}}_n, y^{\text{b}}_n) \}_{n=1}^{N_{\partial\Omega}}$ \\
+      exponential moving average $\beta$, momentum $\mu$, Damping $\lambda$, number of steps $T$
 
-  \\
-  \State \textbf{0) Initialization}
-  \For {$l=1, \dots, L$}
-  \State $\vtheta^{(l)} = \mathrm{vec}( \mW^{(l)}, \vb^{(l)})$ \Comment Combine and flatten layer parameters
-  \State $\mA_{\Omega}^{(l)}, \mB_{\Omega}^{(l)}, \mA_{\partial\Omega}^{(l)}, \mB_{\partial\Omega}^{(l)} \gets \vzero \text{ or } \mI$ \Comment Initialize Kronecker factors
-  \EndFor
-  \\
-  \For {$t = 0, \dots, T-1$}
-  \\
-  \State \textbf{1) Compute the interior loss and update its approximate curvature}
-  \State $(\mZ_n^{(0)}\dots, \mZ_n^{(L)}, \Delta u_n) \gets \Delta u_{\vtheta}(\vx_n^{\Omega})\quad n=1, \dots, N_{\Omega}$  \Comment Forward Laplacian w/ intermediates
+      \\
+      \State \textbf{0) Initialization}
+      \For {$l=1, \dots, L$}
+        \State $\mA_{\Omega}^{(l)}, \mB_{\Omega}^{(l)}, \mA_{\partial\Omega}^{(l)}, \mB_{\partial\Omega}^{(l)} \gets \vzero \text{ or } \mI$ \Comment Initialize Kronecker factors
+      \EndFor
+      \\
+      \For {$t = 0, \dots, T-1$}
+        \\
+        \State \textbf{1) Compute the interior loss and update its approximate curvature}
+        \State $(\mZ_n^{(0)}\dots, \mZ_n^{(L)}, \Delta u_n) \gets \Delta u_{\vtheta_t}(\vx_n)\quad n=1, \dots, N_{\Omega}$  \Comment Forward Laplacian wit intermediates
 
-  \State $(\partial\mZ_n^{(1)}\dots, \partial\mZ_n^{(L)}) \gets \partial \Delta u_{\vtheta}(\vx_n^{\Omega})\quad n=1, \dots, N_{\Omega}$ \Comment Layer output gradients w/ autodiff
+        \State Compute layer output gradients $\vg^{(l)}_{n,s} \coloneqq \nicefrac{\partial \Delta u_n}{\partial\mZ_{n,s}^{(l)}}$ with autodiff in one backward pass
+        \State $(\vg_{n,s}^{(1)}, \dots, \vg_{n,s}^{(L)}) \gets \texttt{grad}(\Delta u_n, (\mZ_{n,s}^{(1)}, \dots, \mZ_{n,s}^{(L)}))\quad n=1, \dots, N_{\Omega}$, \quad $s = 1, \dots, S \coloneqq d+2$
 
-  \ForAll{$l=1, \dots, L$} \Comment Update Kronecker factors of the interior loss
-  \State $\mA_{\Omega}^{(l)} \gets \beta \mA_{\Omega}^{(l)} + (1-\beta) \frac1{N_{\Omega}} \sum_{n=1}^{N_{\Omega}} \mZ_n^{(l-1)} \mZ_n^{(l-1)\top}$
+        \ForAll{$l=1, \dots, L$} \Comment Update Kronecker factors of the interior loss
+          \State $\hat{\mA}_{\Omega}^{(l)} \gets \beta \hat{\mA}_{\Omega}^{(l)} + (1-\beta) \frac1{N_{\Omega} S} \sum_{n=1}^{N_{\Omega}} \mZ_{n,s}^{(l-1)} \mZ_{n,s}^{(l-1)\top}$
 
-  \State $\mB_{\Omega}^{(l)} \gets \beta \mB_{\Omega}^{(l)} + (1-\beta) \frac1{N_{\Omega}} \sum_{n=1}^{N_{\Omega}} \partial\mZ_n^{(l)} \partial\mZ_n^{(l)\top}$
-  \EndFor
+          \State $\hat{\mB}_{\Omega}^{(l)} \gets \beta \hat{\mB}_{\Omega}^{(l)} + (1-\beta) \frac1{N_{\Omega}} \sum_{n=1}^{N_{\Omega}} \vg^{(l)}_{n,s} \vg^{(l)\top}_{n,s}$
+        \EndFor
 
-  \State $\mL_{\Omega}(\vtheta) \gets \frac{1}{2 N_{\Omega}}\sum_{n=1}^{N_{\Omega}} (\Delta u_n - y_n^{\Omega})^2$ \Comment Compute interior loss
+        \State $L_{\Omega}(\vtheta_t) \gets \frac{1}{2 N_{\Omega}}\sum_{n=1}^{N_{\Omega}} (\Delta u_n - y_n)^2$ \Comment Compute interior loss
 
-  \\
-  \State \textbf{2) Compute the boundary loss and update its approximate curvature}
-  \State $(\vz_n^{(0)}\dots, \vz_n^{(L)}, u_n) \gets u_{\vtheta}(\vx_n^{\partial\Omega})\quad n=1, \dots, N_{\partial\Omega}$ \Comment Forward pass w/ intermediates
+        \\
+        \State \textbf{2) Compute the boundary loss and update its approximate curvature}
+        \State $(\vz_n^{(0)}\dots, \vz_n^{(L)}, u_n) \gets u_{\vtheta_t}(\vx_n^{\text{b}})\quad n=1, \dots, N_{\partial\Omega}$ \Comment Forward pass with intermediates
+        \State Compute layer output gradients $\vg_n^{(l)} \coloneqq \nicefrac{\partial u_n}{\vz^{(l)}_n}$ with autodiff in one backward pass
+        \State $(\vg_n^{(1)}\dots, \partial\vg_n^{(L)}) \gets \texttt{grad}(u_n, (\vz_n^{(0)}\dots, \vz_n^{(L)}))\quad n=1, \dots, N_{\partial\Omega}$
 
-  \State $(\partial\vz_n^{(1)}\dots, \partial\vz_n^{(L)}) \gets \partial u_{\vtheta}(\vx_n^{\partial\Omega})\quad n=1, \dots, N_{\partial\Omega}$ \Comment Layer output gradients w/ autodiff
+        \ForAll{$l=1, \dots, L$} \Comment Update Kronecker factors of the boundary loss
+          \State $\hat{\mA}_{\partial\Omega}^{(l)} \gets \beta \hat{\mA}_{\partial\Omega}^{(l)} + (1-\beta) \frac1{N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}} \vz_n^{(l-1)} \vz_n^{(l-1)\top}$
 
-  \ForAll{$l=1, \dots, L$} \Comment Update Kronecker factors of the boundary loss
-  \State $\mA_{\partial\Omega}^{(l)} \gets \beta \mA_{\partial\Omega}^{(l)} + (1-\beta) \frac1{N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}} \vz_n^{(l-1)} \vz_n^{(l-1)\top}$ \Comment Augment $\vz_n$ with 1 for the bias
+          \State $\hat{\mB}_{\partial\Omega}^{(l)} \gets \beta \hat{\mB}_{\partial\Omega}^{(l)} + (1-\beta) \frac1{N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}} \vg_n^{(l)} \vg_n^{(l)\top}$
+        \EndFor
 
-  \State $\mB_{\partial\Omega}^{(l)} \gets \beta \mB_{\partial\Omega}^{(l)} + (1-\beta) \frac1{N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}} \partial\vz_n^{(l)} \partial\vz_n^{(l)\top}$
-  \EndFor
+        \State $L_{\partial\Omega}(\vtheta_t) \gets \frac{1}{2 N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} (u_n - y^{\text{b}}_n)^2$ \Comment Compute boundary loss
 
-  \State $\mL_{\partial\Omega}(\vtheta) \gets \frac{1}{2 N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} (u_n - y^{\partial \Omega}_n)^2$ \Comment Compute boundary loss
+        \\
+        \State \textbf{3) Update the preconditioner (use inverse of Kronecker sum trick)}
+        \ForAll{$l=1, \dots, L$}
+          \State $ \mC^{(l)} \gets \left[(\hat{\mA}_{\Omega}^{(l)} + \lambda \mI) \otimes (\hat{\mB}_{\Omega}^{(l)} + \lambda \mI) + (\hat{\mA}_{\partial\Omega}^{(l)} + \lambda \mI) \otimes (\hat{\mB}_{\partial\Omega}^{(l)} + \lambda \mI)  \right]^{-1}$
+        \EndFor
 
-  \\
-  \State \textbf{3) Update the preconditioner (use inverse of Kronecker sum relation)}
-  \State $ {\mC^{(l)}}^{-1} \gets \left[(\mA_{\Omega}^{(l)} + \delta \mI) \otimes (\mB_{\Omega}^{(l)} + \delta \mI) + (\mA_{\partial\Omega}^{(l)} + \delta \mI) \otimes (\mB_{\partial\Omega}^{(l)} + \delta \mI)  \right]^{-1}$
+        \\
+        \State \textbf{4) Compute the gradient using autodiff, pre-condition the gradient}
+        \State $(\vg^{(1)}, \dots, \vg^{(L)}) \gets \texttt{grad}( L_{\Omega}(\vtheta_t) + L_{\partial\Omega}(\vtheta_t), (\vtheta_t^{(1)}, \dots, \vtheta^{(L)}_t ))$ \Comment Gradient with autodiff
 
-  \\
-  \State \textbf{4) Compute the gradient using autodiff, pre-condition the gradient}
-  \State $(\vg^{(1)}, \dots, \vg^{(L)}) \gets \partial_{\vtheta} ( \gL_{\Omega}(\vtheta) + \gL_{\partial\Omega}(\vtheta))$ \Comment Gradient w/ autodiff
+        \ForAll{$l=1, \dots, L$}
+          \Comment Pre-condition gradient
+          \State $\vDelta_t \gets - \mC^{(l)} \vg^{(l)}$ \Comment Proposed update direction
+          \State $\hat{\vdelta}_t^{(l)} \gets \mu \vdelta_{t-1}^{(l)} + \vDelta_t^{(l)} \text{ if $t>0$ else } \vDelta_t^{(l)}$ \Comment Add momentum from previous update
+        \EndFor
 
-  \ForAll{$l=1, \dots, L$}
-  \Comment Pre-condition gradient using damping
-  \State $\vg^{(l)} \gets  \vg^{(l)}$
+        \\
+        \State \textbf{5) Given the direction $\hat{\vdelta}_t^{(1)}, \dots, \hat{\vdelta}_t^{(L)}$, choose learning rate $\alpha$ by line search \& update}
+        \For {$l=1, \dots, L$} \Comment Parameter update
+          \State $\vdelta_t^{(l)} \gets \alpha \hat{\vdelta}_t^{(l)}$
+          \State $\vtheta^{(l)}_{t+1} \gets \vtheta^{(l)}_t + \alpha \vdelta_t^{(l)}$
+        \EndFor
+      \EndFor
 
-  \State $\vm^{(l)} \gets \mu \vm^{(l)} + \vg^{(l)} \text{ if $t=0$ else } \vg^{(l)}$ \Comment Add momentum
-  \State $\vd^{(l)} \gets \vm^{(l)}$
-  \EndFor
-
-  \\
-  \State \textbf{5) Given the direction $-\vd^{(1)}, \dots, -\vd^{(L)}$, choose learning rate $\alpha$ by line search \& update}
-  \For {$l=1, \dots, L$} \Comment Parameter update
-  \State $\vtheta^{(l)} \gets \vtheta^{(l)} - \alpha \vd^{(l)}$
-  \EndFor
-  \EndFor
-\end{algorithmic}
-\caption{KFAC for the Poisson equation.
-  For simplicity, we omitted additional logic to update the Kronecker factors and the preconditioner less frequently, and the augmentation of the intermediates to account for the bias.}
-\end{figure}
+      \\
+      \State \Return Trained parameters $\vtheta_T$
+    \end{algorithmic}
+  \end{small}
+    \caption{KFAC for the Poisson equation.}
+\end{algorithm}
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
