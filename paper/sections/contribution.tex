@@ -137,11 +137,13 @@ This drops all terms with $s\neq s'$, then applies the expectation approximation
 \subsection{KFAC for Generalized Gauss-Newton Matrices Involving General PDE Terms} \label{sec:KFAC-general}
 To generalize the previous section, let's consider the general $M$-dimensional PDE system of order $k$,
 \begin{equation}\label{eq:general-pde-system}
-  \Psi(u, \partial_{\vx} u, \dots, \partial^k_{\vx} u) = \vzero \in \sR^M.
+  \Psi(u, D_{\vx} u, \dots, D^k_{\vx} u) = \vzero \in \sR^M,
 \end{equation}
-An order $\alpha \in \{0, \dots, k\}$ has $S_{\alpha} = \binom{d + k - 1}{d - 1}$ independent partial derivatives and the total number of independent derivatives is $S \coloneqq \sum_{\alpha=0}^k S_{\alpha} = \binom{d + k}{k}$.
+where $D^m_\vx% = (\partial_\vx^\alpha u)_{\lvert \alpha \rvert = l}
+$ collects all partial derivatives of order $m$. 
+For $m\in \{0, \dots, k\}$ there are $S_m = \binom{d + m - 1}{d - 1}$ independent partial derivatives and the total number of independent derivatives is $S \coloneqq \sum_{m=0}^k S_{m} = \binom{d + k}{k}$. 
 $\Psi$ is a smooth mapping from all partial derivatives to $\sR^M$, $\Psi\colon \mathbb \sR^S\to\mathbb \sR^M$.
-To construct a PINN loss for \Cref{eq:general-pde-system}, we feed the residual $\vr_{\Omega, n}(\vtheta) \coloneqq \Psi(u_{\vtheta}(\vx_n), \partial_{\vx} u_{\vtheta}(\vx_n), \dots, \partial^k_{\vx} u_{\vtheta}(\vx_n)) \in \sR^M$ where $\partial^{\alpha}_{\vx} u_{\vtheta}(\vx_n) \in \sR^{d \times S_{\alpha}}$, into a smooth convex criterion function $\ell\colon \sR^M \to \sR$,
+To construct a PINN loss for \Cref{eq:general-pde-system}, we feed the residual $\vr_{\Omega, n}(\vtheta) \coloneqq \Psi(u_{\vtheta}(\vx_n), D_{\vx} u_{\vtheta}(\vx_n), \dots, D^k_{\vx} u_{\vtheta}(\vx_n)) \in \sR^M$ where $D^{m}_{\vx} u_{\vtheta}(\vx_n) \in \sR^{d \times S_{m}}$, into a smooth convex criterion function $\ell\colon \sR^M \to \sR$,
 \begin{equation}
   L_{\Omega}(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(\vr_{\Omega,n}(\vtheta))\,.
 \end{equation}
@@ -159,12 +161,11 @@ where $\mLambda(\vr) \coloneqq \nabla^2_{\vr} \ell(\vr) \in \sR^{M\times M} \suc
 
 Generalizing the second-order Taylor-mode from \Cref{sec:taylor-mode-AD} to higher orders for the linear layer, we find
 \begin{align}
-  \partial_\vx^\alpha \vz^{(l)} = \mW^{(l)}\partial_\vx^\alpha \vz^{(l-1)}
-  \qquad \in \sR^{h^{(l)} \times S_{\alpha}}
+  D_\vx^m \vz^{(l)} = \mW^{(l)}D_\vx^m \vz^{(l-1)}
+  \qquad \in \sR^{h^{(l)} \times S_{m}}.
 \end{align}
-for arbitrary $\alpha$.
 Hence, we can derive a forward propagation for the required derivatives in which linear layers process at most $S$ vectors\footnote{Depending on the linear operator, one may reduce weight sharing, as demonstrated for the Laplacian in \Cref{sec:taylor-mode-AD}.}, i.e.
-the linear layer's weight is shared over the matrices $\partial^{0}_\vx \vz^{(l-1)} \coloneqq \vz^{(l-1)}, \partial_\vx^1 \vz^{(l-1)}, \dots, \partial_\vx^k \vz^{(l-1)}$. Stacking them into a matrix $\mZ^{(l-1)}_n = (\vz^{(l-1)}, \partial_\vx^1 \vz^{(l-1)}, \dots, \partial_\vx^k \vz^{(l-1)} ) \in \sR^{h^{(l-1)} \times S}$, we can use the chain rule to obtain
+the linear layer's weight is shared over the matrices $D^{0}_\vx \vz^{(l-1)} \coloneqq \vz^{(l-1)}, D_\vx^1 \vz^{(l-1)}, \dots, D_\vx^k \vz^{(l-1)}$. Stacking them into a matrix $\mZ^{(l-1)}_n = (\vz^{(l-1)}, D_\vx^1 \vz^{(l-1)}, \dots, D_\vx^k \vz^{(l-1)} ) \in \sR^{h^{(l-1)} \times S}$, we can use the chain rule to obtain
 \begin{align}
   \begin{split}
     \mG^{(l)}_{\Omega}(\vtheta)

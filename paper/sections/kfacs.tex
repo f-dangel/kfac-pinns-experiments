@@ -98,9 +98,9 @@ which gives the approximation
 Here, we provide the derivation of the general Kronecker-factored approximation of the Gauss-Newton matrix.
 Recall that we consider the general PDE
 \begin{equation}
-    \Psi(u, \partial u, \dots, \partial^{(k)} u) = 0,
+    \Psi(u, D u, \dots, D^{(k)} u) = 0,
 \end{equation}
-where $\Psi\colon \mathbb R^{K}\to\mathbb R^M, K=\binom{d+k}{d}$ is some smooth function.
+where $\Psi\colon \mathbb R^{S}\to\mathbb R^M, S=\binom{d+k}{d}$ is some smooth function.
 By $r_\vtheta(\vx)\coloneqq \Psi(u(\vx), \partial u(\vx), \dots, \partial^{(k)} u(\vx))$ we denote the residual and consider the PINN loss
 \begin{equation}
     L(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(r_{\vtheta}(\vx_n)),
