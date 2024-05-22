@@ -1,6 +1,3 @@
-
-
-
 \subsection{Hyper-Parameter Tuning Protocol}\label{sec:tuning-protocol}
 
 In all our experiments, we tune the following optimizer hyper-parameters and otherwise use the PyTorch default values:
@@ -20,7 +17,7 @@ First, we choose a relatively wide search space and limit to approximately 50 ru
 In a second round, we narrow down the hyper-parameter space based on the first round, then re-run for another approximately 50 runs.
 We will release the details of all hyper-parameter search spaces, as well as the hyper-parameters for the best runs in our implementation.
 
-\subsection{2d Poisson Equation}
+\subsection{2d Poisson Equation}\label{sec:2d-poisson-appendix}
 
 \paragraph{Setup} We consider a two-dimensional Poisson equation $-\Delta u(x, y) = 2 \pi^2 \sin(\pi x) \sin(\pi y)$ on the unit square $(x,y) \in [0, 1]^2$ with sine product right-hand side and zero boundary conditions $u(x, y) = 0$ for $(x,y) \in \partial [0,1]^2$.
 We choose a single set of training points with $N_{\Omega} = 900, N_{\partial\Omega} = 120$.
