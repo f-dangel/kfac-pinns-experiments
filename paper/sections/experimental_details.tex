@@ -654,7 +654,7 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
 \subsection{4+1d Heat Equation with Bayesian Search}\label{sec:4d-heat-bayes-app}
 
 \paragraph{Setup} We consider the same heat equation as in \Cref{sec:4d-heat-app} and use the $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$.
-We tune all optimizer hyper-parameters as described in \Cref{sec:tuning-protocol} and also tune the batch sizes $N_{\omega}, N_{\partial \Omega}$, as well as their re-sampling frequencies.
+We tune all optimizer hyper-parameters as described in \Cref{sec:tuning-protocol} and also tune the batch sizes $N_{\Omega}, N_{\partial \Omega}$, as well as their re-sampling frequencies.
 \Cref{fig:heat4d-bayes-appendix} summarizes the results.
 
 \begin{figure}[!h]
