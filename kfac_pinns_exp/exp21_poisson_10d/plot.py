@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
+from kfac_pinns_exp.train import set_up_layers
 from kfac_pinns_exp.wandb_utils import (
     WandbRunFormatter,
     WandbSweepFormatter,
@@ -19,8 +20,17 @@ from kfac_pinns_exp.wandb_utils import (
 entity = "kfac-pinns"  # team name on wandb
 project = "weinan_10d"  # name from the 'Projects' tab on wandb
 
+architecture = "mlp-tanh-256-256-128-128"
+equation = "poisson"
+dim_Omega = 10
+num_params = sum(
+    p.numel()
+    for layer in set_up_layers(architecture, equation, dim_Omega)
+    for p in layer.parameters()
+)
+
 # Useful to map sweep ids to human-readable names
-print_sweeps = True
+print_sweeps = False
 if print_sweeps:
     show_sweeps(entity, project)
 
@@ -29,50 +39,27 @@ sweep_ids = {  # ids from the wandb agent
     "18r81s6z": "Adam",
     "wjhqq1wa": "Hessian-free",
     "ompmktje": "LBFGS",
-    # "5yfh1ilf": "ENGD (full)",
-    # "6wxk3pta": "ENGD (layer-wise)",
-    # "snsxq4fz": "ENGD (diagonal)",
-    # KFACs with grid line search and tuned momentum
     "fi2f9jrb": "KFAC",
-    # "pfblf1lh": "KFAC (empirical)",
-    # "2pnrmkzz": "KFAC (forward-only)",
-    # auto-tuned KFACs
     "qxwjmqrk": "KFAC*",
-    # "w4zzbov1": "KFAC* (empirical)",
-    # "i9519uxl": "KFAC* (forward-only)",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
 colors = {
     "SGD": sequential.Reds_4.mpl_colors[-2],
     "Adam": sequential.Reds_4.mpl_colors[-1],
-    # "ENGD (full)": sequential.Blues_5.mpl_colors[-3],
-    # "ENGD (layer-wise)": sequential.Blues_5.mpl_colors[-2],
-    # "ENGD (diagonal)": sequential.Blues_5.mpl_colors[-1],
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    # "KFAC (empirical)": "gray",
-    # "KFAC (forward-only)": "lightgray",
     "KFAC*": "black",
-    # "KFAC* (empirical)": "gray",
-    # "KFAC* (forward-only)": "lightgray",
 }
 
 linestyles = {
     "SGD": "-",
     "Adam": "-",
-    # "ENGD (full)": "-",
-    # "ENGD (layer-wise)": "-",
-    # "ENGD (diagonal)": "-",
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    # "KFAC (empirical)": "-",
-    # "KFAC (forward-only)": "-",
     "KFAC*": "dashed",
-    # "KFAC* (empirical)": "dashed",
-    # "KFAC* (forward-only)": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
@@ -102,18 +89,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
 
     for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
         with plt.rc_context(
-            bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+            bundles.neurips2023(rel_width=0.5, usetex=not args.disable_tex)
         ):
             fig, ax = plt.subplots(1, 1)
             ax.set_xlabel(xlabel)
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("10d Poisson")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
@@ -137,7 +123,9 @@ if __name__ == "__main__":
                     linestyle=linestyles[label],
                 )
 
-            ax.legend()
+            if x == "time" and y == "l2_error":
+                ax.legend()
+
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
 
     # export run descriptions to LaTeX

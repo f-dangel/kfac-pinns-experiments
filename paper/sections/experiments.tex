@@ -98,8 +98,8 @@ To demonstrate scaling to high-dimensional PDEs and even larger neural networks,
 using the same architectures as before, but with larger intermediate widths and parameters up to a million (\Cref{fig:10D-Poisson}).
 Due to lacking references for training such high-dimensional problems, we select all hyper-parameters via Bayesian search, including batch sizes and batch sampling frequencies (all details in \Cref{sec:high-dimensional-poissons-app}).
 We see a similar picture as before with KFAC consistently outperforming first-order methods and offering competitive performance among second-order methods.
-To account for the possibility that the Bayesian search did not converge properly to the best hyper-parameters, we conduct a random/grid search experiment for the 10d Poisson equation (\Cref{fig:10D-Poisson}, middle) in \Cref{sec:poisson10d-appendix}, using the same batch sizes and batch sampling frequencies as for the $(4+1)$d heat equation. In this experiment, KFAC further improved and achieved the same final performance as Hessian-free, see
-\Cref{TODO}.
+To account for the possibility that the Bayesian search did not converge properly to the best hyper-parameters, we conduct a random/grid search experiment for the 10d Poisson equation (\Cref{fig:10D-Poisson}, middle), using similar batch sizes and same batch sampling frequencies as for the $(4+1)$d heat equation (all details in \Cref{sec:poisson10d-appendix}).
+In this experiment, KFAC also achieved similar performance than Hessian-free and outperformed SGD, Adam, and L-BFGS (\Cref{fig:poisson_10d-appendix}).
 
 %%% Local Variables:
 %%% mode: latex

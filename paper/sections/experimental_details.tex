@@ -252,6 +252,53 @@ The runs shown in \Cref{fig:poisson5d-appendix} correspond to the following hype
 
 \subsection{10d Poisson Equation}\label{sec:poisson10d-appendix}
 
+\paragraph{Setup} We consider a 10-dimensional Poisson equation $-\Delta u(\vx) = 0$ on the 10-dimensional unit square $\vx \in [0, 1]^5$ with zero right-hand side and harmonic mixed second order polynomial boundary conditions $u(\vx) = \sum_{i=1}^{\nicefrac{d}{2}} \evx_{2i-1} \evx_{2i}$ for $\vx \in \partial [0,1]^d$.
+We sample training batches of size $N_{\Omega} = \num{3000}, N_{\partial\Omega} = 1000$ and evaluate the $L_2$ error on a separate set of $\num{30000}$ data points using the known solution $u^{\star}(\vx) = \sum_{i=1}^{\nicefrac{d}{2}} \evx_{2i-1} \evx_{2i}$.
+All optimizers except for KFAC sample a new training batch each iteration.
+KFAC only re-samples every 100 iterations because we noticed significant improvement with multiple iterations on a fixed batch.
+Each run is limited to $\num{6000}\,\text{s}$.
+We use a $10 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{118145}$ MLP whose linear layers are Tanh-activated except for the final one.
+\Cref{fig:poisson_10d-appendix} visualizes the results.
+
+\begin{figure}[!h]
+  \centering
+  \def\pathToFigs{../kfac_pinns_exp/exp21_poisson_10d}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:poisson_10d-time}
+    \includegraphics{\pathToFigs/l2_error_over_time.pdf}
+    \includegraphics{\pathToFigs/loss_over_time.pdf}
+  \end{subfigure}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:poisson_10d-step}
+    \includegraphics{\pathToFigs/l2_error_over_step.pdf}
+    \includegraphics{\pathToFigs/loss_over_step.pdf}
+  \end{subfigure}
+  \caption{Training loss and evaluation $L_2$ error for learning the solution to a 10d Poisson equation over (\subref{subfig:poisson_10d-time}) time and (\subref{subfig:poisson_10d-step}) steps.}\label{fig:poisson_10d-appendix}
+\end{figure}
+
+\paragraph{Best run details}
+The runs shown in \Cref{fig:poisson_10d-appendix} correspond to the following hyper-parameters:
+\begin{itemize}
+  \def\pathToRuns{../kfac_pinns_exp/exp21_poisson_10d/tex/}
+\item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+\item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+\item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+\item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+\item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+\item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+\end{itemize}
+
+\paragraph{Search space details} The runs shown in \Cref{fig:poisson_10d-appendix} were determined to be the best via a Bayesian search on the following search spaces which each optimizer given approximately the same total computational time ($\mathcal{C}$ denotes a categorical, $\mathcal{U}$ a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+\begin{itemize}
+  \def\pathToRuns{../kfac_pinns_exp/exp21_poisson_10d/tex/}
+\item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+\item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+\item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+\item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+\item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+\item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+\end{itemize}
+
 \subsection{5/10/100-d Poisson Equations with Bayesian Search}\label{sec:high-dimensional-poissons-app}
 
 \paragraph{Setup} Here, we consider three Poisson equations $- \Delta u(\vx) = f(\vx)$ with different right-hand sides and boundary conditions on the unit square $\vx \in [0, 1]^d$:
