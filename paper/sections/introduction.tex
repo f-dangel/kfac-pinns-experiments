@@ -9,9 +9,9 @@ To address this, we build on the idea of Kronecker-factored approximate curvatur
 \item We use higher-order forward (Taylor) mode automatic differentiation to interpret the computation graph of a network's input derivatives as a larger net with weight sharing (\Cref{sec:taylor-mode-AD}).
 
 \item We use this weight sharing view to propose KFAC for Gauss-Newton matrices of objectives with differential operators, like PINN losses (\Cref{sec:KFAC-general,eq:KFAC-PINNs-general}).
-  Thanks to the generality of Taylor mode and KFAC for weight sharing layers~\cite{eschenhagen2023kroneckerfactored}, our approach is widely applicable.
+  Thanks to the generality of Taylor-mode and KFAC for weight sharing layers~\cite{eschenhagen2023kroneckerfactored}, our approach is widely applicable.
 
-\item We show that, for specific differential operators, the weight sharing in Taylor mode can be further reduced by absorbing the reduction of partial derivatives into the forward propagation, producing a more efficient scheme.
+\item We show that, for specific differential operators, the weight sharing in Taylor-mode can be further reduced by absorbing the reduction of partial derivatives into the forward propagation, producing a more efficient scheme.
   For the prominent example of the Laplace operator, this recovers and generalizes the \emph{forward Laplacian} framework~\cite{li2023forward} (\Cref{sec:KFAC-Laplace,eq:KFAC-PINN}).
 
 \item Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods and LBFGS (\Cref{sec:experiments}).
@@ -30,7 +30,7 @@ We build on the literature on Kronecker-factored approximate curvature (KFAC), w
 Later, KFAC was extended to convolutional~\citep{grosse2016kroneckerfactored}, recurrent~\citep{martens2018kroneckerfactored}, attention~\citep{pauloski2021kaisa,osawa2023pipefisher,grosse2023studying}, and recently to general linear layers with weight sharing~\cite{eschenhagen2023kroneckerfactored}.
 These works do not address preconditioners for loss functions with contributions from differential operators, as is the case for PINN losses.
 Kronecker-factored approximations have been used for variational Monte-Carlo methods, where despite the objective function involving a Laplacian term, the preconditioner does not~\citep{pfau2020ab,drissi2024second}.
-Our interpretation via Taylor mode makes the computation graph of such losses explicit, and allows us to establish KFAC based on its generalization to linear weight sharing layers~\cite{eschenhagen2023kroneckerfactored}.
+Our interpretation via Taylor-mode makes the computation graph of such losses explicit, and allows us to establish KFAC based on its generalization to linear weight sharing layers~\cite{eschenhagen2023kroneckerfactored}.
 
 %%% Local Variables:
 %%% mode: latex
