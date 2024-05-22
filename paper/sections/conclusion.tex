@@ -1,7 +1,7 @@
 We extended the concept of Kronecker-factored approximate curvature (KFAC) to Gauss-Newton matrices of PINN losses that involve derivatives, rather than evaluations, of a neural network.
 It greatly reduces the computational cost of approximate natural gradient methods and allows them to scale to much larger networks.
 Our approach goes beyond the popular KFAC for traditional deep learning problems as it captures contributions from a PDE's differential operator that are crucial for optimization.
-To establish KFAC for such losses, we use Taylor-mode automatic differentiation to describe the differential operator's computation graph as a forward network with shared weights which allows us to apply a recently-developed variant of KFAC for networks with weight-sharing.
+To establish KFAC for such losses, we use Taylor-mode automatic differentiation to describe the differential operator's computation graph as a forward network with shared weights which allows us to apply a recently-developed variant of KFAC for networks with weight sharing.
 Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods.
 
 \textbf{Limitations \& future directions} While our implementation currently only supports MLPs and the Poisson and heat equations, the concepts we use to derive KFAC (Taylor mode, weight sharing) apply to arbitrary architectures and PDEs, as described in~\Cref{sec:KFAC-general}.

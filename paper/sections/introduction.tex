@@ -1,35 +1,35 @@
-Neural network based approaches to numerically solve partial differential equations (PDEs) are growing at an unprecedented speed.
+Neural network-based approaches to numerically solve partial differential equations (PDEs) are growing at an unprecedented speed.
 The idea to train network parameters to minimize the residual of a PDE traces back to at least~\citet{dissanayake1994neural, lagaris1998artificial}, but was only recently popularized under the name \emph{deep Galerkin method} (DGM) and \emph{Physics-informed neural networks} (PINNs) through the works of~\citet{sirignano2018dgm, raissi2019physics}.
-PINNs are arguably one of the most popular network-based approaches to the numerical solution of PDEs as they are easy to implement, seamlessly incorporate data, and promise to work well in high dimensions.
+PINNs are arguably one of the most popular network-based approaches to the numerical solution of PDEs as they are easy to implement, seamlessly incorporate measurement data, and promise to work well in high dimensions.
 Despite their immense popularity, PINNs are notoriously difficult to optimize \citep{wang2021understanding} and fail to provide satisfactory accuracy when trained with first-order methods, even for simple problems~\citep{zeng2022competitive, muller2023achieving}.
 Recently, second-order methods that use the function space geometry to design preconditioners have shown remarkable promise in addressing the training difficulties of PINNs~\citep{zeng2022competitive, muller2023achieving, de2023operator,jnini2024gauss, muller2024optimization}.
 However, these methods require solving a linear system in the network's high-dimensional parameter space at cubic computational iteration cost, which prohibits scaling such approaches.
 To address this, we build on the idea of Kronecker-factored approximate curvature (KFAC) and apply it to Gauss-Newton matrices of PINN losses which greatly reduces the computational cost:
 \begin{itemize}
-\item We use higher-order forward (Taylor) mode automatic differentiation to perceive the computation graph of a network's input derivatives as a larger net with weight sharing (\Cref{sec:taylor-mode-AD}).
+\item We use higher-order forward (Taylor) mode automatic differentiation to interpret the computation graph of a network's input derivatives as a larger net with weight sharing (\Cref{sec:taylor-mode-AD}).
 
-\item We use the above weight-sharing interpretation to propose KFAC for Gauss-Newton matrices of loss functions with differential operator terms like PINN losses (\Cref{sec:KFAC-general,eq:KFAC-PINNs-general}).
-  Thanks to the generality of Taylor mode and KFAC for weight sharing layers~\cite{eschenhagen2023kroneckerfactored}, our approach is widely applicable and greatly reduces computational cost.
+\item We use this weight sharing view to propose KFAC for Gauss-Newton matrices of objectives with differential operators, like PINN losses (\Cref{sec:KFAC-general,eq:KFAC-PINNs-general}).
+  Thanks to the generality of Taylor mode and KFAC for weight sharing layers~\cite{eschenhagen2023kroneckerfactored}, our approach is widely applicable.
 
-\item We show that, for specific differential operators like the Laplacian, the weight sharing in Taylor mode can be further reduced by absorbing the reduction of partial derivatives into the forward propagation which reduces cost.
+\item We show that, for specific differential operators, the weight sharing in Taylor mode can be further reduced by absorbing the reduction of partial derivatives into the forward propagation, producing a more efficient scheme.
   For the prominent example of the Laplace operator, this recovers and generalizes the \emph{forward Laplacian} framework~\cite{li2023forward} (\Cref{sec:KFAC-Laplace,eq:KFAC-PINN}).
 
-\item Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods (\Cref{sec:experiments}).
+\item Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems, scale more favorably to higher-dimensional neural networks and PDEs, and consistently outperform first-order methods and LBFGS (\Cref{sec:experiments}).
 \end{itemize}
 
 \textbf{Related work}
-Various approaches were developed to improve the optimization of PINNs such as adaptive re-weighting of individual loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for discretizing the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, and curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}.
-Further, L-BFGS is known to outperform first-order optimizers~\citep{markidis2021old}.
-Recently, other second-order methods that design meaningful preconditioners that respect the problems geometry have significantly outperformed L-BFGS, \cite[see][]{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning, jnini2024gauss,chen2024teng, zampini2024petscml}, with unified view on these approaches given in~\citet{muller2024optimization}.
-These methods greatly improve the accuracy of PINNs but come with a significant per-iteration cost as one needs to solve a linear system in the network's high-dimensional parameter space, which is only feasible for small networks when done naively.
+Various approaches were developed to improve the optimization of PINNs such as adaptive re-weighting of loss terms~\citep{wang2021understanding,van2022optimally,wang2022and}, different sampling strategies for discretizing the loss~\citep{lu2021deepxde, nabian2021efficient, daw2022rethinking,zapf2022investigating, wang2022respecting, wu2023comprehensive}, and curriculum learning~\citep{krishnapriyan2021characterizing, wang2022respecting}.
+While LBFGS is known to outperform first-order optimizers~\citep{markidis2021old},
+recently, other second-order methods that design meaningful preconditioners that respect the problems geometry have significantly outperformed it~\cite{zeng2022competitive, muller2023achieving, de2023operator, liu2024preconditioning, jnini2024gauss,chen2024teng, zampini2024petscml}.
+\citet{muller2024optimization} provide a unified view on these approaches which greatly improve the accuracy of PINNs, but come with a significant per-iteration cost as one needs to solve a linear system in the network's high-dimensional parameter space, which is only feasible for small networks when done naively.
 One approach is to use matrix-free methods to approximately compute Gauss-Newton directions by introducing an inner optimization loop, see~\cite{schraudolph2002fast,martens2010deep} for supervised learning problems and~\cite{zeng2022competitive,bonfanti2024challenges, jnini2024gauss,zampini2024petscml} for PINNs.
-Instead, our KFAC-based approach uses an explicit structured curvature representation which can be updated over iterations and inverted at much lower cost.
+Instead, our KFAC-based approach uses an explicit structured curvature representation which can be updated over iterations and inverted more cheaply.
 
-The preconditioner matrices we propose to approximate with KFAC appear in the neural Galerkin schemes introduced in~\citet{bruna2024neural}.
+The preconditioner matrices we propose to approximate via KFAC appear in the neural Galerkin schemes introduced in~\citet{bruna2024neural}.
 We build on the literature on Kronecker-factored approximate curvature (KFAC), which was initially introduced in~\citet{heskes2000natural,martens2010deep} as an approximation of the per-layer Fisher matrix to perform approximate natural gradient descent.
 Later, KFAC was extended to convolutional~\citep{grosse2016kroneckerfactored}, recurrent~\citep{martens2018kroneckerfactored}, attention~\citep{pauloski2021kaisa,osawa2023pipefisher,grosse2023studying}, and recently to general linear layers with weight sharing~\cite{eschenhagen2023kroneckerfactored}.
 These works do not address preconditioners for loss functions with contributions from differential operators, as is the case for PINN losses.
-Kronecker-factored approximations have been used for variational Monte-Carlo methods, where despite the objective function involving a Laplacian term, the approximated preconditioner does not~\citep{pfau2020ab,drissi2024second}.
+Kronecker-factored approximations have been used for variational Monte-Carlo methods, where despite the objective function involving a Laplacian term, the preconditioner does not~\citep{pfau2020ab,drissi2024second}.
 Our interpretation via Taylor mode makes the computation graph of such losses explicit, and allows us to establish KFAC based on its generalization to linear weight sharing layers~\cite{eschenhagen2023kroneckerfactored}.
 
 %%% Local Variables:
