@@ -3,7 +3,7 @@ However, the generality of Taylor-mode automatic differentiation and KFAC for li
 
 \textbf{Flattening \& Derivatives}
 We vectorize matrices using the \emph{first-index-varies-fastest} convention, i.e.\,column-stacking (row index varies first, column index varies second) and denote the corresponding flattening operation by $\flatten$.
-This allows to reduce derivatives of matrix- or tensor-valued objects back to the vector case by flattening a functions input and output domain before differentiation.
+This allows to reduce derivatives of matrix- or tensor-valued objects back to the vector case by flattening a function's input and output before differentiation.
 The Jacobian of a vector-to-vector function $\va \mapsto \vb(\va)$ has entries $[\jac_{\va}\vb]_{i,j} = \nicefrac{\partial \evb_i}{\partial \eva_j}$.
 For a matrix-to-matrix function $\mA \mapsto \mB(\mA)$, the Jacobian is $\jac_{\mA} \mB = \jac_{\flatten \mA }\flatten\mB$.
 A useful property of $\flatten$ is $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\flatten{\mX}$ for matrices $\mA, \mX, \mB$ which implies $\jac_\mX(\mA\mX\mB) = \mB^\top\otimes \mA$.
@@ -11,8 +11,8 @@ A useful property of $\flatten$ is $\flatten(\mA\mX\mB) = (\mB^\top\otimes \mA)\
 \textbf{Sequential neural nets} Consider a \emph{sequential neural network} $u_{\vtheta} = f_{\vtheta^{(L)}} \circ f_{\vtheta^{(L-1)}} \circ \ldots \circ f_{\vtheta^{(1)}} $ of depth $L\in\mathbb N$. It consists of layers $f_{\vtheta^{(l)}}\colon \sR^{h^{(l-1)}}\to\sR^{h^{(l)}}$, $\vz^{(l-1)}\mapsto \vz^{(l)} = f_{\vtheta^{(l)}}(\vz^{(l-1)})$ with trainable parameters $\vtheta^{(l)} \in \sR^{p^{(l)}}$ that transform an input $\vz^{(0)} \coloneqq \vx \in \mathbb R^{d \coloneqq h^{(0)}}$ into a prediction $u_\vtheta(\vx) = \vz^{(L)} \in \sR^{h^{(L)}}$ via intermediate representations $\vz^{(l)} \in \sR^{h^{(l)}}$.
 In the context of PINNs, we use networks with scalar outputs ($h^{(L)}=1$) and denote the concatenation of all parameters by $\vtheta = (\vtheta^{(1)\top}, \dots, \vtheta^{(L)\top})^{\top} \in \sR^P$.
 A common choice is to alternate fully-connected and activation layers.
-Linear layers map $\vz^{(l-1)} \mapsto \vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$ using a weight matrix $\mW^{(l)} = \flatten^{-1}\vtheta^{(l)}  \in \sR^{h^{(l)} \times h^{(l-1)}}$ (bias terms can be added as an additional column and by appending a $1$ to the layer input).
-Activation layers map $\vz^{(l-1)}\mapsto \vz^{(l)} \sigma(\vz^{(l-1)})$ element-wise for a (typically smooth) $\sigma\colon\mathbb R\to\mathbb R$.
+Linear layers map $\vz^{(l-1)} \mapsto \vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$ using a weight matrix $\mW^{(l)} = \flatten^{-1}\vtheta^{(l)}  \in \sR^{h^{(l)} \times h^{(l-1)}}$ (bias terms can be added as an additional column and by appending a $1$ to the input).
+Activation layers map $\vz^{(l-1)}\mapsto \vz^{(l)} = \sigma(\vz^{(l-1)})$ element-wise for a (typically smooth) $\sigma\colon\mathbb R\to\mathbb R$.
 
 \subsection{Energy Natural Gradients for Physics-Informed Neural Networks}
 Let us consider a domain $\Omega\subseteq\mathbb R^d$ and the partial differential equation
@@ -28,7 +28,7 @@ We parametrize $u$ using a neural network and train its parameters $\vtheta$ to 
   \!\!\!\!\!\!
   L(\vtheta)
   &=
-    \frac{1}{2N_\Omega} \sum_{n=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_i) + f(\vx_n))^2
+    \frac{1}{2N_\Omega} \sum_{n=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_n) + f(\vx_n))^2
     +
     \frac{1}{2N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^\text{b}_n) - g(\vx^\text{b}_n))^2
     \eqqcolon
