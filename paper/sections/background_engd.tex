@@ -1,6 +1,6 @@
 First-order optimizers like gradient descent and Adam struggle at producing satisfactory solutions when used to train PINNs~\citep{cuomo2022scientific}.
 Instead, function space-inspired second-order methods have lately shown promising results~\citep{muller2024optimization}.
-We focus on \emph{energy natural gradient descent (ENGD~\cite{muller2023achieving})} which---applied to PINN objectives like \eqref{eq:pinn-loss}---corresponds to the Gauss-Newton method~\cite[Chapter 6.3,][]{bottou2016machine}.
+We focus on \emph{energy natural gradient descent (ENGD~\cite{muller2023achieving})} which---applied to PINN objectives like \eqref{eq:pinn-loss}---corresponds to the Gauss-Newton method~\cite[][Chapter 6.3]{bottou2016machine}.
 ENGD mimics Newton's method up to a projection onto the model's tangent space and a discretization error that vanishes quadratically in the step size, thus providing locally optimal residual updates.
 Alternatively, the Gauss-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauss-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}.
 

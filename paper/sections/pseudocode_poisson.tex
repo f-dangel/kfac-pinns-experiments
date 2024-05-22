@@ -51,11 +51,11 @@
         \EndFor
 
         \\
-        \State \textbf{4) Compute the gradient using autodiff, pre-condition the gradient}
+        \State \textbf{4) Compute the gradient using autodiff, precondition the gradient}
         \State $(\vg^{(1)}, \dots, \vg^{(L)}) \gets \texttt{grad}( L_{\Omega}(\vtheta_t) + L_{\partial\Omega}(\vtheta_t), (\vtheta_t^{(1)}, \dots, \vtheta^{(L)}_t ))$ \Comment Gradient with autodiff
 
         \ForAll{$l=1, \dots, L$}
-          \Comment Pre-condition gradient
+          \Comment Precondition gradient
           \State $\vDelta_t \gets - \mC^{(l)} \vg^{(l)}$ \Comment Proposed update direction
           \State $\hat{\vdelta}_t^{(l)} \gets \mu \vdelta_{t-1}^{(l)} + \vDelta_t^{(l)} \text{ if $t>0$ else } \vDelta_t^{(l)}$ \Comment Add momentum from previous update
         \EndFor
