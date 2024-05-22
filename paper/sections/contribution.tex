@@ -140,8 +140,8 @@ To generalize the previous section, let's consider the general $M$-dimensional P
   \Psi(u, D_{\vx} u, \dots, D^k_{\vx} u) = \vzero \in \sR^M,
 \end{equation}
 where $D^m_\vx% = (\partial_\vx^\alpha u)_{\lvert \alpha \rvert = l}
-$ collects all partial derivatives of order $m$. 
-For $m\in \{0, \dots, k\}$ there are $S_m = \binom{d + m - 1}{d - 1}$ independent partial derivatives and the total number of independent derivatives is $S \coloneqq \sum_{m=0}^k S_{m} = \binom{d + k}{k}$. 
+$ collects all partial derivatives of order $m$.
+For $m\in \{0, \dots, k\}$ there are $S_m = \binom{d + m - 1}{d - 1}$ independent partial derivatives and the total number of independent derivatives is $S \coloneqq \sum_{m=0}^k S_{m} = \binom{d + k}{k}$.
 $\Psi$ is a smooth mapping from all partial derivatives to $\sR^M$, $\Psi\colon \mathbb \sR^S\to\mathbb \sR^M$.
 To construct a PINN loss for \Cref{eq:general-pde-system}, we feed the residual $\vr_{\Omega, n}(\vtheta) \coloneqq \Psi(u_{\vtheta}(\vx_n), D_{\vx} u_{\vtheta}(\vx_n), \dots, D^k_{\vx} u_{\vtheta}(\vx_n)) \in \sR^M$ where $D^{m}_{\vx} u_{\vtheta}(\vx_n) \in \sR^{d \times S_{m}}$, into a smooth convex criterion function $\ell\colon \sR^M \to \sR$,
 \begin{equation}
@@ -260,92 +260,68 @@ where $\ell\colon\mathbb R^K\to\mathbb R$ is a convex function.
 We can perceive this as a special case of the setting above with $\Psi = \operatorname{id}$ and hence the KFAC approximation~\eqref{eq:KFAC-PINNs-general} remains meaningful.
 In particular, it can be used for the \emph{deep Ritz method} and other variational approaches to solve PDEs~\citep{yu2018deep}.
 
-\begin{comment}
-  \subsection{Computational complexity}
-  \todo[inline]{what can we say? probably better to move to the respective approximations}
-  \begin{itemize}
-  \item GN: $O(p^3+Np^2)$
-  \item BFGS: $O(p^2+?)$
-  \item L-BFGS: $O(mp+?)$?
-  \item KFAC: $O(?)$
-  \item
-  \end{itemize}
-\end{comment}
-
 \subsection{Algorithmic Details}
 
-We provide the additional components that form our KFAC-based optimization algorithms, which are influenced by ENGD and the original KFAC algorithm.
-See \Cref{app:pseudo} for pseudo-code.
+To design an optimizer based on our KFAC approximation, we re-use techniques from the original KFAC~\cite{martens2015optimizing} \& ENGD~\cite{muller2023achieving} algorithms.
+\Cref{app:pseudo} shows pseudo-code for our method on the Poisson equation.
 
-\paragraph{Exponential moving averages and damping} %Given a combination of interior and condition loss, $\gL_{\Omega},\gL_{\partial\Omega}$ we
-First, we approximate the interior and boundary Gramians at iteration $t$  according to~\eqref{eq:KFAC-PINN} and~\eqref{eq:KFAC-PINNs-general} and the classic KFAC approximation, respectively, giving
-$\mG_{\Omega,t}^{(l)} \approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ and $\mG_{\partial \Omega, t}^{(l)}\approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ .
-Here, we replace $\mA^{(l)}_{\bullet,t}$ with an exponential moving average $\hat{\mA}^{(l)}_{\bullet,t} = \beta \hat{\mA}^{(l)}_{\bullet,t-1} + (1 - \beta) \mA^{(l)}_{\bullet,t}$
-and identically for $\hat{\mB}^{(l)}_{\bullet, t}$ for some $\beta\in[0,1)$.
-Further, we add constant damping of strength $\lambda>0$ to all Kronecker factors, obtaining $\tilde{\mA}_{\bullet,t} = \hat{\mA}^{(l)}_{\bullet,t} + \lambda \mI$ and $\tilde{\mB}_{\bullet,t} = \hat{\mB}^{(l)}_{\bullet,t} + \lambda \mI$
-leading to the
-block-diagonal Kronecker-factored approximation
+At iteration $t$, we approximate the per-layer interior and boundary Gramians using our derived Kronecker approximation (\Cref{eq:KFAC-PINN,eq:KFAC-PINNs-general}),
+$\mG_{\Omega,t}^{(l)} \approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ and $\mG_{\partial \Omega, t}^{(l)}\approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$.
+
+\textbf{Exponential moving average and damping}
+For preconditioning, we accumulate the Kronecker factors $\mA^{(l)}_{\bullet,t}, \mB^{(l)}_{\bullet,t}$ over time using an exponential moving average $\hat{\mA}^{(l)}_{\bullet,t} = \beta \hat{\mA}^{(l)}_{\bullet,t-1} + (1 - \beta) \mA^{(l)}_{\bullet,t}$ of factor $\beta\in[0,1)$ (identically for $\hat{\mB}^{(l)}_{\bullet, t}$), similar to the original KFAC.
+Moreover, we apply the same constant damping of strength $\lambda>0$ to all Kronecker factors, $\tilde{\mA}^{(l)}_{\bullet,t} = \hat{\mA}^{(l)}_{\bullet,t} + \lambda \mI$ and $\tilde{\mB}^{(l)}_{\bullet,t} = \hat{\mB}^{(l)}_{\bullet,t} + \lambda \mI$ such that the curvature approximation used for preconditioning at step $t$ is
 \begin{align*}
   \mG_{\bullet, t}
-  &\approx
-    \blockdiag
+  \approx
+    \diag
     \left(
-    \tilde{\mA}^{(1)}_{\bullet,t} \otimes \tilde{\mB}_{\bullet,t}^{(1)},
+    \tilde{\mA}^{(1)}_{\Omega,t} \otimes \tilde{\mB}_{\Omega,t}^{(1)},
     \dots,
-    \tilde{\mA}^{(L)}_{\bullet,t} \otimes \tilde{\mB}_{\bullet,t}^{(L)}
+    \tilde{\mA}^{(L)}_{\Omega,t} \otimes \tilde{\mB}_{\Omega,t}^{(L)}
     \right)
-    \qquad \bullet \in \{ \Omega, \partial\Omega\}\,.
+  +
+    \diag
+    \left(
+    \tilde{\mA}^{(1)}_{\partial\Omega,t} \otimes \tilde{\mB}_{\partial\Omega,t}^{(1)},
+    \dots,
+    \tilde{\mA}^{(L)}_{\partial\Omega,t} \otimes \tilde{\mB}_{\partial\Omega,t}^{(L)}
+    \right)\,.
 \end{align*}
-    %     over all previous Kronecker factors, i.e.\, as defined in ?? and identically for $\hat{\mB}^{(l)}_{\bullet, t}$.
 
-\paragraph{Gradient pre-conditioning% and damping
-}
-Given the current mini-batch gradient $\vg^{(l)}$ for layer $l$, we obtain the update direction $\vDelta_t^{(l)} = -(\tilde{\mA}_{\Omega} \otimes \tilde{\mB}_{\Omega} + \tilde{\mA}_{\partial\Omega} \otimes \tilde{\mB}_{\partial\Omega})^{-1} \vg^{(l)}$ by
-pre-condition with our Kronecker-factored approximate Gramian.
-    %     First, we add constant damping of strength $\lambda>0$ to all Kronecker factors, obtaining $\tilde{\mA}_{\bullet,t} = \hat{\mA}^{(l)}_{\bullet,t} + \lambda \mI$ and $\tilde{\mB}_{\bullet,t} = \hat{\mB}^{(l)}_{\bullet,t} + \lambda \mI$.
-    %     Then, we multiply the inverse of the sum of Kronecker products onto the gradient to obtain the update direction
-This can be done without building up the full matrix utilizing a generalized eigendecomposition of the individual Kronecker factors, where we use the procedure described in \cite[Appendix I]{martens2015optimizing}.
+\textbf{Gradient pre-conditioning}
+Given layer $l$'s mini-batch gradient $\vg_t^{(l)} = \nicefrac{\partial L(\vtheta_t)}{\partial\vtheta^{(l)}_t} \in \sR^{p^{(l)}}$, we obtain an update direction $\vDelta_t^{(l)} = -(\tilde{\mA}^{(l)}_{\Omega,t} \otimes \tilde{\mB}^{(l)}_{\Omega,t} + \tilde{\mA}^{(l)}_{\partial\Omega} \otimes \tilde{\mB}^{(l)}_{\partial\Omega})^{-1} \vg_t^{(l)}$.
+We use the trick of \cite[Appendix I]{martens2015optimizing} to invert the Kronecker sum which requires eigen-decomposing all Kronecker factors.
 
-    %     \paragraph{Combining PDE and boundary approximations}
-    %     The boundary Gramian matrix $\mG_{\partial\Omega}(\mW^{(l)})$ is a classic Gauss-Newton matrix and thus we can use a classic KFAC approximation $\hat{\mG}_{\partial\Omega}(\mW^{(l)})$.
-    %     To invert the sum $\hat{\mG}_\Omega(\mW^{(l)}) + \hat{\mG}_{\partial\Omega}(\mW^{(l)})$ of the two Kronecker approximations we use the procedure described in \cite[Appendix I]{martens2015optimizing}.
-
-\paragraph{Learning rate and momentum}
-We consider two different updates $ \vtheta_{t+1} = \vtheta_t + \vdelta_{t}$ at iteration $t$ from the pre-conditioned gradient $\vDelta_t$, which we call as `KFAC' and `KFAC*'.
-KFAC uses momentum %buffer of all previous updates,
-$\hat{\vdelta}_t = \mu \vdelta_{t-1} + \vDelta_t$ %(similar to momentum in SGD).
-    %     The
-where the parameter $\mu$ can be chosen by the practitioner.
-Like in ENGD, we use a logarithmic grid line search along
-    %     $\hat{\vdelta}_t$, i.e.\,
-    %     choosing
-leading to the update
-$\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ where
-$\alpha_{\star} = \argmin_{\alpha} \gL(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
-KFAC* uses the learning rate and momentum heuristic proposed for the original KFAC optimizer~\citep{martens2015optimizing}.
-It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = \gL(\vtheta_t) + \vdelta_{t+1}^{\top} \nabla_{\vtheta_t}\gL(\vtheta_t) + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the true damped Gramian.
-The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are given by~(see \citep[][Section 7]{martens2015optimizing} for details)
-\begin{align}
+\textbf{Learning rate and momentum} From the pre-conditioned gradient $\vDelta_t \in \sR^P$, we consider two different updates $ \vtheta_{t+1} = \vtheta_t + \vdelta_{t}$ we call `KFAC' and `KFAC*'.
+KFAC uses momentum over previous updates, $\hat{\vdelta}_t = \mu \vdelta_{t-1} + \vDelta_t$, and $\mu$ is chosen by the practitioner.
+Like ENGD, it uses a logarithmic grid line search, selecting $\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ with $\alpha_{\star} = \argmin_{\alpha} L(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
+KFAC* uses the automatic learning rate and momentum heuristic of the original KFAC optimizer.
+It parameterizes the iteration's update as $\vdelta_{t+1}(\alpha, \mu) = \alpha \vDelta_t + \mu \vdelta_t$, then obtains the optimal parameters by minimizing the quadratic model $m(\vdelta_{t+1}) = L(\vtheta_t) + \vdelta_{t+1}^{\top} \vg_t + \nicefrac{1}{2}\vdelta_{t+1}^{\top} (\mG(\vtheta_t) + \lambda \mI) \vdelta_{t+1}$ with the exact damped Gramian.
+The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_t)$ are
+\begin{align*}
   \begin{pmatrix}
-    \alpha^{\star} \\ \mu^{\star}
+    \alpha_{\star} \\ \mu_{\star}
   \end{pmatrix}
   =
   -
   \begin{pmatrix}
-    \vDelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vDelta_t \right\rVert^2
-    & \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
+    \vDelta_t^{\top} \mG_t \vDelta_t + \lambda \left\lVert \vDelta_t \right\rVert^2
+    & \vDelta_t^{\top} \mG_t \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
     \\
-    \vDelta_t \mG \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
+    \vDelta_t^{\top} \mG_t \vdelta_t + \lambda \vDelta^{\top}_t \vdelta_t
     &
-      \vdelta_t^{\top} \mG \vDelta_t + \lambda \left\lVert \vdelta_t \right\rVert^2
+      \vdelta_t^{\top} \mG_t \vDelta_t + \lambda \left\lVert \vdelta_t \right\rVert^2
   \end{pmatrix}^{-1}
   \begin{pmatrix}
-    \vDelta_t \nabla_{\vtheta_t} \gL
+    \vDelta_t^{\top} \vg_t
     \\
-    \vdelta_t \nabla_{\vtheta_t} \gL
-  \end{pmatrix}\,.
-\end{align}
-The computational cost is dominated by the two Gramian-vector products $\mG \vDelta_t$ and $\mG \vdelta_t$ which can be performed with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast}.
+    \vdelta_t^{\top} \vg_t
+  \end{pmatrix}
+\end{align*}
+(see \citep[][Section 7]{martens2015optimizing} for details).
+The computational cost is dominated by the two Gramian-vector products $\mG_t \vDelta_t$ and $\mG_t \vdelta_t$.
+By using the Gramian's outer product structure~\cite{dangel2022vivit,papyan2019measurements}, we perform them with automatic differentiation~\citep{pearlmutter1994fast,schraudolph2002fast} using two Jacobian-vector products, as recommended in \cite{martens2015optimizing}.
 
 %%% Local Variables:
 %%% mode: latex
