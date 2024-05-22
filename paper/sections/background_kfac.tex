@@ -5,12 +5,14 @@ The Fisher associated with the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u
 \begin{equation}\label{eq:fisher-mle}
   \mF(\vtheta)
   =
-  \frac{1}{N}
+  \nicefrac{1}{N}
+  \textstyle
   \sum_{n=1}^N
   \left(\jac_{\vtheta} u_{\vtheta}(\vx_n)  \right)^\top
   \jac_{\vtheta} u_{\vtheta}(\vx_n)
   =
-  \frac{1}{N}
+  \nicefrac{1}{N}
+  \textstyle
   \sum_{n=1}^N
   \left( \jac_{\vtheta} u_n \right)^\top
   \jac_{\vtheta} u_n
@@ -30,14 +32,16 @@ Inserting into $\mF^{(l)}(\vtheta)$, summing over data points, and using the exp
   \approx
   \underbrace{
     \left(
-      \frac{1}{N}
+      \nicefrac{1}{N}
+      \textstyle
       \sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top
     \right)
   }_{\eqqcolon \mA^{(l)} \in \sR^{h^{(l-1)} \times h^{(l-1)}}}
   \otimes
   \underbrace{
     \left(
-      \frac{1}{N}
+      \nicefrac{1}{N}
+      \textstyle
       \sum_{n=1}^N
       \left(\jac_{\vz^{(l)}}  u_n \right)^\top
       \jac_{\vz^{(l)}}  u_n

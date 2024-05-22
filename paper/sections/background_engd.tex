@@ -6,21 +6,25 @@ Alternatively, the Gauss-Newton method can be motivated from the standpoint of o
 
 Natural gradient methods perform parameter updates via a preconditioned gradient descent scheme $\vtheta_{t+1} = \vtheta_t - \alpha_t \mG(\vtheta_t)^+\nabla L(\vtheta_t)$, where $\mG(\vtheta)^+$ denotes the pseudo-inverse of a suitable \emph{Gramian matrix} $\mG(\vtheta) \in \sR^{P \times P}$.
 ENGD for the PINN loss~\eqref{eq:pinn-loss} uses the Gramian
-\begin{equation}\label{eq:gramian}
-  \mG(\vtheta)
-  =
-  \underbrace{\frac1{{N_\Omega}}
-    \sum_{n=1}^{N_\Omega}
-    \left( \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n) \right)^\top
-    \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)
-  }_{\eqqcolon \mG_\Omega(\vtheta)}
-  +
-  \underbrace{
-    \frac1{{N_{\partial\Omega}}} \sum_{n=1}^{N_{\partial\Omega}}
-    \left(\jac_{\vtheta} u_\vtheta(\vx_n^\text{b})  \right)^\top
-    \jac_{\vtheta} u_\vtheta (\vx_n^\text{b})
-  }_{\eqqcolon \mG_{\partial\Omega}(\vtheta)}.
-\end{equation}
+\begin{align}\label{eq:gramian}
+  \begin{split}
+    \mG(\vtheta)
+    &=
+      \nicefrac{1}{N_\Omega}
+      \textstyle
+      \sum_{n=1}^{N_\Omega}
+      \left( \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n) \right)^\top
+      \jac_{\vtheta} \mathcal{L} u_\vtheta(\vx_n)
+      +
+      \nicefrac{1}{N_{\partial\Omega}}
+      \textstyle
+      \sum_{n=1}^{N_{\partial\Omega}}
+      \left(\jac_{\vtheta} u_\vtheta(\vx_n^\text{b})  \right)^\top
+      \jac_{\vtheta} u_\vtheta (\vx_n^\text{b})
+    \\
+    &\eqqcolon \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)\,.
+  \end{split}
+\end{align}
 \eqref{eq:gramian} is the Gauss-Newton matrix of the residual $\vr(\vtheta) = (\nicefrac{\vr_\Omega(\vtheta)^{\top}}{\sqrt{2N_\Omega}}, \nicefrac{\vr_{\partial\Omega}(\vtheta)^{\top}}{\sqrt{2N_{\partial\Omega}}} )^\top \in \sR^{N_{\Omega} + N_{\partial\Omega}}$ with interior and boundary residuals $r_{\Omega,n}(\vtheta) = \mathcal{L} u_\vtheta(\vx_n) + f(\vx_n)$ and $r_{\partial\Omega,n}(\vtheta) = u_\vtheta(\vx_n^\text{b}) - g(\vx_n^\text{b})$.
 
 %%% Local Variables:

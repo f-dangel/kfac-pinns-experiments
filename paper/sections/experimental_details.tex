@@ -132,7 +132,7 @@ The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hype
   \end{itemize}
 \end{itemize}
 
-\subsection{5d Poisson Equation}
+\subsection{5d Poisson Equation}\label{sec:poisson5d-appendix}
 
 \paragraph{Setup} We consider a five-dimensional Poisson equation $-\Delta u(\vx) = \pi^2 \sum_{i=1}^5 \cos(\pi \evx_i)$ on the five-dimensional unit square $\vx \in [0, 1]^5$ with cosine sum right-hand side and boundary conditions $u(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$ for $\vx \in \partial [0,1]^5$.
 We sample training batches of size $N_{\Omega} = \num{3000}, N_{\partial\Omega} = 500$ and evaluate the $L_2$ error on a separate set of $\num{30000}$ data points using the known solution $u^{\star}(\vx) = \sum_{i=1}^5 \cos(\pi \evx_i)$.
@@ -250,6 +250,8 @@ The runs shown in \Cref{fig:poisson5d-appendix} correspond to the following hype
   \end{itemize}
 \end{itemize}
 
+\subsection{10d Poisson Equation}\label{sec:poisson10d-appendix}
+
 \subsection{5/10/100-d Poisson Equations with Bayesian Search}\label{sec:high-dimensional-poissons-app}
 
 \paragraph{Setup} Here, we consider three Poisson equations $- \Delta u(\vx) = f(\vx)$ with different right-hand sides and boundary conditions on the unit square $\vx \in [0, 1]^d$:
@@ -366,10 +368,10 @@ These architectures are too large to be optimized by ENGD.
   \end{itemize}
 \end{itemize}
 
-\subsection{PINN Loss for the Heat Equation}
+\subsection{PINN Loss for the Heat Equation}\label{sec:pinn-loss-heat-equation}
 \input{sections/heat_equation.tex}
 
-\subsection{1+1d Heat Equation}
+\subsection{1+1d Heat Equation}\label{sec:1d-heat-equation}
 
 \paragraph{Setup} We consider a 1+1-dimensional heat equation $\partial_tu(t,x) - \kappa \Delta_{x} u(t, x) = 0$ with $\kappa = \nicefrac{1}{4}$ on the unit square and unit time interval, $x, t \in [0,1] \times [0,1]$.
 The equation has zero spatial boundary conditions and the initial values are given by $u(0, x) = \sin(\pi x)$ for $\vx \in [0,1]$.
@@ -604,7 +606,7 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
 
 \subsection{4+1d Heat Equation with Bayesian Search}\label{sec:4d-heat-bayes-app}
 
-\paragraph{Setup} We consider the same heat equation as in \Cref{sec:4d-heat-app} and use the $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116864}$.
+\paragraph{Setup} We consider the same heat equation as in \Cref{sec:4d-heat-app} and use the $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$.
 We tune all optimizer hyper-parameters as described in \Cref{sec:tuning-protocol} and also tune the batch sizes $N_{\omega}, N_{\partial \Omega}$, as well as their re-sampling frequencies.
 \Cref{fig:heat4d-bayes-appendix} summarizes the results.
 

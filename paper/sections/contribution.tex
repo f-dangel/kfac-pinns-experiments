@@ -71,6 +71,7 @@ Concretely, by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{s
     &=
       \sigma'(\vz^{(l-1)})\odot\Delta_\vx\vz^{(l-1)}
       +
+      \textstyle
       \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot (\partial_{x_i}{\vz^{(l-1)}})^{\odot 2}
       \quad \in \sR^{h^{(l)}}\,.
   \end{align}
@@ -84,14 +85,16 @@ Therefore, we can use the concept of KFAC in the presence of weight sharing to d
 
 \subsection{KFAC for Gauss-Newton Matrices with the Laplace Operator}\label{sec:KFAC-Laplace}
 Let's consider the interior Gramian block for a linear layer and the Poisson equation,
-\begin{align}
+\begin{align*}
   \mG^{(l)}_\Omega(\vtheta)
   =
-  \frac{1}{N_\Omega} \sum_{n=1}^{N_\Omega}
+  \nicefrac{1}{N_\Omega}
+  \textstyle
+  \sum_{n=1}^{N_\Omega}
   \left(
   \jac_{\mW^{(l)}} \Delta_\vx u_n  \right)^\top
   \jac_{\mW^{(l)}} \Delta_\vx u_n\,.
-\end{align}
+\end{align*}
 Because we made the Laplacian computation explicit through Taylor-mode autodiff (\Cref{sec:taylor-mode-AD}, specifically \Cref{eq:forward_Laplacian_linear}), we can stack all output vectors that share the layer's weight into a matrix
 $\mZ_n^{(l)} \in \sR^{h^{(l)} \times S}$ with $S = d+2$ and columns $\mZ_{n, 1}^{(l)} = \vz_n^{(l)}, \mZ_{n, 2}^{(l)} = \partial_{x_1}\vz_n^{(l)}, \dots, \mZ_{n, 1+d}^{(l)} = \partial_{x_d}\vz_n^{(l)}$ and $\mZ_{n, 2+d}^{(l)} = \Delta_\vx\vz_n^{(l)}$ (likewise $\mZ_n^{(l-1)} \in \sR^{h^{(l-1)} \times S}$ for the layer inputs), then apply the chain rule
 \begin{align*}
@@ -99,6 +102,7 @@ $\mZ_n^{(l)} \in \sR^{h^{(l)} \times S}$ with $S = d+2$ and columns $\mZ_{n, 1}^
   &=
     (\jac_{\mZ_n^{(l)}}\Delta_\vx u_n) \jac_{\mW^{(l)}} \mZ_n^{(l)}
     =
+    \textstyle
     \sum_{s=1}^S
     {
     \underbrace{\mZ^{(l-1)}_{n,s}}_{\in \sR^{h^{(l-1)}}}
@@ -110,7 +114,8 @@ which has similar structure than the Jacobian in \Cref{sec:kfac-background}, but
 \begin{equation}\label{eq:laplace_gramian_block_exact}
   \mG^{(l)}_\Omega(\vtheta)
   =
-  \frac{1}{N}
+  \nicefrac{1}{N}
+  \textstyle
   \sum_{n=1}^N
   \sum_{s=1}^S
   \sum_{s'=1}^S
@@ -145,13 +150,16 @@ For $m\in \{0, \dots, k\}$ there are $S_m = \binom{d + m - 1}{d - 1}$ independen
 $\Psi$ is a smooth mapping from all partial derivatives to $\sR^M$, $\Psi\colon \mathbb \sR^S\to\mathbb \sR^M$.
 To construct a PINN loss for \Cref{eq:general-pde-system}, we feed the residual $\vr_{\Omega, n}(\vtheta) \coloneqq \Psi(u_{\vtheta}(\vx_n), D_{\vx} u_{\vtheta}(\vx_n), \dots, D^k_{\vx} u_{\vtheta}(\vx_n)) \in \sR^M$ where $D^{m}_{\vx} u_{\vtheta}(\vx_n) \in \sR^{d \times S_{m}}$, into a smooth convex criterion function $\ell\colon \sR^M \to \sR$,
 \begin{equation}
-  L_{\Omega}(\vtheta)\coloneqq \frac1N\sum_{n=1}^N \ell(\vr_{\Omega,n}(\vtheta))\,.
+  L_{\Omega}(\vtheta)\coloneqq \nicefrac{1}{N}
+  \textstyle
+  \sum_{n=1}^N \ell(\vr_{\Omega,n}(\vtheta))\,.
 \end{equation}
 The generalized Gauss-Newton (GGN) matrix~\cite{schraudolph2002fast} is the Hessian of $L_{\Omega}(\vtheta)$ when the residual is linearized w.r.t.\,$\vtheta$ before differentiation. It is positive semi-definite and has the form
 \begin{align}
   \mG_{\Omega}(\vtheta)
   \coloneqq
-  \frac{1}{N}
+  \nicefrac{1}{N}
+  \textstyle
   \sum_{n=1}^N
   \left(\jac_\vtheta \vr_{\Omega,n}(\vtheta)  \right)^\top
   \mLambda(\vr_{\Omega,n})
@@ -166,14 +174,14 @@ Generalizing the second-order Taylor-mode from \Cref{sec:taylor-mode-AD} to high
 \end{align}
 Hence, we can derive a forward propagation for the required derivatives in which linear layers process at most $S$ vectors\footnote{Depending on the linear operator, one may reduce weight sharing, as demonstrated for the Laplacian in \Cref{sec:taylor-mode-AD}.}, i.e.
 the linear layer's weight is shared over the matrices $D^{0}_\vx \vz^{(l-1)} \coloneqq \vz^{(l-1)}, D_\vx^1 \vz^{(l-1)}, \dots, D_\vx^k \vz^{(l-1)}$. Stacking them into a matrix $\mZ^{(l-1)}_n = (\vz^{(l-1)}, D_\vx^1 \vz^{(l-1)}, \dots, D_\vx^k \vz^{(l-1)} ) \in \sR^{h^{(l-1)} \times S}$, we can use the chain rule to obtain
-\begin{align}
+\begin{align*}
   \begin{split}
     \mG^{(l)}_{\Omega}(\vtheta)
     &=
-      \frac{1}{N}
+      \nicefrac{1}{N}
+      \textstyle
       \sum_{n=1}^N
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_n \right)^{\top}
-      % \underbrace{
       \left(
       \jac_{\mZ^{(l)}_n} \vr_{\Omega,n}
       \right)^{\top}
@@ -181,11 +189,11 @@ the linear layer's weight is shared over the matrices $D^{0}_\vx \vz^{(l-1)} \co
       \left(
       \jac_{\mZ^{(l)}_n} \vr_{\Omega,n}
       \right)
-      % }_{\eqqcolon \mLambda^{(l)}_n \in \sR^{S h^{(l)} \times S h^{(l)}}}
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_n \right)
     \\
     &=
-      \frac{1}{N}
+      \nicefrac{1}{N}
+      \textstyle
       \sum_{n,s,s'=1}^{N,S,S}
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_{n,s} \right)^{\top}
       \left(
@@ -198,7 +206,8 @@ the linear layer's weight is shared over the matrices $D^{0}_\vx \vz^{(l-1)} \co
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_{n,s'} \right)
     \\
     &=
-      \frac{1}{N}
+      \nicefrac{1}{N}
+      \textstyle
       \sum_{n,s,s'=1}^{N,S,S}
       \mZ^{(l-1)}_{n,s}
       \mZ^{(l-1)\top}_{n,s'}
@@ -209,7 +218,7 @@ the linear layer's weight is shared over the matrices $D^{0}_\vx \vz^{(l-1)} \co
       \jac_{\mZ^{(l)}_{n,s'}} \vr_{\Omega,n}
       \right)
   \end{split}
-\end{align}
+\end{align*}
 where $\mZ_{n,s}^{(l-1)} \in \sR^{h^{(l-1)}}$ denotes the $s$-th column of $\mZ_n^{(l-1)}$.
 Following the same steps as in \Cref{sec:KFAC-Laplace}, we apply the KFAC-expand approximation from \cite{eschenhagen2023kroneckerfactored} to obtain the generalization of ~\Cref{eq:KFAC-PINN}:
 \begin{tcolorbox}[colframe=kfac, title={KFAC with general PDE terms},bottom=0mm,top=-2mm,middle=0mm]

@@ -12,7 +12,7 @@ As baselines, we use SGD with tuned learning rate and momentum, Adam with tuned 
 We tune hyper-parameters using Weights \& Biases~\citep{wandb} (see \Cref{sec:tuning-protocol} for the exact protocol).
 For random/grid search, we run an initial round of 50 runs with generous search spaces, then narrow them down and re-run for another 50 runs; for Bayesian search, we assign the same total compute to each optimizer.
 We report the runs with lowest $L_2$ error approximated on a held-out data set and using the known solution to the studied PDEs.
-To be comparable, all runs are executed on a compute cluster with RTX 6000 GPUs (24\,GiB RAM) and in double precision, and we use the same computation time budget for all optimizers.
+To be comparable, all runs are executed on a compute cluster with RTX 6000 GPUs (24\,GiB RAM) and in double precision, and we use the same computation time budget for all optimizers on a fixed PINN problem.
 All search spaces and best run hyper-parameters, as well as training curves over iteration count rather than time, are in \Cref{sec:experimental_details}.
 
 \textbf{Pedagogical example: 2d Poisson equation}
@@ -24,172 +24,82 @@ It is given by
     u(x,y) & = 0 \quad \text{for } (x,y) \in\partial[0,1]^2.
   \end{split}
 \end{align}
-Like the original paper, we choose a fixed data set of identical batch size for training and evaluate the performance of all optimizers for different $\tanh$-activated MLPs, one shallow and two with five fully-connected layers of different width (all details in \Cref{sec:2d-poisson-appendix}).
+Like the original paper, we choose a fixed data set of identical batch size for training, then use random/grid search to evaluate the performance of all optimizers for different $\tanh$-activated MLPs, one shallow and two with five fully-connected layers of different width (all details in \Cref{sec:2d-poisson-appendix}).
 We include ENGD whenever the network's parameter space is small enough to build up the Gramian.
 
-For the shallow net, we can reproduce the results of~\cite{muller2023achieving}, where exact ENGD achieves high accuracy (\Cref{fig:2D-Poisson}, left).
+For the shallow net (\Cref{fig:2D-Poisson}, left), we can reproduce the results of~\cite{muller2023achieving}, where exact ENGD achieves high accuracy.
 In terms of computation time, our KFACs are competitive with full-ENGD for a long phase, outperforming the first-order and quasi-Newton baselines.
-In contrast to ENGD which relies on an exact solution of the preconditioning step, KFAC scales to larger networks (\Cref{fig:2D-Poisson}, middle/center)
-and is competitive to other second-order optimizers like Hessian-free, which uses more sophisticated heuristics.
+In contrast to ENGD which runs out of memory for networks with more than $\num{10000}$ parameters, KFAC scales to larger networks (\Cref{fig:2D-Poisson}, middle/center) and is competitive to other second-order optimizers like Hessian-free, which uses more sophisticated heuristics.
+We make similar observations on a (1+1)d heat equation with the same models, see \Cref{sec:1d-heat-equation,fig:heat1d-appendix}.
 
-\textbf{An evolutionary problem: (4+1)d heat equation}
-To demonstrate that our method can also be applied to other problems as the Poisson equation we consider the four-dimensional heat equation
-\begin{align}\label{eq:4D-heat}
-  \begin{split}
-    \partial_t u(t,\vx)-\kappa\Delta_\vx u(t,\vx) & = 0 \quad \text{for } t\in[0,1], \vx\in [0,1]^{4} \\
-    u(0,\vx) & = \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
-               \vx\in [0,1]^{4}
-    \\
-    u(t,\vx) & = \exp(-t) \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for } t\in[0,1], \vx\in\partial[0,1]^{4}
-  \end{split}
-\end{align}
-with diffusivity constant $\kappa = 1/4$.
-Like before, we evaluate the performance of the different optimizers for networks with $4$ hidden layers, $\tanh$ activation function, and layers of different sizes.
-We report the relative $L^2$ error with respect to the optimization time in \Cref{fig:4D-heat}.
-
-% Due to the higher spatial dimension, we use mini-batches in the evaluation of the loss and the preconditioner, where for KFAC, we keep the same batch for $100$ iterations\todo{copy from the appendix; later, we add this as a tunable hp}.
-
-All optimizers except for KFAC sample a new training batch each iteration.
-
-KFAC only re-samples every 100 iterations because we noticed  significant improvement with multiple iterations on a fixed batch.
-
-To make sure that this does not lead to an unfair advantage of KFAC, we conduct an additional experiment where we also tune the batch sampling frequency, as well as other hyper-parameters; see \Cref{sec:high-dimensional-poissons-app}.
-
-Again, we observe that KFAC offers competitive performance compared with other second-order order optimizers that use sophisticated heuristics.
 \begin{figure}
   \centering
   \includegraphics{../kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
-  \caption{We report the performance of different optimizers on the 4D heat equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
+  \caption{Performance of different optimizers on the (4+1)d heat equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
   \label{fig:4D-heat}
 \end{figure}
 
-
-\paragraph{High-dimensional Poisson equations}
-We consider Poisson equations in dimensions $d=5,10,100$ on the problems used in~\cite{yu2018deep, muller2023achieving}, which admit the solutions
-\begin{align}\label{eq:solutions_poisson}
+\textbf{An evolutionary problem: (4+1)d heat equation}
+To demonstrate that our methods can also be applied to other problems than the Poisson equation, we consider a four-dimensional heat equation
+\begin{align}\label{eq:4D-heat}
   \begin{split}
-    u^\star(\vx) & = \sum_{i=1}^5 \cos(\pi x_i) \quad \text{for } \vx\in [0,1]^{5}, \\
-    u^\star(\vx) & = \sum_{k=1}^5 x_{2k-1}x_{2k},  \quad \text{for } \vx\in [0,1]^{10} \\
-    u^\star(\vx) & = \lVert \vx \rVert_2^2 \quad \text{for } \vx\in [0,1]^{100},
+    \partial_t u(t,\vx)-\kappa\Delta_\vx u(t,\vx)
+    &=
+      0 \quad \text{for } t\in[0,1], \vx\in [0,1]^{4}\,,
+    \\
+    u(0,\vx)
+    &=
+      \textstyle
+      \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
+      \vx\in [0,1]^{4}\,,
+    \\
+    u(t,\vx)
+    &=
+      \textstyle
+      \exp(-t) \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for } t\in[0,1], \vx\in\partial[0,1]^{4}\,,
   \end{split}
 \end{align}
-respectively.
-\begin{comment}
-  \begin{align}\label{eq:5d_poisson}
-    \begin{split}
-      -\Delta u(x) & = -\sum_{i=1}^5 \cos(\pi x_i)? \quad \text{for } x\in [0,1]^{5} \\
-      u(x) & = 0 \quad \text{for } x\in \partial[0,1]^{5}
-    \end{split}
-  \end{align}
-  \begin{align}\label{eq:10d_poisson}
-    \begin{split}
-      -\Delta u(x) & = 0 \quad \text{for } x\in [0,1]^{10} \\
-      u(x) & = \sum_{k=1}^5 x_{2k-1}x_{2k} \quad \text{for } x\in \partial[0,1]^{10}
-    \end{split}
-  \end{align}
-  \begin{align}\label{eq:high_dimensional_poisson}
-    \begin{split}
-      -\Delta u(x) & = -2d \quad \text{for } x\in [0,1]^{100} \\
-      u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{100}.
-    \end{split}
-  \end{align}
-\end{comment}
-% We test the different optimizers on problems with different spatial dimensions $d=5, 10, 100$ and
-Here, we select the hyper-parameters via a Bayesian optimization procedure.
-Again, we use mini-batches for $100$ iterations before drawing news samples.
-We see a similar picture as before with KFAC consistently outperforming first-order methods and offering competitive performance amongst the second-order methods.
-Here, we expect a high variance due to the Bayesian optimization, as a grid search provided better accuracy of KFAC for the 10d problem, see \Cref{fig:?}.
-
+with diffusivity constant $\kappa = 1/4$, similar to that studied in \cite{muller2023achieving} (see \Cref{sec:pinn-loss-heat-equation} for the heat equation's PINN loss).
+We use previous architectures with same hidden widths and evaluate optimizer performance with random/grid search(all details in \Cref{sec:4d-heat-app}), see \Cref{fig:4D-heat}.
+To prevent over-fitting, we use mini-batches and sample a new batch each iteration.
+We noticed that KFAC improves significantly when batches are sampled less frequently and hypothesize that it might need more iterations to make similar progress than one iteration of Hessian-free or ENGD; consequently we sample a new batch only every 100 iterations for KFAC.
+To ensure that this does not lead to an unfair advantage for KFAC, we conduct an additional experiment for the MLP with $D=\num{116864}$ where we tune batch sizes, batch sampling frequencies, and all hyper-parameters with generous search spaces using Bayesian search (\Cref{sec:4d-heat-bayes-app}).
+We find that this does not significantly boost performance of the other methods (compare \Cref{fig:4D-heat,fig:heat4d-bayes-appendix}).
+Again, we observe that KFAC offers competitive performance compared to other second-order methods for networks with prohibitive size for ENGD and consistently outperforms SGD, Adam, and L-BFGS. We confirmed these observations with another 5d Poisson equation on the same architectures, see~\Cref{sec:poisson5d-appendix,fig:poisson5d-appendix}.
 
 \begin{figure}
   \centering
   \includegraphics{../kfac_pinns_exp/exp33_poisson_bayes_groupplot/l2_error_over_time.pdf}
   \caption{
-    We report the performance of different optimizers on Poisson equations in different spatial dimensions measured in relative $L^2$ error against wall clock time for a network with $D$ parameters; Bayesian optimization is used for the choice of the hyper-parameters.
+    Optimizer performance on Poisson equations in high dimensions and different boundary conditions measured in relative $L_2$ error against wall clock time for networks with $D$ parameters.
   }
   \label{fig:10D-Poisson}
 \end{figure}
 
-% \todo[inline]{I think we should only present the time plots to safe space, move everything else to the appendix}
-
-\begin{comment}
-  \subsection{A 100D Poisson equation}
-
-  \begin{itemize}
-  \item 100D from deep Ritz paper~\citep{yu2018deep}, i.e.,
-    \begin{align*}
-      -\Delta u(x) & = -200 \quad \text{for } x\in [0,1]^{100} \\
-      u(x) & = \lVert x \rVert_2^2 \quad \text{for } x\in \partial[0,1]^{100}
-    \end{align*}
-    where the solution is given by $u^\star(x) = \lVert x \rVert_2^2$
-  \item around $10^5$ to $10^6$ parameters
-  \item no ENGD, ENGD matrix-free?, only KFACs, L-BFGS, HF, and first-order methods
-  \end{itemize}
-
-
-  \subsection{Heat equation}
-
-  \begin{itemize}
-  \item again 100D
-  \item sum of cosinuts with exponential trash in time? I.e.,
-    time-space domain $[0,1]\times[0,1]^{100}$ %and
-    % \begin{align*}
-    %   \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } x\in [0,1]^{100} \\
-    %   u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
-    %   x\in [0,1]^{100}
-    %   \\
-    %   u(t,x) & = 0 \quad \text{for } t\in[0,1], x\in\partial[0,1]^{100}
-    % \end{align*}
-    % \item an alternative would be
-    \todo{rhs not equal zero I think, double check before implementing}
-    \begin{align*}
-      \partial_t u(t,x)-\Delta_x u(t,x) & = 0 \quad \text{for } x\in [0,1]^{100} \\
-      u(0,x) & = \sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for }
-               x\in [0,1]^{100}
-      \\
-      u(t,x) & = e^{-\pi^2 t}\sum_{i=1}^{100} \sin(\pi x_i) \quad \text{for } t\in[0,1], x\in\partial[0,1]^{100}
-    \end{align*}
-    for which the solution should be given by
-    \begin{align*}
-      u^\star(t,x) = e^{-\pi^2 t} \sum_{i=1}^{100} \sin(\pi x_i)?
-    \end{align*}
-    % we can also scale in time because $e^{-4\pi^2}\approx e^{-40}$
-  \item around $10^5-10^6$ parameters
-  \end{itemize}
-\end{comment}
-
-% \subsection{Limitations and Future Work}
-
-\begin{comment}
-  We want to show the following things:
-  \begin{itemize}
-  \item We can safely discard the Gramian's off-diagonal blocks without harming
-    training performance. This reduces the Gramian's size, but still imposes
-    strong constraints on scalability.
-
-  \item Our proposed Kronecker approximation works roughly as well as the
-    full/block diagonal Gramian, while being much cheaper to compute, store, and
-    invert.
-
-  \item Thanks to the Kronecker approximation of the Gramian, we can scale to larger neural networks where the other methods either do not work (storing the Gramian is prohibitively expensive) or become quite slow (matrix-free linear system solve via Gramian-vector products).
-  \end{itemize}
-
-  Todos:
-  \begin{itemize}
-  \item concrete example ground truth: 2d Poisson on unit square with sine target
-  \end{itemize}
-
-  Ideas:
-  \begin{itemize}
-  \item try out different approximations
-    \begin{itemize}
-    \item Ground truth
-    \item Block diagonal exact
-    \item Diagonal
-    \item Block diagonal with different approximations
-    \end{itemize}
-  \end{itemize}
-\end{comment}
+\textbf{High-dimensional Poisson equations}
+To demonstrate scaling to high-dimensional PDEs and even larger neural networks, we consider three Poisson equations ($d=5,10,100$) with different boundary conditions used in~\cite{yu2018deep, muller2023achieving}, which admit the solutions
+\begin{align}\label{eq:solutions_poisson}
+  \begin{split}
+    u_\star(\vx)
+    &=
+      \textstyle
+      \sum_{i=1}^5 \cos(\pi x_i) \quad \text{for } \vx\in [0,1]^{5}\,,
+    \\
+    u_\star(\vx)
+    &=
+      \textstyle
+      \sum_{k=1}^5 x_{2k-1}x_{2k},  \quad \text{for } \vx\in [0,1]^{10}\,,
+    \\
+    u_\star(\vx)
+    &=
+     \lVert \vx \rVert_2^2 \quad \text{for } \vx\in [0,1]^{100}\,,
+  \end{split}
+\end{align}
+using the same architectures as before, but with larger intermediate widths and parameters up to a million (\Cref{fig:10D-Poisson}).
+Due to lacking references for training such high-dimensional problems, we select all hyper-parameters via Bayesian search, including batch sizes and batch sampling frequencies (all details in \Cref{sec:high-dimensional-poissons-app}).
+We see a similar picture as before with KFAC consistently outperforming first-order methods and offering competitive performance among second-order methods.
+To account for the possibility that the Bayesian search did not converge properly to the best hyper-parameters, we conduct a random/grid search experiment for the 10d Poisson equation (\Cref{fig:10D-Poisson}, middle) in \Cref{sec:poisson10d-appendix}, using the same batch sizes and batch sampling frequencies as for the $(4+1)$d heat equation. In this experiment, KFAC further improved and achieved the same final performance as Hessian-free, see
+\Cref{TODO}.
 
 %%% Local Variables:
 %%% mode: latex
