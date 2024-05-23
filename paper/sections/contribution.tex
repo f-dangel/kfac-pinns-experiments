@@ -256,8 +256,7 @@ Following the same steps as in \Cref{sec:KFAC-Laplace}, we apply the KFAC-expand
     \end{split}
   \end{align}
 \end{tcolorbox}
-To bring this expression even closer to \Cref{eq:KFAC-PINN}, we can re-write the second Kronecker factor using an outer product decomposition $\mLambda(\vr_{\Omega,n}) = \sum_{m=1}^M \vl_{n,m} \vl_{n,m}$ with $\vl_{n,m} \in \sR^M$, then introduce $\vg^{(l)}_{n,s,m} \coloneqq (\jac_{\mZ^{(l)}_{n,s}} \vr_{\Omega,n})^{\top} \vl_{n,m} \in \sR^{h^{(l)}}$ and write the second term as $\nicefrac{1}{N} \sum_{n,s,m=1}^{N,S,M} \vg^{(l)}_{n,s,m} \vg^{(l)\top}_{n,s,m}$, similar to~\cite{botev2017practical}.
-We refer the interested reader to a more detailed derivation in \Cref{app:derivations}.
+To bring this expression even closer to \Cref{eq:KFAC-PINN}, we can re-write the second Kronecker factor using an outer product decomposition $\mLambda(\vr_{\Omega,n}) = \sum_{m=1}^M \vl_{n,m} \vl_{n,m}$ with $\vl_{n,m} \in \sR^M$, then introduce $\vg^{(l)}_{n,s,m} \coloneqq (\jac_{\mZ^{(l)}_{n,s}} \vr_{\Omega,n})^{\top} \vl_{n,m} \in \sR^{h^{(l)}}$ and write the second term as $\nicefrac{1}{N} \sum_{n,s,m=1}^{N,S,M} \vg^{(l)}_{n,s,m} \vg^{(l)\top}_{n,s,m}$, similar to the Kronecker-factored low-rank (KFLR) approach of~\citet{botev2017practical}.
 
 \textbf{KFAC for variational problems}
 Our proposed KFAC approximation is not limited to PINNs and can be used for variational problems of the form
