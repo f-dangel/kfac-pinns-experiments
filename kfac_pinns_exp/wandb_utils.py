@@ -239,7 +239,7 @@ class WandbSweepFormatter(WandbRunFormatter):
                     ]
                 ]
             )
-            return r"$\mathcal{C}(\{" + values + "\})$"
+            return r"$\mathcal{C}(\{" + values + r"\})$"
 
         else:
             raise NotImplementedError(f"Unknown distribution {dist}.")
