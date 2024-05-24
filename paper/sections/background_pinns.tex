@@ -17,18 +17,18 @@ Activation layers map $\vz^{(l-1)}\mapsto \vz^{(l)} = \sigma(\vz^{(l-1)})$ eleme
 \subsection{Energy Natural Gradients for Physics-Informed Neural Networks}
 Let us consider a domain $\Omega\subseteq\mathbb R^d$ and the partial differential equation
 \begin{align*}
-  -\mathcal{L} u = f \quad \text{in }\Omega\,,
+  \mathcal{L} u = f \quad \text{in }\Omega\,,
                    \qquad
   u = g \quad \text{on }\partial\Omega\,,
 \end{align*}
-with square-integrable right hand side $f\in L^2(\Omega)$ and twice continuously differentiable boundary condition $g\in C^2(\Omega)\cap C(\overline{\Omega})$.
-$\mathcal{L}$ denotes a differential operator, e.g.\,the Laplacian $\mathcal{L} u = \Delta_{\vx} u = \sum_{i=1}^d \partial_{\evx_i}^2 u$.
+with right-hand side $f$, boundary data $g$ and a differential operator
+$\mathcal{L}$, e.g.\,the negative Laplacian $-\mathcal{L} u = \Delta_{\vx} u = \sum_{i=1}^d \partial_{\evx_i}^2 u$.
 We parametrize $u$ using a neural network and train its parameters $\vtheta$ to minimize the loss
 \begin{align}\label{eq:pinn-loss}
   \!\!\!\!\!\!
   L(\vtheta)
   &=
-    \frac{1}{2N_\Omega} \sum_{n=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_n) + f(\vx_n))^2
+    \frac{1}{2N_\Omega} \sum_{n=1}^{N_\Omega} (\mathcal{L} u_\vtheta(\vx_n) - f(\vx_n))^2
     +
     \frac{1}{2N_{\partial\Omega}}\sum_{n=1}^{N_{\partial\Omega}} ( u_\vtheta(\vx^\text{b}_n) - g(\vx^\text{b}_n))^2
     \eqqcolon

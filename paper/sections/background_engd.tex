@@ -1,7 +1,7 @@
 First-order optimizers like gradient descent and Adam struggle at producing satisfactory solutions when used to train PINNs~\citep{cuomo2022scientific}.
 Instead, function space-inspired second-order methods have lately shown promising results~\citep{muller2024optimization}.
 We focus on \emph{energy natural gradient descent (ENGD~\cite{muller2023achieving})} which---applied to PINN objectives like \eqref{eq:pinn-loss}---corresponds to the Gauss-Newton method~\cite[][Chapter 6.3]{bottou2016machine}.
-ENGD mimics Newton's method up to a projection onto the model's tangent space and a discretization error that vanishes quadratically in the step size, thus providing locally optimal residual updates.
+ENGD mimics Newton's method \emph{in function space} up to a projection onto the model's tangent space and a discretization error that vanishes quadratically in the step size, thus providing locally optimal residual updates.
 Alternatively, the Gauss-Newton method can be motivated from the standpoint of operator-preconditioning, where the Gauss-Newton matrix leads to optimal conditioning of the problem~\citep{de2023operator}.
 
 Natural gradient methods perform parameter updates via a preconditioned gradient descent scheme $\vtheta \leftarrow \vtheta - \alpha \mG(\vtheta)^+\nabla L(\vtheta)$, where $\mG(\vtheta)^+$ denotes the pseudo-inverse of a suitable \emph{Gramian matrix} $\mG(\vtheta) \in \sR^{P \times P}$ and $\alpha$ is a step size.
@@ -25,7 +25,7 @@ ENGD for the PINN loss~\eqref{eq:pinn-loss} uses the Gramian
     &\eqqcolon \mG_\Omega(\vtheta) + \mG_{\partial\Omega}(\vtheta)\,.
   \end{split}
 \end{align}
-\eqref{eq:gramian} is the Gauss-Newton matrix of the residual $\vr(\vtheta) = (\nicefrac{\vr_\Omega(\vtheta)^{\top}}{\sqrt{2N_\Omega}}, \nicefrac{\vr_{\partial\Omega}(\vtheta)^{\top}}{\sqrt{2N_{\partial\Omega}}} )^\top \in \sR^{N_{\Omega} + N_{\partial\Omega}}$ with interior and boundary residuals $r_{\Omega,n}(\vtheta) = \mathcal{L} u_\vtheta(\vx_n) + f(\vx_n)$ and $r_{\partial\Omega,n}(\vtheta) = u_\vtheta(\vx_n^\text{b}) - g(\vx_n^\text{b})$.
+\eqref{eq:gramian} is the Gauss-Newton matrix of the residual $\vr(\vtheta) = (\nicefrac{\vr_\Omega(\vtheta)^{\top}}{\sqrt{N_\Omega}}, \nicefrac{\vr_{\partial\Omega}(\vtheta)^{\top}}{\sqrt{N_{\partial\Omega}}} )^\top \in \sR^{N_{\Omega} + N_{\partial\Omega}}$ with interior and boundary residuals $r_{\Omega,n}(\vtheta) = \mathcal{L} u_\vtheta(\vx_n) - f(\vx_n)$ and $r_{\partial\Omega,n}(\vtheta) = u_\vtheta(\vx_n^\text{b}) - g(\vx_n^\text{b})$.
 
 %%% Local Variables:
 %%% mode: latex
