@@ -226,7 +226,7 @@ class WandbSweepFormatter(WandbRunFormatter):
             values = ",".join(
                 [cls.num(v).replace("$", "") for v in parameter["values"]]
             )
-            return r"$\mathcal{C}(\{" + values + r"\})$"
+            return r"$\mathcal{U}(\{" + values + r"\})$"
         elif dist == "int_uniform":
             values = ",".join(
                 [
@@ -239,7 +239,7 @@ class WandbSweepFormatter(WandbRunFormatter):
                     ]
                 ]
             )
-            return r"$\mathcal{C}(\{" + values + r"\})$"
+            return r"$\mathcal{U}(\{" + values + r"\})$"
 
         else:
             raise NotImplementedError(f"Unknown distribution {dist}.")
