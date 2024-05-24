@@ -18,4 +18,5 @@ main.pdf
 /.coverage
 **wandb
 /paper/arxiv.tar.gz
-/.deps
+**.deps
+**.deps-t
