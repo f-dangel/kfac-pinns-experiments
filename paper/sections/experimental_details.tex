@@ -429,23 +429,23 @@ Figure \Cref{fig:heat1d-appendix} summarizes the results.
 
 \begin{figure}[!h]
   \centering
-  \def\pathtofigs{../kfac_pinns_exp/exp24_heat1d_groupplot}
+  \def\pathToFigs{kfac_pinns_exp/exp24_heat1d_groupplot}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:heat1d-time}
     % trim legend, xlabel and xticklabels
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathtofigs/l2_error_over_time.pdf}
+    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathtofigs/loss_over_time.pdf}
+    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:heat1d-step}
     % trim the legend, xlabel and xticklabels
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathtofigs/l2_error_over_step.pdf}
+    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
     % trim the titles
-    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathtofigs/loss_over_step.pdf}
+    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
   \end{subfigure}
   \caption{training loss and evaluation $L_2$ error for learning the solution to a 1+1-dimensional heat equation over (\subref{subfig:heat1d-time}) time and (\subref{subfig:heat1d-step}). each column corresponds to a different neural network.}\label{fig:heat1d-appendix}
 \end{figure}
