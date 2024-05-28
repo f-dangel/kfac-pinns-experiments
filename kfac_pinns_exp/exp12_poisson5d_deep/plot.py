@@ -19,16 +19,17 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "0w9egl2u": "SGD",
-    "gm45xw6w": "Adam",
-    "ceezms1x": "Hessian-free",
-    "8yyepuj4": "LBFGS",
-    "q4x3gd9x": "ENGD (full)",
-    "x4rr52g2": "ENGD (layer-wise)",
-    "60yjzuh1": "ENGD (diagonal)",
-    "rsjryuic": "KFAC",
-    "2rdhag2w": "KFAC (empirical)",
-    "gip15lzy": "KFAC (forward-only)",
+    "r1rkqaav": "SGD",
+    "bux5jmz6": "Adam",
+    "0lw8ye8p": "Hessian-free",
+    "qinxwb3l": "LBFGS",
+    "ip39qzxt": "ENGD (full)",
+    "sjtdpccw": "ENGD (layer-wise)",
+    "mr4fsnyn": "ENGD (diagonal)",
+    # KFACs with grid line search and tuned momentum
+    "63uuyxky": "KFAC",
+    # auto-tuned KFACs
+    "tdl4ros6": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -41,8 +42,7 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    "KFAC (empirical)": "gray",
-    "KFAC (forward-only)": "lightgray",
+    "KFAC*": "black",
 }
 
 linestyles = {
@@ -54,8 +54,7 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    "KFAC (empirical)": "-",
-    "KFAC (forward-only)": "-",
+    "KFAC*": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
@@ -115,7 +114,7 @@ if __name__ == "__main__":
                 ax.plot(
                     x_data,
                     df_history[y],
-                    label=label,
+                    label=None if "*" in label else label,
                     color=colors[label],
                     linestyle=linestyles[label],
                 )

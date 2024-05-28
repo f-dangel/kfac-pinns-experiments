@@ -40,19 +40,25 @@ from kfac_pinns_exp.parse_utils import (
     parse_known_args_and_remove_from_argv,
 )
 from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
-from kfac_pinns_exp.train_utils import (
-    FrozenDataLoader,
-    GenerativeDataLoader,
-    KillTrigger,
-    LoggingTrigger,
-)
+from kfac_pinns_exp.train_utils import DataLoader, KillTrigger, LoggingTrigger
 from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
 SUPPORTED_EQUATIONS = ["poisson", "heat"]
-SUPPORTED_MODELS = ["mlp-tanh-64", "mlp-tanh-64-48-32-16", "mlp-tanh-64-64-48-48"]
-SUPPORTED_BOUNDARY_CONDITIONS = ["sin_product", "cos_sum", "u_weinan", "u_weinan_norm"]
-SUPPORTED_DATALOADERS = ["FrozenDataLoader", "GenerativeDataLoader"]
+SUPPORTED_MODELS = [
+    "mlp-tanh-64",
+    "mlp-tanh-64-48-32-16",
+    "mlp-tanh-64-64-48-48",
+    "mlp-tanh-256-256-128-128",
+    "mlp-tanh-768-768-512-512",
+]
+SUPPORTED_BOUNDARY_CONDITIONS = [
+    "sin_product",
+    "cos_sum",
+    "u_weinan",
+    "u_weinan_norm",
+    "sin_sum",
+]
 
 SOLUTIONS = {
     "poisson": {
@@ -63,6 +69,7 @@ SOLUTIONS = {
     },
     "heat": {
         "sin_product": heat_equation.u_sin_product,
+        "sin_sum": heat_equation.u_sin_sum,
     },
 }
 INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS = {
@@ -112,11 +119,10 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Which boundary condition will be used.",
     )
     parser.add_argument(
-        "--data_loader",
-        type=str,
-        default="FrozenDataLoader",
-        choices=SUPPORTED_DATALOADERS,
-        help="Which data loader will be used.",
+        "--batch_frequency",
+        type=int,
+        default=0,
+        help="Frequency at which new batches are generated. 0 means never.",
     )
     parser.add_argument(
         "--dim_Omega",
@@ -186,6 +192,12 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default=150,
         help="Maximum number of logs/prints. Ignored if `num_seconds` is non-zero.",
     )
+    parser.add_argument(
+        "--N_eval",
+        type=int,
+        default=None,
+        help="Number of evaluation points (default: 10 * N_Omega).",
+    )
     # plotting-specific arguments
     parser.add_argument(
         "--plot_solution",
@@ -209,6 +221,10 @@ def parse_general_args(verbose: bool = False) -> Namespace:
 
     # overwrite dtype
     args.dtype = DTYPES[args.dtype]
+
+    # set default value for N_eval if not supplied
+    if args.N_eval is None:
+        args.N_eval = 10 * args.N_Omega
 
     if verbose:
         print(f"General arguments for the PINN problem: {args}")
@@ -261,6 +277,30 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
             Tanh(),
             Linear(48, 1),
         ]
+    elif model == "mlp-tanh-256-256-128-128":
+        layers = [
+            Linear(in_dim, 256),
+            Tanh(),
+            Linear(256, 256),
+            Tanh(),
+            Linear(256, 128),
+            Tanh(),
+            Linear(128, 128),
+            Tanh(),
+            Linear(128, 1),
+        ]
+    elif model == "mlp-tanh-768-768-512-512":
+        layers = [
+            Linear(in_dim, 768),
+            Tanh(),
+            Linear(768, 768),
+            Tanh(),
+            Linear(768, 512),
+            Tanh(),
+            Linear(512, 512),
+            Tanh(),
+            Linear(512, 1),
+        ]
     else:
         raise ValueError(
             f"Unsupported model: {model}. Supported models: {SUPPORTED_MODELS}"
@@ -304,7 +344,10 @@ def create_interior_data(
             "u_weinan_norm": poisson_equation.f_weinan_norm,
         }[condition]
         y = f(X)
-    elif equation == "heat" and condition == "sin_product":
+    elif equation == "heat" and condition in {
+        "sin_product",
+        "sin_sum",
+    }:
         y = zeros(num_data, 1)
     else:
         raise NotImplementedError(
@@ -343,7 +386,10 @@ def create_condition_data(
     }:
         # boundary condition
         X_dOmega = square_boundary(num_data, dim_Omega)
-    elif equation == "heat" and condition == "sin_product":
+    elif equation == "heat" and condition in {
+        "sin_product",
+        "sin_sum",
+    }:
         # boundary condition
         X_dOmega1 = heat_equation.square_boundary_random_time(num_data // 2, dim_Omega)
         # initial value condition
@@ -359,7 +405,7 @@ def create_condition_data(
 
 
 def create_data_loader(
-    data_loader: str,
+    frequency: int,
     loss_type: str,
     equation: str,
     condition: str,
@@ -371,7 +417,7 @@ def create_data_loader(
     """Create a data loader for one of the losses.
 
     Args:
-        data_loader: what kind of data loader to use.
+        frequency: How many steps before the data loader samples a new batch.
         loss_type: For which type of loss to generate data. Can be either `'interior'`
             or `'condition'`.
         equation: The name of the equation.
@@ -383,20 +429,12 @@ def create_data_loader(
 
     Returns:
         A data loader for the specified loss which generates batched `(X, y)` pairs.
-
-    Raises:
-        NotImplementedError: If the data loader is not supported.
     """
     data_func = {"interior": create_interior_data, "condition": create_condition_data}[
         loss_type
     ]
     data_func = partial(data_func, equation, condition, dim_Omega, num_data)
-    if data_loader == "FrozenDataLoader":
-        return FrozenDataLoader(data_func, dev, dt)
-    elif data_loader == "GenerativeDataLoader":
-        return GenerativeDataLoader(data_func, dev, dt)
-    else:
-        raise NotImplementedError(f"Data loader {data_loader} not supported.")
+    return DataLoader(data_func, dev, dt, frequency)
 
 
 def main():  # noqa: C901
@@ -417,7 +455,7 @@ def main():  # noqa: C901
     # for satisfying the PDE on the domain
     interior_train_data_loader = iter(
         create_data_loader(
-            args.data_loader,
+            args.batch_frequency,
             "interior",
             equation,
             condition,
@@ -429,12 +467,12 @@ def main():  # noqa: C901
     )
     interior_eval_data_loader = iter(
         create_data_loader(
-            args.data_loader,
+            0,  # fixed evaluation data
             "interior",
             equation,
             condition,
             dim_Omega,
-            10 * N_Omega,
+            args.N_eval,
             dev,
             dt,
         )
@@ -442,7 +480,7 @@ def main():  # noqa: C901
     # for satisfying boundary and (maybe) initial conditions
     condition_train_data_loader = iter(
         create_data_loader(
-            args.data_loader,
+            args.batch_frequency,
             "condition",
             equation,
             condition,

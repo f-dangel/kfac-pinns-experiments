@@ -1,5 +1,5 @@
 entity: kfac-pinns
-project: weinan_norm
+project: poisson100d_weinan_norm
 name: LBFGS
 program: ../../train.py
 command:
@@ -11,24 +11,32 @@ command:
     - ${args}
 metric:
     goal: minimize
-    name: loss
-method: grid
+    name: l2_error
+method: bayes
 parameters:
     boundary_condition:
         value: u_weinan_norm
     model:
-        value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 50_000
-    dim_Omega:
-        value: 10
-    N_Omega:
+        value: mlp-tanh-768-768-512-512
+    num_seconds:
         value: 10_000
+    dim_Omega:
+        value: 100
+    N_eval:
+        value: 30_000
+    N_Omega:
+        min: 100
+        max: 5_000
     N_dOmega:
-        value: 5_000
+        min: 50
+        max: 2_500
+    batch_frequency:
+        min: 0
+        max: 1_000
     LBFGS_lr:
-        distribution: categorical
-        values: [0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
+        distribution: log_uniform_values
+        min: 1e-6
+        max: 1e-0
     LBFGS_history_size:
-        distribution: categorical
-        values: [50, 75, 100, 125, 150, 175, 200, 225]
+        min: 5
+        max: 500

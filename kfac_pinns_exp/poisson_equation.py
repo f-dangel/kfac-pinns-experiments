@@ -2,6 +2,7 @@
 
 from math import pi
 from typing import Callable, Dict, List, Optional, Tuple, Union
+from warnings import warn
 
 from einops import einsum, rearrange, reduce
 from matplotlib import pyplot as plt
@@ -120,7 +121,17 @@ def u_weinan_prods(X: Tensor) -> Tensor:
         The function values as tensor of shape (N, 1).
     """
     N, d = X.shape
-    return X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True)
+    if d == 10:
+        norm = 1.34  # numerical approximation for dim_Omega=10
+    elif d == 100:
+        norm = 12.59  # numerical approximation for dim_Omega=100
+    else:
+        norm = 1.0
+        warn(
+            "[u_weinan_prods]: u_weinan_prods is not of unit L2 norm. "
+            "Consider changing the normalization constant."
+        )
+    return X.reshape(N, d // 2, 2).prod(dim=2).sum(dim=1, keepdim=True) / norm
 
 
 def f_weinan_prods(X: Tensor) -> Tensor:
@@ -148,7 +159,13 @@ def u_weinan_norm(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape (N, 1).
     """
-    return (X**2.0).sum(dim=1, keepdim=True)
+    if X.shape[-1] != 100:
+        warn(
+            "[u_weinan_norm]: u_weinan_norm is not of unit L2 norm. "
+            "Consider changing the normalization constant."
+        )
+    norm = 33.47  # numerical approximation for dim_Omega=100
+    return (X**2.0).sum(dim=1, keepdim=True) / norm
 
 
 def f_weinan_norm(X: Tensor) -> Tensor:
@@ -161,7 +178,7 @@ def f_weinan_norm(X: Tensor) -> Tensor:
         2 * dim_Omega of the shape (len(X), 1).
     """
     N, d = X.shape
-    return -2 * d * ones(N, 1)
+    return -2 * d * (1.0 / 33.47) * ones(N, 1)
 
 
 def l2_error(model: Module, X: Tensor, u: Callable[[Tensor], Tensor]) -> Tensor:

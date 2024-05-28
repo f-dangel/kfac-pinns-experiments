@@ -533,81 +533,80 @@ We can just do that in the same way as the original KFAC paper, which gives us
 
 \section{Different Gramians}
 
-\subsection{$L^2$ aka Gauß-Newton matrix aka empirical Fisher}
+\subsection{$L^2$ aka Gauss-Newton matrix aka empirical Fisher}
 
-In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the Gramian $\mG(\vtheta)$ is chosen as the (empirical) Fisher information matrix given by~\citep{martens2020new, eschenhagen2023kroneckerfactored}
+In least squares regression with data $(\vx_1, \vy_1), \dots, (\vx_N, \vy_N)$ the Gramian $\mG(\vtheta)$ is chosen as the (empirical) Fisher information matrix given in~\citep{martens2020new, eschenhagen2023kroneckerfactored}
 \begin{equation}
   \mG(\vtheta) = \frac1N\sum_{n=1}^N \jac_{\vtheta} u_{\vtheta}(\vx_n)^\top \jac_{\vtheta} u_{\vtheta}(\vx_n).
  \end{equation}
- The individual entries are given by 
+ The individual entries are given by
 \begin{equation}
-  \mG(\vtheta)_{ij} = \frac1N\sum_{n=1}^N \partial_{\vtheta_i} u_{\vtheta}(\vx_n) \partial_{\vtheta_j} u_{\vtheta}(\vx_n). 
+  \mG(\vtheta)_{ij} = \frac1N\sum_{n=1}^N \partial_{\vtheta_i} u_{\vtheta}(\vx_n) \partial_{\vtheta_j} u_{\vtheta}(\vx_n).
 \end{equation}
 Another way to derive this preconditioner is from the standpoint of maximum likelihood estimation.
-Indeed, let us consider the following parametric distribution $p_\theta(\cdot|\vx) = \mathcal N(u_\vtheta(\vx), \sigma^2\mI)$, i.e., the density of the conditional distribution is given by 
+Indeed, let us consider the following parametric distribution $p_\theta(\cdot|\vx) = \mathcal N(u_\vtheta(\vx), \sigma^2\mI)$, i.e., the density of the conditional distribution is given by
 \begin{align}
-    p_\vtheta(\vy|\vx) = \frac1{(2\pi\sigma^2)^{\frac{d}2}} \cdot e^{-\frac{\lVert u_\vtheta(\vx) - \vy \rVert_2^2}{2\sigma^2}}. 
+    p_\vtheta(\vy|\vx) = \frac1{(2\pi\sigma^2)^{\frac{d}2}} \cdot e^{-\frac{\lVert u_\vtheta(\vx) - \vy \rVert_2^2}{2\sigma^2}}.
 \end{align}
-I.e., we interpret the output of the network as an estimate of the mean and then assume a standard Gaussian noise. 
-The \emph{Fisher information matrix} of the probability model 
+I.e., we interpret the output of the network as an estimate of the mean and then assume a standard Gaussian noise.
+The \emph{Fisher information matrix} of the probability model
 \begin{align}
     p_\vtheta = \frac1N \sum_{n=1}^N \delta_{\vx_n}\otimes p_\vtheta(\cdot|\vx_n)
 \end{align}
 \todo[inline]{I just recalled the confusion that about the what people call the empirical Fisher; what I meant was the empirical Fisher as referred to by Amari, what I wrote down was the empirical Fisher in the ML community, which is something different; nicely explained of course by \cite{kunstner2019limitations}}
-on $\mathbb X\times\mathbb Y$ is given by 
+on $\mathbb X\times\mathbb Y$ is given by
 \begin{align}
-    {\mF}(\vtheta)_{ij} = \frac1N\sum_{n=1}^N  \mathbb E_{p_\vtheta(\vy|\vx_n)}\Big[\partial_{\vtheta_i} \log p_{\vtheta}(\vy|\vx_n) \partial_{\vtheta_j} \log p_{\vtheta}(\vy|\vx_n)\Big]. 
+    {\mF}(\vtheta)_{ij} = \frac1N\sum_{n=1}^N  \mathbb E_{p_\vtheta(\vy|\vx_n)}\Big[\partial_{\vtheta_i} \log p_{\vtheta}(\vy|\vx_n) \partial_{\vtheta_j} \log p_{\vtheta}(\vy|\vx_n)\Big].
 \end{align}
-A short computation shows that up to an absolute constant factor $\mG$ and ${\mF}$ agree. 
-Another way of stating this is that $u\mapsto p$ is an isometry wrt to $L^2$ and the Fisher-Rao metric... 
+A short computation shows that up to an absolute constant factor $\mG$ and ${\mF}$ agree.
+Another way of stating this is that $u\mapsto p$ is an isometry wrt to $L^2$ and the Fisher-Rao metric...
 \todo{}
 
-One can also consider the empirical empirical Fisher 
+One can also consider the empirical empirical Fisher
 \begin{align}
-    \hat{\mF}(\vtheta)_{ij} = \frac1N\sum_{n=1}^N  \partial_{\vtheta_i} \log p_{\vtheta}(\vy_n|\vx_n) \partial_{\vtheta_j} \log p_{\vtheta}(\vy_n|\vx_n). 
+    \hat{\mF}(\vtheta)_{ij} = \frac1N\sum_{n=1}^N  \partial_{\vtheta_i} \log p_{\vtheta}(\vy_n|\vx_n) \partial_{\vtheta_j} \log p_{\vtheta}(\vy_n|\vx_n).
 \end{align}
 
 \subsection{Quantum Gramian / Quantum Natural Gradient}
 
-The \emph{Quantum natural gradient} was introduced by~\cite{stokes2020quantum} in the context of variational Monte-Carlo methods. Here, one parametrizes wave functions $\psi_\vtheta$ of some Quantum system  %$p_\vtheta\propto \psi_\vtheta^2$, where $\psi_\vtheta$ is computed by some neural network, i.e.,
-and consequently considers the corresponding probability density functions  
+The \emph{Quantum natural gradient} was introduced in~\cite{stokes2020quantum} in the context of variational Monte-Carlo methods. Here, one parametrizes wave functions $\psi_\vtheta$ of some Quantum system  %$p_\vtheta\propto \psi_\vtheta^2$, where $\psi_\vtheta$ is computed by some neural network, i.e.,
+and consequently considers the corresponding probability density functions
 \begin{align}
-    p_\vtheta(\vx) = \frac{\psi_\vtheta^2(\vx)}{\lVert \psi_\vtheta \rVert_2^2}. 
+    p_\vtheta(\vx) = \frac{\psi_\vtheta^2(\vx)}{\lVert \psi_\vtheta \rVert_2^2}.
 \end{align}
-We compute 
+We compute
 \begin{align}
-    \partial_{\vtheta_i} \log p_{\vtheta}(\vx) & = \partial_{\vtheta_i} \log(\psi_{\vtheta}(\vx)^2) - \partial_{\vtheta_i} \log(\lVert \psi_{\vtheta}\rVert_2^2) 
-    \\ & = \frac{\partial_{\vtheta_i} \psi_\vtheta(\vx)^2}{\psi_\vtheta(\vx)^2} - \frac{\partial_{\vtheta_i} \lVert\psi_\vtheta \rVert_2^2}{\lVert\psi_\vtheta \rVert_2^2} 
-    \\ & = \frac{2\psi_\vtheta(\vx)\partial_{\vtheta_i} \psi_\vtheta(\vx)}{\psi_\vtheta(\vx)^2} - \frac{2 \langle \psi_\vtheta, \partial_{\vtheta_i} \psi_\vtheta \rangle }{\lVert\psi_\vtheta \rVert_2^2} 
+    \partial_{\vtheta_i} \log p_{\vtheta}(\vx) & = \partial_{\vtheta_i} \log(\psi_{\vtheta}(\vx)^2) - \partial_{\vtheta_i} \log(\lVert \psi_{\vtheta}\rVert_2^2)
+    \\ & = \frac{\partial_{\vtheta_i} \psi_\vtheta(\vx)^2}{\psi_\vtheta(\vx)^2} - \frac{\partial_{\vtheta_i} \lVert\psi_\vtheta \rVert_2^2}{\lVert\psi_\vtheta \rVert_2^2}
+    \\ & = \frac{2\psi_\vtheta(\vx)\partial_{\vtheta_i} \psi_\vtheta(\vx)}{\psi_\vtheta(\vx)^2} - \frac{2 \langle \psi_\vtheta, \partial_{\vtheta_i} \psi_\vtheta \rangle }{\lVert\psi_\vtheta \rVert_2^2}
 \end{align}
-The corresponding Fisher-information matrix is given by 
+The corresponding Fisher-information matrix is given by
 \begin{align*}
-    \frac{\mF_Q(\vtheta)_{ij}}{4} & = \frac{\mathbb E_{p_\vtheta}[\partial_{\vtheta_i} \log p_{\vtheta}(\vx)\partial_{\vtheta_j} \log p_{\vtheta}(\vx)]}{4} 
-    \\ & = \mathbb E_{p_\vtheta}\left[ \frac{\partial_{\vtheta_i} \psi_\vtheta \partial_{\vtheta_j} \psi_\vtheta}{\psi_\vtheta^2} \right] - \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_i} \psi_\vtheta \rangle}{ \lVert \psi_\vtheta \rVert_2^2 } \cdot \mathbb E_{p_\vtheta} \left[ \frac{\partial_{\vtheta_j} \psi_\vtheta}{\psi_\vtheta} \right] - \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{ \lVert \psi_\vtheta \rVert_2^2 } \cdot \mathbb E_{p_\vtheta} \left[ \frac{\partial_{\vtheta_i} \psi_\vtheta}{\psi_\vtheta} \right] 
+    \frac{\mF_Q(\vtheta)_{ij}}{4} & = \frac{\mathbb E_{p_\vtheta}[\partial_{\vtheta_i} \log p_{\vtheta}(\vx)\partial_{\vtheta_j} \log p_{\vtheta}(\vx)]}{4}
+    \\ & = \mathbb E_{p_\vtheta}\left[ \frac{\partial_{\vtheta_i} \psi_\vtheta \partial_{\vtheta_j} \psi_\vtheta}{\psi_\vtheta^2} \right] - \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_i} \psi_\vtheta \rangle}{ \lVert \psi_\vtheta \rVert_2^2 } \cdot \mathbb E_{p_\vtheta} \left[ \frac{\partial_{\vtheta_j} \psi_\vtheta}{\psi_\vtheta} \right] - \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{ \lVert \psi_\vtheta \rVert_2^2 } \cdot \mathbb E_{p_\vtheta} \left[ \frac{\partial_{\vtheta_i} \psi_\vtheta}{\psi_\vtheta} \right]
     \\ & \qquad + \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_i} \psi_\vtheta \rangle\langle \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{\lVert \psi_\vtheta \rVert_2^4}
-    \\ & = \frac{\langle \partial_{\vtheta_i} \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{\lVert \psi_\vtheta \rVert_2^2} - \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_i} \psi_\vtheta \rangle\langle \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{\lVert \psi_\vtheta \rVert_2^4}. 
+    \\ & = \frac{\langle \partial_{\vtheta_i} \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{\lVert \psi_\vtheta \rVert_2^2} - \frac{\langle \psi_{\vtheta}, \partial_{\vtheta_i} \psi_\vtheta \rangle\langle \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle}{\lVert \psi_\vtheta \rVert_2^4}.
 \end{align*}
-Note that if $\lVert \psi_\vtheta \rVert_2^2=1$ for all $\vtheta$, then 
+Note that if $\lVert \psi_\vtheta \rVert_2^2=1$ for all $\vtheta$, then
 \begin{align}
     0 = \partial_{\vtheta_i} \lVert \psi_\vtheta \rVert_2^2 = 2\langle \psi_{\vtheta}, \partial_{\vtheta_i} \psi_\vtheta \rangle
 \end{align}
-and hence the Gramian simplifies to 
+and hence the Gramian simplifies to
 \begin{align}
-\mF_Q(\vtheta)_{ij} = 4\langle \partial_{\vtheta_i} \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle. 
+\mF_Q(\vtheta)_{ij} = 4\langle \partial_{\vtheta_i} \psi_{\vtheta}, \partial_{\vtheta_j} \psi_\vtheta \rangle.
 \end{align}
-However, it is not clear to me how this can be enforced for a neural network architecture. 
+However, it is not clear to me how this can be enforced for a neural network architecture.
 
-\subsection{Rayleigh-Gauß-Newton}
-This was introduced by~\cite{webber2022rayleigh} and leads to a Gramian that incorporates PDE / Hamiltonian terms. 
-An important task in computational quantum mechanics is to minimize the Rayleigh quotient 
+\subsection{Rayleigh-Gauss-Newton}
+This was introduced in~\cite{webber2022rayleigh} and leads to a Gramian that incorporates PDE / Hamiltonian terms.
+An important task in computational quantum mechanics is to minimize the Rayleigh quotient
 \begin{align}
     \mathcal E(\psi) = \frac{\langle \psi, \mathcal H \psi \rangle}{\langle \psi, \psi \rangle},
 \end{align}
-where $\mathcal H$ denotes the \emph{Hamiltonian} of the quantum system. 
+where $\mathcal H$ denotes the \emph{Hamiltonian} of the quantum system.
 
 
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
 %%% End:
-

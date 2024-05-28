@@ -1,53 +1,32 @@
 """Implements a class to multiply with the inverse of a sum of Kronecker matrices."""
 
-from typing import Tuple, Union
-
 from einops import einsum
-from scipy.linalg import eigh as scipy_eigh
-from torch import Tensor, dtype, float64, from_numpy, inverse
-from torch.linalg import eigh as torch_eigh
+from torch import Tensor, dtype, float64
+from torch.linalg import eigh
 
 
 class InverseKroneckerSum:
     """Class to multiply with the inverse of the sum of two Kronecker products."""
 
     def __init__(
-        self,
-        A1: Tensor,
-        A2: Tensor,
-        B1: Tensor,
-        B2: Tensor,
-        inv_dtype: dtype = float64,
-        backend: str = "scipy",
+        self, A: Tensor, B: Tensor, C: Tensor, D: Tensor, inv_dtype: dtype = float64
     ):
-        """Invert A₁ ⊗ A₂ + B₁ ⊗ B₂.
+        """Invert A ⊗ B + C ⊗ D.
 
-        A₁ and B₁ must have the same dimension.
-        A₂ and B₂ must have the same dimension.
+        A and C must have the same dimension.
+        B and D must have the same dimension.
         All matrices must be symmetric positive-definite.
-
-        Uses the relation
-        (A₁ ⊗ A₂ + B₁ ⊗ B₂)⁻¹ = (V₁ ⊗ V₂) (Λ₁ ⊗ Λ₂ + I)⁻¹ (V₁⁻¹ B₁⁻¹ ⊗ V₂⁻¹ B₂⁻¹).
-        where Vᵢ, Λᵢ are the solutions of the generalized eigenvalue problem
-        Aᵢ Vᵢ = Bᵢ Vᵢ Λᵢ
-        and Λᵢ is a diagonal matrix.
+        See Martens 2015, Appendix B for details.
 
         Args:
-            A1: First matrix in the first Kronecker product.
-            A2: Second matrix in the first Kronecker product.
-            B1: First matrix in the second Kronecker product.
-            B2: Second matrix in the second Kronecker product.
+            A: First matrix in the first Kronecker product.
+            B: Second matrix in the first Kronecker product.
+            C: First matrix in the second Kronecker product.
+            D: Second matrix in the second Kronecker product.
             inv_dtype: Data type in which matrix inversions and eigen-decompositions
                 are performed. Those operations are often unstable in low precision.
                 Therefore, it is often helpful to carry them out in higher precision.
                 Default is `float64`.
-            backend: Backend to use for solving the generalized eigenvalue problem.
-                Currently supports `"torch"` and `"scipy"`. Default is `"scipy"`, which
-                uses `scipy.linalg.eigh` which requires GPU-CPU syncs. `"torch"` will
-                use a PyTorch implementation that is based on the description in
-                ['Eigenvalue and Generalized Eigenvalue Problems:
-                Tutorial'](https://arxiv.org/pdf/1903.11240.pdf) that might be
-                numerically less stable but runs on GPU.
 
         Raises:
             ValueError: If first and second Kronecker factors don't match shapes.
@@ -55,88 +34,39 @@ class InverseKroneckerSum:
             ValueError: If the tensors do not share the same data type.
             ValueError: If the tensors do not share the same device.
         """
-        if any(t.ndim != 2 or t.shape[0] != t.shape[1] for t in (A1, A2, B1, B2)):
+        if any(t.ndim != 2 or t.shape[0] != t.shape[1] for t in (A, B, C, D)):
             raise ValueError("All tensors must be 2d square.")
-        if any(t.dtype != A1.dtype for t in (A2, B1, B2)):
+        if any(t.dtype != A.dtype for t in (B, C, D)):
             raise ValueError("All tensors must have the same data type.")
-        if any(t.device != A1.device for t in (A2, B1, B2)):
+        if any(t.device != A.device for t in (B, C, D)):
             raise ValueError("All tensors must be on the same device.")
-        if A1.shape != B1.shape or A2.shape != B2.shape:
+        if A.shape != C.shape or B.shape != D.shape:
             raise ValueError(
                 "First and second Kronecker factors must match shapes. "
-                + f"Got {A1.shape} vs {B1.shape}, {A2.shape} vs {B2.shape}."
+                + f"Got {A.shape} vs {C.shape}, {B.shape} vs {D.shape}."
             )
 
-        (dt,) = {A1.dtype, A2.dtype, B1.dtype, B2.dtype}
-        self.kronecker_dims = (A1.shape[0], A2.shape[0])
+        (dt,) = {A.dtype, B.dtype, C.dtype, D.dtype}
+        self.kronecker_dims = (A.shape[0], B.shape[0])
 
-        # solve generalized eigenvalue problem in specified precision
-        diagLam1, V1, B1_inv = self.eigh(
-            A1.to(inv_dtype), B1.to(inv_dtype), backend, return_B_inv=True
-        )
-        diagLam2, V2, B2_inv = self.eigh(
-            A2.to(inv_dtype), B2.to(inv_dtype), backend, return_B_inv=True
-        )
+        # compute A^{-1/2}
+        A_evals, A_evecs = eigh(A.to(inv_dtype))
+        A_inv_sqrt = (A_evecs / A_evals.sqrt()) @ A_evecs.T
 
-        # convert eigenvalues back to original precision
-        self.diagLam1 = diagLam1.to(dt)
-        self.diagLam2 = diagLam2.to(dt)
+        # compute B^{-1/2}
+        B_evals, B_evecs = eigh(B.to(inv_dtype))
+        B_inv_sqrt = (B_evecs / B_evals.sqrt()) @ B_evecs.T
 
-        # compute the other required quantities in `inv_dtype` precision and convert
-        # back to original precision
-        V1_inv = inverse(V1).to(dt)
-        self.V1_inv_B1_inv = V1_inv @ B1_inv.to(dt)
-        V2_inv = inverse(V2).to(dt)
-        self.B2_inv_T_V2_inv_T = (V2_inv @ B2_inv.to(dt)).T
+        # compute E1, E2
+        S1, E1 = eigh(A_inv_sqrt @ C.to(inv_dtype) @ A_inv_sqrt)
+        S2, E2 = eigh(B_inv_sqrt @ D.to(inv_dtype) @ B_inv_sqrt)
 
-        self.V1 = V1.to(dt)
-        self.V2_T = V2.to(dt).T
+        # compute K1, K2
+        K1, K2 = A_inv_sqrt @ E1, B_inv_sqrt @ E2
 
-    @classmethod
-    def eigh(
-        cls, A: Tensor, B: Tensor, backend: str, return_B_inv: bool = False
-    ) -> Union[Tuple[Tensor, Tensor], Tuple[Tensor, Tensor, Tensor]]:
-        """Solve a generalized eigenvalue problem defined by (A, B).
-
-        Finds ϕ (dxd, orthonormal), Λ (dxd, diagonal) such that A ϕ = B ϕ Λ.
-
-        Args:
-            A: Symmetric positive definite matrix.
-            B: Symmetric positive definite matrix.
-            backend: Backend to use for solving the generalized eigenvalue problem.
-                Currently supports `"torch"` and `"scipy"`.
-            return_B_inv: Whether to return the inverse of B.
-
-        Returns:
-            Tuple of generalized eigenvalues (Λ) and eigenvectors (ϕ), and maybe the
-            inverse of B.
-
-        Raises:
-            ValueError: If the backend is not supported.
-        """
-        if backend == "scipy":
-            (dev,) = {A.device, B.device}
-            A_numpy, B_numpy = A.cpu().numpy(), B.cpu().numpy()
-            diagLam, V = scipy_eigh(A_numpy, B_numpy)
-            diagLam, V = from_numpy(diagLam).to(dev), from_numpy(V).to(dev)
-            return (diagLam, V, inverse(B)) if return_B_inv else (diagLam, V)
-
-        elif backend == "torch":
-            # see Algorithm 1 in https://arxiv.org/pdf/1903.11240.pdf
-            diagLam_B, Phi_B = torch_eigh(B)
-            if return_B_inv:
-                B_inv = einsum(Phi_B, diagLam_B.pow(-1), Phi_B.T, "i j, j, j k -> i k")
-            Phi_B = einsum(Phi_B, diagLam_B.pow(-0.5), "i j, j -> i j")
-            diagLamA, Phi_A = torch_eigh(Phi_B.T @ A @ Phi_B)
-            return (
-                (diagLamA, Phi_B @ Phi_A, B_inv)
-                if return_B_inv
-                else (diagLamA, Phi_B @ Phi_A)
-            )
-
-        raise ValueError(
-            f"Unsupported backend: {backend}. Supported: 'torch', 'scipy'."
-        )
+        # convert back to original precision
+        self.S1, self.S2 = S1.to(dt), S2.to(dt)
+        self.K1, self.K2 = K1.to(dt), K2.to(dt)
 
     def __matmul__(self, x: Tensor) -> Tensor:
         """Multiply the inverse onto a vector (@ operator).
@@ -166,8 +96,8 @@ class InverseKroneckerSum:
         if flattened:
             x = x.reshape(*self.kronecker_dims)
 
-        x = self.V1_inv_B1_inv @ x @ self.B2_inv_T_V2_inv_T
-        x = x / (einsum(self.diagLam1, self.diagLam2, "i, j -> i j") + 1.0)
-        x = self.V1 @ x @ self.V2_T
+        x = self.K1.T @ x @ self.K2
+        x /= einsum(self.S1, self.S2, "i, j -> i j") + 1.0
+        x = self.K1 @ x @ self.K2.T
 
         return x.flatten() if flattened else x

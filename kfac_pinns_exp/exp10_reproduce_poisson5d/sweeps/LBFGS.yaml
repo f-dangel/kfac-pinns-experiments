@@ -11,9 +11,11 @@ command:
     - ${args}
 metric:
     goal: minimize
-    name: loss
+    name: l2_error
 method: grid
 parameters:
+    batch_frequency:
+        value: 1
     boundary_condition:
         value: cos_sum
     num_seconds:

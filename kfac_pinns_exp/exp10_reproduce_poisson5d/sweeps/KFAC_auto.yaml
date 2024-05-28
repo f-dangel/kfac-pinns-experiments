@@ -1,0 +1,41 @@
+entity: kfac-pinns
+project: poisson5d
+name: KFAC-auto
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFAC"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: l2_error
+method: random
+run_cap: 50
+parameters:
+    batch_frequency:
+        value: 100
+    boundary_condition:
+        value: cos_sum
+    num_seconds:
+        value: 3_000
+    dim_Omega:
+        value: 5
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 500
+    KFAC_ema_factor:
+        distribution: uniform
+        min: 0
+        max: 0.99
+    KFAC_damping:
+        distribution: log_uniform_values
+        min: 1e-13
+        max: 1e-7
+    KFAC_initialize_to_identity:
+        value: true
+    KFAC_lr:
+        value: auto

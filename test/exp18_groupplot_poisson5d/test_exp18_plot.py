@@ -1,4 +1,4 @@
-"""Run the plotting script from exp17."""
+"""Run the plotting script from exp18."""
 
 from kfac_pinns_exp.exp18_groupplot_poisson5d import plot
 from kfac_pinns_exp.utils import run_verbose
