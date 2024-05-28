@@ -106,13 +106,6 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         default="poisson",
     )
     parser.add_argument(
-        f"--{prefix}damping_heuristic",
-        type=str,
-        choices=KFAC.SUPPORTED_DAMPING_HEURISTICS,
-        help="How to distribute the damping onto the two Kronecker factors.",
-        default="same",
-    )
-    parser.add_argument(
         f"--{prefix}adaptive_damping",
         action="store_true",
         help="Whether to use adaptive Levenberg-Marquardt damping.",
@@ -162,16 +155,11 @@ class KFAC(Optimizer):
             (ordered in descending computational cost and approximation quality).
         SUPPORTED_EQUATIONS: Available equations to solve. Currently supports the
             Poisson (`'poisson'`) and heat (`'heat'`) equations.
-        SUPPORTED_DAMPING_HEURISTICS: Available damping heuristics how to distribute
-            the damping onto the two Kronecker factors. Currently supports `'same'`
-            and `'trace-norm'` (from Martens et al. (2015), Section 6.3 in
-            https://arxiv.org/pdf/1503.05671).
     """
 
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
     SUPPORTED_EQUATIONS = {"poisson", "heat"}
-    SUPPORTED_DAMPING_HEURISTICS = {"same", "trace-norm"}
 
     def __init__(
         self,
@@ -187,7 +175,6 @@ class KFAC(Optimizer):
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
         equation: str = "poisson",
-        damping_heuristic: str = "same",
         adaptive_damping: bool = False,
         momentum: float = 0.0,
     ) -> None:
@@ -229,9 +216,6 @@ class KFAC(Optimizer):
                 identity matrix. Default is `False` (initialize with zero).
             equation: Equation to solve. Currently supports `'poisson'` and `'heat'`.
                 Default: `'poisson'`.
-            damping_heuristic: How to distribute the damping onto the two Kronecker
-                factors. Currently supports `'same'` and `'trace-norm` (see Section 6.3
-                of https://arxiv.org/pdf/1503.05671). Default is `'same'`.
             adaptive_damping: Whether to use adaptive damping with LM heuristic.
                 Default is `False`. See Section 6.5 of https://arxiv.org/pdf/1503.05671.
             momentum: Momentum on the update. Default: `0.0`.
@@ -251,7 +235,6 @@ class KFAC(Optimizer):
             inv_strategy=inv_strategy,
             inv_dtype=inv_dtype,
             initialize_to_identity=initialize_to_identity,
-            damping_heuristic=damping_heuristic,
             momentum=momentum,
         )
         params = sum((list(layer.parameters()) for layer in layers), [])
@@ -335,7 +318,6 @@ class KFAC(Optimizer):
         inv_dtype = group["inv_dtype"]
         damping_interior = group["damping_interior"]
         damping_boundary = group["damping_boundary"]
-        damping_heuristic = group["damping_heuristic"]
 
         # compute the KFAC inverse
         for layer_idx in self.layer_idxs:
@@ -346,8 +328,8 @@ class KFAC(Optimizer):
             A2, A1 = self.kfacs_interior[layer_idx]
             B2, B1 = self.kfacs_boundary[layer_idx]
 
-            A2, A1 = self.add_damping(A2, A1, damping_interior, damping_heuristic)
-            B2, B1 = self.add_damping(B2, B1, damping_boundary, damping_heuristic)
+            A2, A1 = self.add_damping(A2, A1, damping_interior)
+            B2, B1 = self.add_damping(B2, B1, damping_boundary)
 
             self.inv[layer_idx] = InverseKroneckerSum(  # noqa: B909
                 A1, A2, B1, B2, inv_dtype=inv_dtype
@@ -440,13 +422,6 @@ class KFAC(Optimizer):
         inv_strategy = group["inv_strategy"]
         if inv_strategy != "invert kronecker sum":
             raise ValueError(f"Unsupported inversion strategy: {inv_strategy}.")
-
-        damping_heuristic = group["damping_heuristic"]
-        if damping_heuristic not in self.SUPPORTED_DAMPING_HEURISTICS:
-            raise ValueError(
-                f"Unsupported damping heuristic: {damping_heuristic}. "
-                + f"Supported: {self.SUPPORTED_DAMPING_HEURISTICS}."
-            )
 
         momentum = group["momentum"]
         if not 0 <= momentum < 1:
@@ -588,7 +563,7 @@ class KFAC(Optimizer):
         return loss
 
     def add_damping(
-        self, A: Tensor, B: Tensor, damping: float, heuristic: str
+        self, A: Tensor, B: Tensor, damping: float
     ) -> Tuple[Tensor, Tensor]:
         """Add damping to the KFAC factors.
 
@@ -596,26 +571,13 @@ class KFAC(Optimizer):
             A: The input-based Kronecker factor.
             B: The output-gradient-based Kronecker factor.
             damping: The damping factor.
-            heuristic: The damping heuristic.
 
         Returns:
             A tuple of the damped KFAC factors.
-
-        Raises:
-            ValueError: If the damping heuristic is not supported.
         """
         (dim_A,), (dim_B,) = set(A.shape), set(B.shape)
 
-        if heuristic == "same":
-            damping_A, damping_B = damping, damping
-        elif heuristic == "trace-norm":
-            # trace-norm heuristic from Martens et al. (2015),
-            # see https://arxiv.org/pdf/1503.05671, Sectin 6.3
-            pi = ((A.trace() * dim_B) / (B.trace() * dim_A)).sqrt()
-            damping_A = sqrt(damping) * pi
-            damping_B = sqrt(damping) / pi
-        else:
-            raise ValueError(f"Unsupported damping heuristic: {heuristic}.")
+        damping_A, damping_B = damping, damping
 
         A_damped = A.clone()
         idx_A = arange(dim_A, device=A.device)
