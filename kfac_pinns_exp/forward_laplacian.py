@@ -22,9 +22,9 @@ def manual_forward_laplacian(
             that are summed into the Laplacian. If `None`, all diagonal entries
             are summed. Default: `None`.
         coefficients: A coefficient matrix that, if specified, will compute a weighted
-            sum `∑ᵢⱼ cᵢⱼ ∂²f/∂xᵢ∂xⱼ` instead of the Laplacian. If `None`, the Laplacian is
-            computed, i.e. `cᵢⱼ = δᵢⱼ`. If `coordinates` is specified, the coefficients
-            must match the size of the sub-space implied by `coordinates`.
+            sum `∑ᵢⱼ cᵢⱼ ∂²f/∂xᵢ∂xⱼ` instead of the Laplacian. If `None`, the Laplacian
+            is computed, i.e. `cᵢⱼ = δᵢⱼ`. If `coordinates` is specified, the
+            coefficients must match the size of the sub-space implied by `coordinates`.
 
     Returns:
         A list of dictionaries, each containing the Taylor coefficients (0th-, 1st-, and
@@ -101,9 +101,9 @@ def manual_forward_laplacian_layer(
             that are summed into the Laplacian. If `None`, all diagonal entries
             are summed.
         coefficients: A coefficient matrix that, if specified, will compute a weighted
-            sum `∑ᵢⱼ cᵢⱼ ∂²f/∂xᵢ∂xⱼ` instead of the Laplacian. If `None`, the Laplacian is
-            computed, i.e. `cᵢⱼ = δᵢⱼ`. If `coordinates` is specified, the coefficients
-            must match the size of the sub-space implied by `coordinates`.
+            sum `∑ᵢⱼ cᵢⱼ ∂²f/∂xᵢ∂xⱼ` instead of the Laplacian. If `None`, the Laplacian
+            is computed, i.e. `cᵢⱼ = δᵢⱼ`. If `coordinates` is specified, the
+            coefficients must match the size of the sub-space implied by `coordinates`.
 
     Returns:
         A dictionary containing the new Taylor coefficients.

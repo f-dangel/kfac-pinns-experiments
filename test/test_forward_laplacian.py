@@ -35,7 +35,7 @@ COORDINATE_FNS = {
     "coordinates=even": lambda X: [i for i in range(X.shape[1]) if i % 2 == 0],
 }
 COEFFICIENTS_FNS = {
-    "coefficients=None": lambda _, __: None,
+    "coefficients=None": lambda *_: None,
     # symmetric non-diagonal
     "coefficients=equal": lambda X, coordinates: ones(
         X.shape[1:].numel() if coordinates is None else len(coordinates),
