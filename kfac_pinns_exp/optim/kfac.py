@@ -5,7 +5,7 @@ from math import sqrt
 from typing import Dict, List, Tuple, Union
 
 from backpack.hessianfree.rop import jacobian_vector_product
-from torch import Tensor, arange, cat, dtype, eye, float64, tensor
+from torch import Tensor, arange, cat, dtype, float64, tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 
