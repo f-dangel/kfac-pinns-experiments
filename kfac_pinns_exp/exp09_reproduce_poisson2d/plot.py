@@ -8,10 +8,27 @@ from matplotlib import pyplot as plt
 from palettable.colorbrewer import sequential
 from tueplots import bundles
 
-from kfac_pinns_exp.wandb_utils import load_best_run, remove_unused_runs, show_sweeps
+from kfac_pinns_exp.train import set_up_layers
+from kfac_pinns_exp.wandb_utils import (
+    WandbRunFormatter,
+    WandbSweepFormatter,
+    load_best_run,
+    remove_unused_runs,
+    show_sweeps,
+)
 
 entity = "kfac-pinns"  # team name on wandb
 project = "poisson2d"  # name from the 'Projects' tab on wandb
+
+# information for title
+equation = "poisson"
+architecture = "mlp-tanh-64"
+dim_Omega = 2
+num_params = sum(
+    p.numel()
+    for layer in set_up_layers(architecture, equation, dim_Omega)
+    for p in layer.parameters()
+)
 
 # Useful to map sweep ids to human-readable names
 print_sweeps = False
@@ -19,16 +36,15 @@ if print_sweeps:
     show_sweeps(entity, project)
 
 sweep_ids = {  # ids from the wandb agent
-    "jbm3npeb": "SGD",
-    "go33jqg3": "Adam",
-    "t0z0cb0w": "Hessian-free",
-    "4wrqarzz": "LBFGS",
-    "48jvuiv0": "ENGD (full)",
-    "gpvffr7w": "ENGD (layer-wise)",
-    "mkin6ouu": "ENGD (diagonal)",
-    "eyie7x7p": "KFAC",
-    "me0h1w7f": "KFAC (empirical)",
-    "lmi1pnbh": "KFAC (forward-only)",
+    "b1a1iygs": "SGD",
+    "0zppzhej": "Adam",
+    "v14daetn": "Hessian-free",
+    "gjbxog62": "LBFGS",
+    "0ku0xl1j": "ENGD (full)",
+    "mv3u2nww": "ENGD (layer-wise)",
+    "bczqwxag": "ENGD (diagonal)",
+    "euc27yi9": "KFAC",
+    "i1txqj6g": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -41,8 +57,7 @@ colors = {
     "Hessian-free": sequential.Greens_4.mpl_colors[-2],
     "LBFGS": sequential.Greens_4.mpl_colors[-1],
     "KFAC": "black",
-    "KFAC (empirical)": "gray",
-    "KFAC (forward-only)": "lightgray",
+    "KFAC*": "black",
 }
 
 linestyles = {
@@ -54,8 +69,7 @@ linestyles = {
     "Hessian-free": "-",
     "LBFGS": "-",
     "KFAC": "-",
-    "KFAC (empirical)": "-",
-    "KFAC (forward-only)": "-",
+    "KFAC*": "dashed",
 }
 
 HEREDIR = path.dirname(path.abspath(__file__))
@@ -96,7 +110,7 @@ if __name__ == "__main__":
             ax.set_xscale("log")
             ax.set_ylabel(ylabel)
             ax.set_yscale("log")
-            ax.set_title("2d Poisson")
+            ax.set_title(f"{dim_Omega}d {equation.capitalize()} ($D={num_params}$)")
             ax.grid(True, alpha=0.5)
 
             for sweep_id, label in sweep_ids.items():
@@ -115,10 +129,25 @@ if __name__ == "__main__":
                 ax.plot(
                     x_data,
                     df_history[y],
-                    label=label,
+                    label=None if "*" in label else label,
                     color=colors[label],
                     linestyle=linestyles[label],
                 )
 
             ax.legend()
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
+
+    # export sweep and run descriptions to LaTeX
+    TEXDIR = path.join(HEREDIR, "tex")
+    makedirs(TEXDIR, exist_ok=True)
+
+    if args.update:  # only if online access is possible
+        for sweep_id in sweep_ids:
+            _, meta = load_best_run(entity, project, sweep_id, savedir=DATADIR)
+            sweep_args = meta.to_dict()["config"][0]
+            WandbRunFormatter.to_tex(TEXDIR, sweep_args)
+
+        for sweep in show_sweeps(entity, project):
+            WandbSweepFormatter.to_tex(TEXDIR, sweep.config)
+    else:
+        print("Skipping LaTeX export of sweeps and best runs.")

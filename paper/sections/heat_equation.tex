@@ -1,51 +1,52 @@
-Consider the $D$-dimensional heat equation
+Consider the $(\tilde{d}+1)$-dimensional homogeneous heat equation
 \begin{align*}
-  \partial_{t} u(t, \vx)
+  \partial_{t} u(t, \tilde{\vx})
   -
-  \frac{1}{4} \Delta_{\vx} u(t, \vx)
+  \kappa \Delta_{\tilde{\vx}} u(t, \tilde{\vx})
   =
   0
 \end{align*}
-where $\vx \in \Omega \subseteq \sR^D$ and $t \in \mathrm{T} \subseteq \sR$.
-In this case, our neural network processes a $D+1$-dimensional vector $\tilde{\vx} =
-\begin{pmatrix} t \\ \vx \end{pmatrix}$ and we can re-write the heat equation as
+with spatial coordinates $\tilde{\vx} \in \Omega \subseteq \sR^{\tilde{d}}$ and time coordinate $t \in \mathrm{T} \subseteq \sR$ where $\mathrm{T}$ is a time interval and $\kappa >0$ denotes the heat conductivity. In this case, our neural network processes a $(d = \tilde{d} +1)$-dimensional vector $\vx = ( t,  \tilde{\vx}^{\top} )^{\top} \in \sR^d$ and we can re-write the heat equation as
 \begin{align*}
-  \partial_{[\tilde{\vx}]_1} u(\tilde{\vx})
+  \partial_{\evx_1} u(\vx)
   -
-  \frac{1}{4} \sum_{d=2}^{D+1} \Delta_{[\tilde{\vx}]_d} u(\tilde{\vx})
+  \kappa \sum_{d=2}^{d} \Delta_{\evx_d} u(\vx)
   =
   0\,.
 \end{align*}
-In the following, we consider the unit time interval $\mathrm{T} = [0;1]$ and the unit square $\Omega = [0;1]^D$.
-There are two types of conditions we want to enforce on the heat equation's solution: initial conditions and boundary conditions.
-As initial conditions, we use $u(0, \vx) = \prod_{d=1}^D \sin(\pi [\vx_d])$ for $\vx \in \Omega$.
-For boundary conditions, we use $u(t, \vx) = 0$ for $t, \vx \in \mathrm{T} \times \partial\Omega$.
-The solution to this heat equation is
+In the following, we consider the unit time interval $\mathrm{T} = [0;1]$, the unit square $\Omega = [0;1]^{\tilde{d}}$ and set $\kappa = \nicefrac{1}{4}$.
+There are two types of constraints we need to enforce on the heat equation in order to obtain unique solutions: initial conditions and boundary conditions.
+As our framework for the KFAC approximation assumes only two terms in the loss function, we combine the contributions from the boundary and initial values into one term.
+
+To make this more precise, consider the following example solution of the heat equation, which will be used later on as well.
+As initial conditions, we use $u_0(\tilde{\vx}) = u(0, \tilde{\vx}) = \prod_{i=1}^{\tilde{d}} \sin(\pi \tilde{\evx}_i)$ for $\tilde{\vx} \in \Omega$.
+For boundary conditions, we use $g(t, \tilde{\vx}) = 0$ for $(t, \tilde{\vx}) \in \mathrm{T} \times \partial\Omega$.
+The manufactured solution is
 \begin{align*}
-  u_{\star}(t, \vx)
+  u_{\star}(t, \tilde{\vx})
   =
-  \exp \left(-\frac{\pi^2 D t}{4} \right)
-  \prod_{d=1}^D \sin(\pi [\vx_d])\,.
+  \exp \left(-\frac{\pi^2 \tilde{d} t}{4} \right)
+  \prod_{i=1}^{\tilde{d}} \sin(\pi [\tilde{\evx}_i])\,.
 \end{align*}
-The PINN loss for this problem consists of three terms
+The PINN loss for this problem consists of three terms: a PDE term, an initial value condition term, and a spatial boundary condition term,
 \begin{align*}
-  \gL(\vtheta)
+  L(\vtheta)
   &=
     \frac{1}{N_{\Omega}}
     \sum_{n=1}^{N_{\Omega}}
     \left\lVert
-    \partial_t u_{\vtheta}(\tilde{\vx}_n^{\Omega})
+    \partial_t u_{\vtheta}(\vx_n^{\Omega})
     -
-    \frac{1}{4} \Delta_{\vx} u_{\vtheta}(\tilde{\vx}_n^{\Omega})
+    \frac{1}{4} \Delta_{\tilde{\vx}_n} u_{\vtheta}(\vx_n^{\Omega})
     \right\rVert^2_2
   \\
   &+
     \frac{1}{N_{\partial\Omega}}
     \sum_{n=1}^{N_{\partial\Omega}}
     \left\lVert
-    u_{\vtheta}(\tilde{\vx}_n^{\partial\Omega})
+    u_{\vtheta}(\vx_n^{\partial\Omega})
     -
-    u(\tilde{\vx}_n^{\partial\Omega})
+    g(\vx_n^{\partial\Omega})
     \right\rVert^2_2
   \\
   &+
@@ -54,38 +55,38 @@ The PINN loss for this problem consists of three terms
     \left\lVert
     u_{\vtheta}(0, \vx_n^0)
     -
-    u(0, \vx_n^0)
+    u_0( \vx_n^0)
     \right\rVert^2_2
 \end{align*}
-with $\tilde{\vx}_n^{\Omega} \sim \mathrm{T} \times \Omega$, and $\tilde{\vx}_n^{\partial\Omega} \sim \mathrm{T} \times \partial\Omega$, and $\vx_n^0 \sim \{0\} \times \Omega$.
+with $\vx_n^{\Omega} \sim \mathrm{T} \times \Omega$, and $\vx_n^{\partial\Omega} \sim \mathrm{T} \times \partial\Omega$, and $\vx_n^0 \sim \{0\} \times \Omega$.
 To fit this loss into our framework which assumes two loss terms, each of whose curvature is approximated with a Kronecker factor, we combine the initial value and boundary value conditions into a single term.
 Assuming $N_{\partial \Omega} = N_0 = \nicefrac{N_{\text{cond}}}{2}$ without loss of generality, we write
 \begin{align*}
-  \gL(\vtheta)
+  L(\vtheta)
   &=
     \underbrace{
     \frac{1}{N_{\Omega}}
     \sum_{n=1}^{N_{\Omega}}
     \left\lVert
-    \partial_t u_{\vtheta}(\tilde{\vx}_n^{\Omega})
+    \partial_t u_{\vtheta}(\vx_n^{\Omega})
     -
-    \frac{1}{4} \Delta_{\vx} u_{\vtheta}(\tilde{\vx}_n^{\Omega})
+    \frac{1}{4} \Delta_{\tilde{\vx}_n} u_{\vtheta}(\vx_n^{\Omega})
     - y_n^{\Omega}
     \right\rVert^2_2
-    }_{\gL_{\Omega}(\vtheta)}
+    }_{L_{\Omega}(\vtheta)}
   +
     \underbrace{
     \frac{1}{N_{\text{cond}}}
     \sum_{n=1}^{N_{\text{cond}}}
     \left\lVert
-    u_{\vtheta}(\tilde{\vx}_n^{\text{cond}})
+    u_{\vtheta}(\vx_n^{\text{cond}})
     -
     y_n^{\text{cond}}
     \right\rVert^2_2
-    }_{\gL_{\text{cond}}(\vtheta)}
+    }_{L_{\text{cond}}(\vtheta)}
 \end{align*}
-with domain inputs $\tilde{\vx}_n^{\Omega} \sim \mathrm{T} \times \Omega$ and targets $y_n^{\Omega} = 0$, condition targets $y_n^{\text{cond}} = u(\tilde{\vx}_n^{\text{cond}})$ with initial inputs $\tilde{\vx}_n^{\text{cond}} \sim \{0\} \times \Omega$ for $n = 1, \dots, \nicefrac{N_{\text{cond}}}{2}$ and boundary inputs $\tilde{\vx}_n^{\partial\Omega} \sim \mathrm{T} \times \partial\Omega$ for $n = \nicefrac{N_{\text{cond}}}{2}+1, \dots, N_{\text{cond}}$.
-The boundary and condition loss are of exactly same structure as the loss we discussed for the Poisson equation.
+with domain inputs $\vx_n^{\Omega} \sim \mathrm{T} \times \Omega$ and targets $y_n^{\Omega} = 0$, boundary and initial condition targets $y_n^{\text{cond}} = u_\star(\vx_n^{\text{cond}})$ with initial inputs $\vx_n^{\text{cond}} \sim \{0\} \times \Omega$ for $n = 1, \dots, \nicefrac{N_{\text{cond}}}{2}$ and boundary inputs $\vx_n^{\text{cond}} \sim \mathrm{T} \times \partial\Omega$ for $n = \nicefrac{N_{\text{cond}}}{2}+1, \dots, N_{\text{cond}}$.
+This loss has the same structure as the PINN loss in \Cref{eq:pinn-loss}.
 
 %%% Local Variables:
 %%% mode: latex

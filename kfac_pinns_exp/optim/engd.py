@@ -270,7 +270,7 @@ class ENGD(Optimizer):
             raise NotImplementedError(f"Approximation {approximation} not implemented.")
 
     def _compute_natural_gradients(self) -> List[Tensor]:
-        """Compute the natural gradients from current pre-conditioner and gradients.
+        """Compute the natural gradients from current preconditioner and gradients.
 
         Returns:
             Natural gradients in parameter list format.

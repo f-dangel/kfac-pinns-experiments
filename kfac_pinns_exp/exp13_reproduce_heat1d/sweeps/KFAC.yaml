@@ -11,7 +11,7 @@ command:
     - ${args_no_boolean_flags}
 metric:
     goal: minimize
-    name: loss
+    name: l2_error
 method: random
 run_cap: 50
 parameters:
@@ -27,12 +27,11 @@ parameters:
         max: 0.99
     KFAC_momentum:
         distribution: uniform
-        min: 0
+        min: 0.5
         max: 0.99
     KFAC_damping:
         distribution: log_uniform_values
         min: 1e-13
         max: 1e-7
     KFAC_initialize_to_identity:
-        distribution: categorical
-        values: [false, true]
+        value: true

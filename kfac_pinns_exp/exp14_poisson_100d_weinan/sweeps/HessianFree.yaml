@@ -1,5 +1,5 @@
 entity: kfac-pinns
-project: weinan_norm
+project: poisson100d_weinan_norm
 name: HessianFree
 program: ../../train.py
 command:
@@ -11,30 +11,38 @@ command:
     - ${args_no_boolean_flags}
 metric:
     goal: minimize
-    name: loss
-method: grid
+    name: l2_error
+method: bayes
 parameters:
     boundary_condition:
         value: u_weinan_norm
     model:
-        value: mlp-tanh-64-48-32-16
-    num_steps:
-        value: 50_000
-    dim_Omega:
-        value: 10
-    N_Omega:
+        value: mlp-tanh-768-768-512-512
+    num_seconds:
         value: 10_000
+    dim_Omega:
+        value: 100
+    N_eval:
+        value: 30_000
+    N_Omega:
+        min: 100
+        max: 5_000
     N_dOmega:
-        value: 5_000
+        min: 50
+        max: 2_500
+    batch_frequency:
+        min: 0
+        max: 1_000
     HessianFree_curvature_opt:
         distribution: categorical
         values: ["ggn", "hessian"]
     HessianFree_damping:
-        distribution: categorical
-        values: [1.0, 1e-1, 1e-2, 1e-3, 1e-4]
+        distribution: log_uniform_values
+        min: 1e-15
+        max: 1e-0
     HessianFree_no_adapt_damping:
         distribution: categorical
         values: [false, true]
     HessianFree_cg_max_iter:
-        distribution: categorical
-        values: [50, 250]
+        min: 1
+        max: 500

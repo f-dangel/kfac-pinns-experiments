@@ -1,0 +1,44 @@
+entity: kfac-pinns
+project: heat4d_mlp_tanh_256_bayes
+name: LBFGS
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=LBFGS"
+    - ${args}
+metric:
+    goal: minimize
+    name: l2_error
+method: bayes
+parameters:
+    equation:
+        value: heat
+    boundary_condition:
+        value: sin_sum
+    model:
+        value: mlp-tanh-256-256-128-128
+    num_seconds:
+        value: 3_000
+    dim_Omega:
+        value: 4
+    N_eval:
+        value: 30_000
+    N_Omega:
+        min: 100
+        max: 10_000
+    N_dOmega:
+        min: 50
+        max: 5_000
+    batch_frequency:
+        min: 0
+        max: 10_000
+    LBFGS_lr:
+        distribution: log_uniform_values
+        min: 1e-6
+        max: 1e-0
+    LBFGS_history_size:
+        min: 5
+        max: 500

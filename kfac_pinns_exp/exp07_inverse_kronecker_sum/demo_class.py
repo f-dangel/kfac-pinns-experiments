@@ -13,33 +13,32 @@ def main():
     tols = {"atol": 1e-7, "rtol": 1e-5}
 
     # create symmetric positive-definite matrices in double precision
-    A1 = randn(dim1, dim1).double()
-    A1 = A1 @ A1.T + damping * eye(dim1)
+    A = randn(dim1, dim1).double()
+    A = A @ A.T + damping * eye(dim1)
 
-    A2 = randn(dim2, dim2).double()
-    A2 = A2 @ A2.T + damping * eye(dim2)
+    B = randn(dim2, dim2).double()
+    B = B @ B.T + damping * eye(dim2)
 
-    B1 = randn(dim1, dim1).double()
-    B1 = B1 @ B1.T + damping * eye(dim1)
+    C = randn(dim1, dim1).double()
+    C = C @ C.T + damping * eye(dim1)
 
-    B2 = randn(dim2, dim2).double()
-    B2 = B2 @ B2.T + damping * eye(dim2)
+    D = randn(dim2, dim2).double()
+    D = D @ D.T + damping * eye(dim2)
 
     # explicitly compute and invert the matrix
-    K = kron(A1, A2) + kron(B1, B2)
+    K = kron(A, B) + kron(C, D)
     K_inv = inverse(K)
 
     # class approach
-    for backend in ["scipy", "torch"]:
-        K_inv_class = InverseKroneckerSum(A1, A2, B1, B2, backend=backend)
+    K_inv_class = InverseKroneckerSum(A, B, C, D)
 
-        # multiply onto flattened vector
-        x = randn(dim1 * dim2).double()
-        assert allclose(K_inv @ x, K_inv_class @ x, **tols)
+    # multiply onto flattened vector
+    x = randn(dim1 * dim2).double()
+    assert allclose(K_inv @ x, K_inv_class @ x, **tols)
 
-        # multiply onto un-flattened vector
-        x = x.reshape(dim1, dim2)
-        assert allclose(K_inv @ x.flatten(), (K_inv_class @ x).flatten(), **tols)
+    # multiply onto un-flattened vector
+    x = x.reshape(dim1, dim2)
+    assert allclose(K_inv @ x.flatten(), (K_inv_class @ x).flatten(), **tols)
 
 
 if __name__ == "__main__":

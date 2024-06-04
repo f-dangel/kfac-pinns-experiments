@@ -3,24 +3,32 @@
 % ===================================================================
 \usepackage{nicefrac} % fractions that fit into inline text
 \usepackage{dsfont} % for \mathds command
+\usepackage[%
+exponent-product=\ensuremath{\cdot},%
+group-minimum-digits={3}%
+]{siunitx} % \num command for pretty-formatting large numbers
 
 % ===================================================================
 % REFERENCES
 % ===================================================================
 \usepackage{cleveref} % automatically adds type of reference, MUST BE LOADED AFTER AMSMATH
+\crefname{section}{\S\!\!}{\S\!\!} % use paragraph symbol for Section
+\crefname{appendix}{\S\!\!}{\S\!\!} % use paragraph symbol for Appendix
 
 % ===================================================================
 % TODOS & COMMENTS
 % ===================================================================
 \usepackage{todonotes} % for TODOs, loads xcolor with []
-\newcommand{\toodoo}[1]{{\tt\color{red} #1}}
-\newcommand{\felix}[1]{{\color{blue}\textbf{Felix:} #1}}
 \usepackage{comment} % for comment environment
 
 % ===================================================================
 % FIGURES & COLORS
 % ===================================================================
 \usepackage{subcaption} % \subfigure environment
+\captionsetup[subfigure]{% subfigure captions are left-aligned
+  justification=justified,%
+  singlelinecheck=false,%
+}%
 \usepackage{tikz} % for drawings in LaTeX
 \usetikzlibrary{arrows.meta} % for prettier arrows
 
@@ -39,6 +47,11 @@
 \colorlet{thirdcolor}{VectorOrange}
 \colorlet{fourthcolor}{VectorTeal}
 \colorlet{fifthcolor}{VectorGray}
+
+% COLOR FOR KFAC BOXES
+\definecolor{kfac}{rgb}{0.55294118, 0.17647059, 0.22352941}
+
+\usepackage[most]{tcolorbox} % coloured boxes
 
 % ===================================================================
 % LINKS & REFERENCES
@@ -61,6 +74,7 @@
 % ===================================================================
 % ALGORITHMS
 % ===================================================================
+\usepackage{algorithm}
 \usepackage{algpseudocode}
 %%% Local Variables:
 %%% mode: latex

@@ -1,0 +1,37 @@
+entity: kfac-pinns
+project: heat1d_mlp_tanh_256
+name: KFAC-auto
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=KFAC"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: l2_error
+method: random
+run_cap: 50
+parameters:
+    model:
+        value: mlp-tanh-256-256-128-128
+    dim_Omega:
+        value: 1
+    equation:
+        value: heat
+    num_seconds:
+        value: 1_000
+    KFAC_ema_factor:
+        distribution: uniform
+        min: 0.5
+        max: 0.99
+    KFAC_damping:
+        distribution: log_uniform_values
+        min: 1e-14
+        max: 1e-6
+    KFAC_initialize_to_identity:
+        value: true
+    KFAC_lr:
+        value: auto

@@ -3,7 +3,7 @@
 from math import log10
 from typing import Callable, Tuple
 
-from torch import Tensor, logspace
+from torch import Tensor, device, dtype, logspace
 
 
 class LoggingTrigger:
@@ -86,53 +86,29 @@ class KillTrigger:
         self.should_kill = should_kill
 
 
-class FrozenDataLoader:
-    """Dataloader which infinitely returns the same data."""
+class DataLoader:
+    """Produces the same batch for a specified number of steps."""
 
-    def __init__(self, data_func: Callable[[], Tuple[Tensor, Tensor]], dev, dt):
+    def __init__(
+        self,
+        data_func: Callable[[], Tuple[Tensor, Tensor]],
+        dev: device,
+        dt: dtype,
+        frequency: int,
+    ):
         """Save data-generating function, device and data type.
 
         Args:
             data_func: Function that generates tuples of batched inputs and labels.
             dev: The device to load the data to.
             dt: The data type to load the data to.
-        """
-        X, y = data_func()
-        X = X.to(dev, dt)
-        y = y.to(dev, dt)
-        self.data = (X, y)
-
-    def __iter__(self):
-        """Create a data iterator.
-
-        Returns:
-            Itself.
-        """
-        return self
-
-    def __next__(self) -> Tuple[Tensor, Tensor]:
-        """Return the next batch.
-
-        Returns:
-            Always the same batch evaluated at initialization.
-        """
-        return self.data
-
-
-class GenerativeDataLoader:
-    """Dataloader which infinitely generates data from a function."""
-
-    def __init__(self, data_func: Callable[[], Tuple[Tensor, Tensor]], dev, dt):
-        """Save data-generating function, device and data type.
-
-        Args:
-            data_func: Function that generates tuples of batched inputs and labels.
-            dev: The device to load the data to.
-            dt: The data type to load the data to.
+            frequency: The frequency at which a batch is updated. `0` means always the
+                same batch is used
         """
         self.data_func = data_func
         self.dev = dev
         self.dt = dt
+        self.frequency = frequency
 
     def __iter__(self):
         """Create a data iterator.
@@ -140,6 +116,7 @@ class GenerativeDataLoader:
         Returns:
             Itself.
         """
+        self.step = 0
         return self
 
     def __next__(self) -> Tuple[Tensor, Tensor]:
@@ -148,6 +125,11 @@ class GenerativeDataLoader:
         Returns:
             Next batch from a new function evaluation.
         """
-        X, y = self.data_func()
-        X, y = X.to(self.dev, self.dt), y.to(self.dev, self.dt)
-        return (X, y)
+        create_new = (self.frequency == 0 and self.step == 0) or (
+            self.frequency != 0 and self.step % self.frequency == 0
+        )
+        if create_new:
+            X, y = self.data_func()
+            self.X, self.y = X.to(self.dev, self.dt), y.to(self.dev, self.dt)
+        self.step += 1
+        return (self.X, self.y)

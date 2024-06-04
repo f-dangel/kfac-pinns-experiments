@@ -17,3 +17,6 @@ main.pdf
 .eggs
 /.coverage
 **wandb
+/paper/arxiv.tar.gz
+**.deps
+**.deps-t

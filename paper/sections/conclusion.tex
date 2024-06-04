@@ -1,9 +1,14 @@
-\paragraph{Limitations:}
-\begin{itemize}
-\item Only works for sequential networks
-\item Hessian backpropagation requires memory quadratic in the intermediate features size and therefore becomes impractical for large intermediates like in CNNs.
-\item Our implementation is likely manual and relatively hard to automate with the current graph inspection tools offered by ML frameworks.
-\end{itemize}
+We extended the concept of Kronecker-factored approximate curvature (KFAC) to Gauss-Newton matrices of Physics-informed neural network (PINN) losses that involve derivatives, rather than function evaluations, of the neural net.
+This greatly reduces the computational cost of approximate natural gradient methods, which are known to work well on PINNs, and allows them to scale to much larger nets.
+Our approach goes beyond the established KFAC for traditional supervised problems as it captures contributions from a PDE's differential operator that are crucial for optimization.
+To establish KFAC for such losses, we use Taylor-mode autodiff to view the differential operator's compute graph as a forward net with shared weights, then apply the recently-developed formulation of KFAC for linear layers with weight sharing.
+Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems and scale to high-dimensional neural networks and PDEs while consistently outperforming first-order methods and LBFGS.
+
+\textbf{Limitations \& future directions} While our implementation currently only supports MLPs and the Poisson and heat equations, the concepts we use to derive KFAC (Taylor-mode, weight sharing) apply to arbitrary architectures and PDEs, as described in~\Cref{sec:KFAC-general}.
+We are excited that our current algorithms show promising performance when compared to second-order methods with sophisticated heuristics.
+In fact, the original KFAC optimizer itself~\cite{martens2015optimizing} relies heavily on such heuristics that are said to be crucial for its performance~\cite{clarke2023adam}.
+Our algorithms borrow components, but we did not explore all bells and whistles, e.g.\,adaptive damping and heuristics to distribute damping over the Kronecker factors.
+We believe our current algorithm's performance can further be improved, e.g.\,by exploring (1) updating the KFAC matrices less frequently, as is standard for traditional KFAC, (2) merging the two Kronecker approximations for boundary and interior Gramians into a single one, (3) removing matrix inversions~\cite{lin2023simplifying}, (4) using structured Kronecker factors~\cite{lin2023structured}, (5) computing the Kronecker factors in parallel with the gradient~\cite{dangel2020backpack}, (6) using single or mixed precision training~\cite{micikevicius2017mixed}, and (7) studying cheaper KFAC flavours based on the empirical Fisher~\cite{kunstner2019limitations} or input-based curvature~\cite{benzing2022gradient,petersen2023isaac}.
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"

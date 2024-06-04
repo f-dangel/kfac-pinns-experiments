@@ -79,11 +79,19 @@ ARGS = [
         for equation in ["poisson", "heat"]
     ],
     # train with a deeper net
-    [
-        "--num_steps=3",
-        "--optimizer=SGD",
-        "--SGD_lr=0.1",
-        "--model=mlp-tanh-64-48-32-16",
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=SGD",
+            "--SGD_lr=0.1",
+            f"--model={model}",
+        ]
+        for model in [
+            "mlp-tanh-64-48-32-16",
+            "mlp-tanh-64-64-48-48",
+            "mlp-tanh-256-256-128-128",
+            "mlp-tanh-768-768-512-512",
+        ]
     ],
     # train with different boundary conditions
     [
@@ -110,6 +118,7 @@ ARGS = [
             (1, "poisson", "cos_sum"),
             (2, "poisson", "cos_sum"),
             (1, "heat", "sin_product"),
+            (1, "heat", "sin_sum"),
         ]
     ],
     # train with KFAC+momentum
@@ -119,12 +128,27 @@ ARGS = [
         "--KFAC_damping=0.01",
         "--KFAC_momentum=0.1",
     ],
+    # train with KFAC+automatic learning rate and momentum
+    [
+        "--num_steps=3",
+        "--optimizer=KFAC",
+        "--KFAC_damping=0.01",
+        "--KFAC_lr=auto",
+    ],
     # train with KFAC+trace-norm damping heuristic
     [
         "--num_steps=3",
         "--optimizer=KFAC",
         "--KFAC_damping=0.01",
         "--KFAC_damping_heuristic=trace-norm",
+    ],
+    # train with SGD + new batches every 2 steps
+    [
+        "--num_steps=5",
+        "--optimizer=SGD",
+        "--SGD_lr=0.1",
+        "--SGD_momentum=0.9",
+        "--batch_frequency=2",
     ],
 ]
 ARG_IDS = ["_".join(cmd) for cmd in ARGS]

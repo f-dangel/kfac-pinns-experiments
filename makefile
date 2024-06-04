@@ -33,6 +33,8 @@ help:
 	@echo "        Run darglint (docstring check) on the project"
 	@echo "pydocstyle-check"
 	@echo "        Run pydocstyle (docstring check) on the project"
+	@echo "arxiv"
+	@echo "        Run arxiv-collector to prepare a submission to arXiv (requires latexmk)"
 
 .PHONY: install
 
@@ -112,3 +114,8 @@ pydocstyle-check:
 
 conda-env:
 	@conda env create --file .conda_env.yml
+
+.PHONY: arxiv
+
+arxiv:
+	@cd paper && arxiv-collector main.tex
