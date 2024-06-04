@@ -77,21 +77,17 @@ Concretely, by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{s
   \end{align}
 \end{subequations}
 This reduces computational cost, but is restricted to PDEs that involve second-order derivatives only via the Laplacian, or a partial Laplacian over a sub-set of input coordinates (e.g.\,heat equation, \Cref{sec:experiments}).
-For a more general second-order linear PDE operator $\gL = \sum_{i,j=1}^d c_{i,j} \partial^2_{\evx_i,\evx_j}$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)} \in \sR^{h^{(l)}}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}.
-This is similar to \cite{li2024dof}, which transforms the input space using an eigen-decomposition of $c_{i,j}$ to a basis where it is diagonal with entries $\{0, \pm 1\}$, reducing the computation to two forward Laplacians.
-
-\todo[inline]{
-For the nonlinear layers with component-wise activation we obtain 
+For a more general second-order linear PDE operator $\gL = \sum_{i,j=1}^d c_{i,j} \partial^2_{\evx_i,\evx_j}$, the forward pass for a linear layer is $\mathcal{L} \vz^{(l)} = \mW^{(l)}\mathcal{L} \vz^{(l-1)} \in \sR^{h^{(l)}}$, generalizing~\eqref{eq:forward_Laplacian_linear}, and similarly for~\Cref{eq:forward_Laplacian_nonlinear}
 \begin{align*}
-    \mathcal{L}\vz^{(l)}
-    &=
-      \sigma'(\vz^{(l-1)})\odot\mathcal{L}\vz^{(l-1)}
-      +
-      \textstyle
-      \sum_{i,j=1}^d c_{ij} \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}\odot \partial_{x_j}{\vz^{(l-1)}}
-      \quad \in \sR^{h^{(l)}}\,.
+  \mathcal{L}\vz^{(l)}
+  &=
+    \sigma'(\vz^{(l-1)})\odot\mathcal{L}\vz^{(l-1)}
+    +
+    \textstyle
+    \sum_{i,j=1}^d c_{i,j} \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}\odot \partial_{x_j}{\vz^{(l-1)}}
+    \quad \in \sR^{h^{(l)}}\,,
 \end{align*}
-}
+see \Cref{sec:generalized-forward-laplacian} for details. This is different from \cite{li2024dof}, which transforms the input space such that the coefficients are diagonal with entries $\{0, \pm 1\}$, reducing the computation to two forward Laplacians.
 
 Importantly, the computation of higher-order derivatives for linear layers boils down to a forward pass through the layer with weight sharing over the different partial derivatives (\Cref{eq:forward_pass}), and weight sharing can potentially be reduced depending on the differential operator's structure (\Cref{eq:forward_Laplacian_linear}).
 Therefore, we can use the concept of KFAC in the presence of weight sharing to derive a principled Kronecker approximation for Gramians containing differential operator terms.
