@@ -135,6 +135,13 @@ ARGS = [
         "--KFAC_damping=0.01",
         "--KFAC_lr=auto",
     ],
+    # train with KFAC+trace-norm damping heuristic
+    [
+        "--num_steps=3",
+        "--optimizer=KFAC",
+        "--KFAC_damping=0.01",
+        "--KFAC_damping_heuristic=trace-norm",
+    ],
     # train with SGD + new batches every 2 steps
     [
         "--num_steps=5",

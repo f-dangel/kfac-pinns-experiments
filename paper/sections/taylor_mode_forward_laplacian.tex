@@ -4,7 +4,7 @@ To establish a Kronecker-factorized approximation of the Gramian, which consists
 Here, we describe how the weight matrix of a linear layer inside a feed-forward net enters the Laplacian's computation when using the forward Laplacian framework.
 We start by connecting the forward Laplacian framework to Taylor-mode automatic differentiation \citep{griewank2008evaluating,bettencourt2019taylor}, both to make the presentation self-contained and to explicitly point out this connection which we believe has not been done previously.
 
-\subsection{Taylor-Mode Automatic Differentiation}
+\subsection{Taylor-Mode Automatic Differentiation}\label{sec:taylor-mode-tutorial}
 The idea of Taylor-mode is to forward-propagate Taylor coefficients, i.e.\,directional derivatives, through the computation graph. We provide a brief summary based on its description in \cite{bettencourt2019taylor}.
 
 \paragraph{Taylor series and directional derivatives} Consider a function $f: \sR^d \to \sR$ and its $K$-th order Taylor expansion at a point $\vx \in \sR^d$ along a direction $\alpha \vv \in \sR^d$ with $\alpha \in \sR$,
@@ -90,6 +90,7 @@ This is limited though, e.g.\,if we set $K=2$ then we can compute $\partial^2 f(
 We can set $\vv = \ve_i$ to the $i$-th standard basis vector to compute the $i$-th diagonal element of the Hessian.
 But we cannot evaluate off-diagonal elements, as this would require multi-directional derivatives, like $\partial^2 f(\vx) [\ve_i, \ve_{j\neq i}]$.
 A more general description of Taylor-mode for multi-directional Taylor series along $M$ directions, $\hat{f}(\alpha_1, \dots, \alpha_M) = f(\vx + \alpha_1 \vv_1 + \dots + \alpha_M \vv_M)$, which require more general directional derivatives $\partial^K f(\vx) [\vv_1, \dots, \vv_K]$ (each vector can be different) are discussed in \cite{johnson2021taylor-made}.
+We will use this formulation later to generalize the forward Laplacian scheme to more general weighted sums of second-order derivatives in \Cref{sec:generalized-forward-laplacian}.
 
 \paragraph{Composition rule}
 Next, we consider the case where $f = g \circ h$ is a composition of two functions. Starting from the Taylor coefficients $\vw_0^h, \dots \vw_K^h$ of $\hat{h}(\alpha) = h(\vx + \alpha \vv)$, the Taylor coefficients $\vw_0^f, \dots, \vw_K^f$ of $\hat{f}(\alpha) = f(\vx + \alpha\vv)$ follow from Fa\`a di Bruno's formula~\cite{griewank2008evaluating,bettencourt2019taylor}:
@@ -263,7 +264,7 @@ Further, let $\odot$ denote element-wise multiplication, and $(\bullet)^{\odot 2
 With that, we can write the Jacobian as $\jac_{h(\vx)}g(\vx) = \diag(\sigma(h(\vx)))$ where $\diag(\bullet)$ embeds a vector $\bullet$ into the diagonal of a matrix.
 The Hessian of component $i$ is $\nicefrac{\partial^2 [g(h(\vx))]_i}{\partial h(\vx)^2} = [\sigma''(h(\vx))]_i \ve_i \ve_i^{\top}$.
 Inserting \Cref{eq:taylor-mode-second-order-jac-hess} into \Cref{eq:forward-laplacian} and using the Jacobian and Hessian expressions of the element-wise activation function yields the following forward Laplacian forward propagation:
-\begin{subequations}
+\begin{subequations}\label{eq:forward-laplacian-activation-layers}
   \begin{align}
     \vw_0^f
     &=
@@ -353,6 +354,162 @@ We can summarize \Cref{eq:forward-laplacian-linear-layer} in a single equation b
     \label{eq:forward-laplacian-linear-layer-compact}
 \end{align}
 \Cref{eq:forward-laplacian-linear-layer-compact} shows that the weight matrix $\tilde{\mW}^{(l)} = (\mW^{(l)} \ \vb^{(l)})$ of a linear layer $f^{(l)}$ inside a neural network $f^{(L)} \circ \ldots \circ f^{(1)}$ is applied to a matrix $\mT^{(l-1)} \in \sR^{D_{\text{in}}\times (d+2)}$ during the computation of the net's prediction and Laplacian via the forward Laplacian framework and yields another matrix $\mT^{(l)} \in \sR^{D_{\text{out}}\times (d+2)}$.
+
+\subsection{Generalization of the Forward Laplacian to Weighted Sums of Second Derivatives}\label{sec:generalized-forward-laplacian}
+The Laplacian is of the form $\Delta_{\vx}f = \sum_{i} \partial^2f(\vx)[\ve_i, \ve_i]$ and we previously described the forward Laplacian framework of \citet{li2023forward} as a consequence of pulling the summation into Taylor-mode's forward propagation.
+Here, we derive the forward propagation to more general operators of the form $\sum_{i,j} c_{i,j} \partial^2f(\vx)[\ve_i, \ve_j]$, which contain the Laplacian for $c_{i,j} = \delta_{i,j}$.
+
+As mentioned in \Cref{sec:taylor-mode-tutorial}, this requires a generalization of Taylor-mode which computes derivatives of the form $\partial^K f(\vx) [\vv, \dots, \vv]$, where the directions $\vv$ must be identical. We start with the formulation in \cite{johnson2021taylor-made} which expresses the $K$-th multi-directional derivative of a function $f = g \circ h$ through the composites' derivatives (all functions can be vector-to-vector)
+\begin{align}
+  \label{eq:taylor-mode-multi-directional}
+  \partial^K f(\vx)[\vv_1, \dots, \vv_K]
+  =
+  \sum_{\sigma \in \mathrm{part}(\{1, \dots, K\})}
+  \partial^{|\sigma|}g(h(\vx))
+  \left[
+  \otimes_{\eta \in \sigma} \partial^{|\eta|}h(\vx) \left[ \otimes_{l \in \eta} \vv_l \right]
+  \right]\,.
+\end{align}
+Here, $\mathrm{part}(\{1, \dots, K\})$ denotes the set of all partitions of $\{1, \dots, K\}$, a set of sets. For instance,
+\begin{align*}
+  \mathrm{part}(\{1\})
+  &=
+    \{
+    \{ \{1 \} \}
+    \}\,,
+  \\
+  \mathrm{part}(\{1,2\})
+  &=
+    \{
+    \{ \{1,2\} \}, \{ \{1\}, \{2\} \}
+    \}\,,
+  \\
+  \mathrm{part}(\{1,2,3\})
+  &=
+    \{
+    \{ \{1,2,3\} \},
+    \{ \{1\}, \{2,3\} \},
+    \{ \{1,2\}, \{3\} \},
+    \{ \{1,3\}, \{2\} \},
+    \{ \{1\}, \{2\}, \{3\} \}
+    \}\,.
+\end{align*}
+To make this more concrete, let's consider \Cref{eq:taylor-mode-multi-directional} for first- and second-order derivatives,
+\begin{subequations}\label{eq:taylor-mode-multi-directional-1-2}
+  \begin{align}
+    \partial f(\vx) [\vv]
+    &=
+      \partial g(h(\vx)) [\partial h(\vx) [\vv]]\,,
+    \\  \label{subeq:taylor-mode-multi-directional-1-2}
+    \partial^2 f(\vx) [\vv_1, \vv_2]
+    &=
+      \partial g^2(h(\vx)) [\partial h(\vx) [\vv_1], \partial h(\vx) [\vv_2]]
+      +
+      \partial g(h(\vx)) [\partial h^2(\vx) [\vv_1, \vv_2]]\,.
+  \end{align}
+\end{subequations}
+
+From \Cref{eq:taylor-mode-multi-directional-1-2}, we can see that if we want to compute a weighted sum of second-order derivatives $\sum_{i,j} c_{i,j} \partial^2 f(\vx)[\vv_i, \vv_j]$, we can pull the sum inside the second equation,
+\begin{align}\label{eq:taylor-mode-multi-directional-1-2-sum-inside}
+  \begin{split}
+    \sum_{i,j} c_{i,j} \partial^2 f(\vx) [\vv_i, \vv_j]
+    &=
+      \sum_{i,j} c_{i,j} \partial^2 g(h(\vx)) [\partial h(\vx) [\vv_i], \partial h(\vx) [\vv_j]]
+    \\
+    &\phantom{=}+
+      \partial g(h(\vx))
+      \left[
+      \sum_{i,j} c_{i,j}
+      \partial^2 h(\vx) [\vv_1, \vv_2]
+      \right]\,.
+  \end{split}
+\end{align}
+Hence, we can propagate the collapsed second-order derivatives, together with all first-order derivatives along $\vv_1, \vv_2, \dots$. The only difference to the forward Laplacian is how second-order effects of an operation are incorporated (first term in \Cref{eq:taylor-mode-multi-directional-1-2-sum-inside}).
+
+We now specify~\Cref{eq:taylor-mode-multi-directional,eq:taylor-mode-multi-directional-1-2-sum-inside} for linear layers and element-wise activation functions.
+
+For a linear layer $g: h(\vx) \mapsto \mW h(\vx) + \vb$, we have $\partial^{m>1}g(h(x))[\vv_1, \dots, \vv_m] = \vzero$, and thus
+\begin{subequations}\label{eq:taylor-mode-multi-directional-1-2-linear}
+  \begin{align}
+    \partial f(x) [\vv]
+    &=
+      \mW \partial h(x) [\vv]\,,
+    \\
+    \partial^2 f(x) [\vv_1, \vv_2]
+    &=
+      \mW \partial^2 h(x) [\vv_1, \vv_2]\,,
+    \\
+    \partial^K f(x) [\vv_1, \dots, \vv_K]
+    &=
+      \mW \partial^K h(x) [\vv_1, \dots, \vv_K]\,.
+  \end{align}
+\end{subequations}
+The last equation is because only the set partition $\{1, \dots, K\}$ contributes to \Cref{eq:taylor-mode-multi-directional}.
+
+For elementwise activations $g: h(x) \mapsto \sigma(h(x))$ with $\sigma: \sR \to \sR$ applied component-wise, we have the structured derivative tensor $[\partial^{m}g(h(x))]_{i_1, \dots, i_m} = \partial^m\sigma(h(x)_{i_1}) \delta_{i_1, \dots, i_m}$ and multi-directional derivative $\partial^K g(h(\vx))[\vv_1, \dots, \vv_K] = \partial^K\sigma(\vx) \odot \vv_1 \odot \dots \odot \vv_K$. \Cref{eq:taylor-mode-multi-directional-1-2} becomes
+\begin{subequations}\label{eq:taylor-mode-multi-directional-1-2-activation}
+  \begin{align}
+    \partial f(x) [\vv]
+    &=
+      \sigma'(h(x)) \odot \partial h(x) [\vv]\,,
+    \\
+    \partial^2 f(x) [\vv_1, \vv_2]
+    &=
+      \sigma''(h(x)) \odot \partial h(x) [\vv_1] \odot \partial h(x) [\vv_2]
+      +
+      \sigma'(h(x)) \odot \partial^2 h(x) [\vv_1, \vv_2]\,.
+  \end{align}
+\end{subequations}
+As shown in \Cref{subeq:taylor-mode-multi-directional-1-2}, for both \Cref{eq:taylor-mode-multi-directional-1-2-linear,eq:taylor-mode-multi-directional-1-2-activation}, we can pull the summation inside the propagation scheme. Specifically, to compute $\sum_{i,j} c_{i,j}\partial^2f(\vx)[\ve_i, \ve_j]$, we have for linear layers
+\begin{subequations}
+  \begin{align}
+    f(\vx)
+    &=
+      g(\h(\vx))\,,
+    \\
+    \partial f(\vx) [\ve_i]
+    &=
+      \mW \partial h(\vx) [\ve_i]\,,
+      \qquad
+      i=1, \dots, d\,,
+    \\
+    \textcolor{maincolor}{\sum_{i,j} c_{i,j} \partial^2 f(\vx) [\ve_i, \ve_j]}
+    &=
+      \mW
+      \left(
+      \textcolor{maincolor}{\sum_{i,j} c_{i,j} \partial^2 h(\vx) [\ve_i, \ve_j]}
+      \right)\,.
+  \end{align}
+  and for activation layers
+  \begin{align}
+    f(\vx)
+    &=
+      \sigma(\h(\vx))\,,
+    \\
+    \partial f(\vx) [\ve_i]
+    &=
+      \sigma'(h(\vx)) \odot \partial h(\vx) [\ve_i]\,,
+      \qquad
+      i=1, \dots, d\,,
+    \\
+    \begin{split}
+      \textcolor{maincolor}{\sum_{i,j} c_{i,j} \partial^2 f(\vx) [\ve_i, \ve_j]}
+      &=
+        \sum_{i,j} c_{i,j}
+        \sigma''(h(\vx)) \odot \partial h(\vx) [\ve_i] \odot \partial h(\vx) [\ve_j]
+      \\
+      &\phantom{=}+
+        \sigma'(h(\vx))
+        \odot
+        \left(
+        \textcolor{maincolor}{\sum_{i,j} c_{i,j} \partial^2 h(\vx) [\ve_i, \ve_j]}
+        \right)\,.
+    \end{split}
+  \end{align}
+\end{subequations}
+(the summed second-order derivatives that are forward-propagated are highlighted).
+This propagation reduces back to the forward Laplacian \Cref{eq:forward-laplacian-activation-layers,eq:forward-laplacian-linear-layer} when we set $c_{i,j} = \delta_{i,j}$.
+In contrast to other attempts to compute such a weighted sum of second-order derivatives by reducing it to (multiple) partial standard forward Laplacians~\cite{li2024dof}, we do not need to diagonalize the coefficient matrix and can compute the linear operator in one forward propagation.
 
 %%% Local Variables:
 %%% mode: latex
