@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple, Union
 
 from backpack.hessianfree.ggnvp import ggn_vector_product_from_plist
 from backpack.hessianfree.rop import jacobian_vector_product
-from torch import Tensor, arange, cat, dtype, eye, float64, no_grad, tensor
+from torch import Tensor, arange, cat, dtype, float64, no_grad, tensor
 from torch.autograd import grad
 from torch.nn import Module
 from torch.optim import Optimizer
