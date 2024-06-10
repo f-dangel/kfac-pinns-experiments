@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Union
 
 from einops import einsum
 from pytest import mark
-from torch import Tensor, allclose, linspace, ones, outer, rand, randn, stack
+from torch import Tensor, allclose, linspace, ones, outer, rand, randn
 from torch.nn import Sequential
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian

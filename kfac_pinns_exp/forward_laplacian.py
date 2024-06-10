@@ -7,7 +7,7 @@ from torch import Tensor, eye, gt, stack, zeros_like
 from torch.nn import Linear, Module, ReLU, Sigmoid, Tanh
 
 
-def manual_forward_laplacian(
+def manual_forward_laplacian(  # noqa: C901
     layers: List[Module],
     x: Tensor,
     coordinates: Optional[List[int]] = None,
