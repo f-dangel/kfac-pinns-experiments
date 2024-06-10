@@ -88,6 +88,7 @@ def test_manual_forward_laplacian(
 
     Raises:
         AssertionError: If the computed Laplacian does not match the true Laplacian.
+        ValueError: If the coefficients format is not supported.
     """
     layers, X = set_up(case)
     coordinates = coordinate_fn(X)
