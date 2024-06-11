@@ -593,7 +593,8 @@ class BoundaryGramianLinearOperator:
             y: The target data tensor.
 
         Raises:
-            NotImplementedError: If there are trainable parameters in unsupported layers.
+            NotImplementedError: If there are trainable parameters in unsupported
+                layers.
         """
         self.layers = layers
         self.batch_size = X.shape[0]
@@ -609,7 +610,7 @@ class BoundaryGramianLinearOperator:
                     self.layer_idxs.append(idx)
                 elif any(p.requires_grad for p in layer.parameters()):
                     raise NotImplementedError(
-                        "Trainable linear layers must have differentiable weight and bias."
+                        "Trainable linear layers must have differentiable weight+bias."
                     )
             elif any(p.requires_grad for p in layer.parameters()):
                 raise NotImplementedError(
