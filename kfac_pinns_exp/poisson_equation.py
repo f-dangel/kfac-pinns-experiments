@@ -1,6 +1,6 @@
 """Functionality for solving the Poisson equation."""
 
-from math import pi
+from math import pi, sqrt
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from warnings import warn
 
@@ -24,7 +24,7 @@ from torch import (
 from torch import sum as torch_sum
 from torch import zeros
 from torch.autograd import grad
-from torch.nn import Module
+from torch.nn import Linear, Module
 from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
@@ -571,3 +571,108 @@ def plot_solution(
         raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")
 
     plt.close(fig=fig)
+
+
+class BoundaryGramianLinearOperator:
+    """Linear operator for the Poisson equation's boundary Gramian.
+
+    Pre-computes the information required to multiply with the Gramian in one
+    backward pass. This saves computation when doing multiple Gramian-vector
+    products, compared to matrix-free multiplication with the Gramian based on
+    nested autodiff.
+    """
+
+    def __init__(
+        self, layers: List[Module], X: Tensor, y: Tensor, ggn_type: str = "type-2"
+    ):
+        """Pre-compute the information for the Gramian-vector product.
+
+        Args:
+            layers: The neural network's layers.
+            X: The input data tensor.
+            y: The target data tensor.
+
+        Raises:
+            NotImplementedError: If there are trainable parameters in unsupported layers.
+        """
+        self.layers = layers
+        self.batch_size = X.shape[0]
+
+        self.layer_idxs = []
+        for idx, layer in enumerate(layers):
+            if isinstance(layer, Linear):
+                if (
+                    layer.weight.requires_grad
+                    and layer.bias is not None
+                    and layer.bias.requires_grad
+                ):
+                    self.layer_idxs.append(idx)
+                elif any(p.requires_grad for p in layer.parameters()):
+                    raise NotImplementedError(
+                        "Trainable linear layers must have differentiable weight and bias."
+                    )
+            elif any(p.requires_grad for p in layer.parameters()):
+                raise NotImplementedError(
+                    "Trainable parameters must be in linear layers."
+                )
+
+        self.params = sum(
+            (list(layers[idx].parameters()) for idx in self.layer_idxs), []
+        )
+        _, residual, intermediates = evaluate_boundary_loss(layers, X, y)
+
+        # collect all layer output gradients
+        layer_outputs = [intermediates[idx + 1] for idx in self.layer_idxs]
+        error = get_backpropagated_error(residual, ggn_type).mul_(sqrt(self.batch_size))
+        grad_outputs = grad(residual, layer_outputs, grad_outputs=error)
+        self.layer_grad_outputs = {
+            idx: g for g, idx in zip(grad_outputs, self.layer_idxs)
+        }
+
+        # collect all layer inputs
+        self.layer_inputs = {
+            idx: bias_augmentation(intermediates[idx], 1) for idx in self.layer_idxs
+        }
+
+    def __matmul__(self, v: Tensor) -> Tensor:
+        """Multiply the Gramian onto a vector.
+
+        Args:
+            v: The vector to multiply with the Gramian. Has shape `[D]` where `D` is
+                the total number of parameters in the network.
+
+        Returns:
+            The result of the Gramian-vector product. Has shape `[D]`.
+        """
+        # split into parameters
+        v_list = [
+            v_p.reshape_as(p)
+            for v_p, p in zip(v.split([p.numel() for p in self.params]), self.params)
+        ]
+        JT_v = zeros(self.batch_size, device=v.device, dtype=v.dtype)
+
+        # multiply with the transpose Jacobian
+        for i, layer_idx in enumerate(self.layer_idxs):
+            z = self.layer_inputs[layer_idx]
+            g = self.layer_grad_outputs[layer_idx]
+
+            v_idx = cat([v_list[2 * i], v_list[2 * i + 1].unsqueeze(-1)], dim=1)
+            JT_v.add_(
+                einsum(
+                    z, g, v_idx, "batch ... d_in, batch ... d_out, d_out d_in -> batch"
+                )
+            )
+
+        # multiply with the Jacobian
+        for i, layer_idx in enumerate(self.layer_idxs):
+            z = self.layer_inputs[layer_idx]
+            g = self.layer_grad_outputs[layer_idx]
+
+            v_idx = einsum(
+                z, g, JT_v, "batch ... d_in, batch ... d_out, batch -> d_out d_in"
+            )
+            v_list[2 * i] = v_idx[:, :-1]
+            v_list[2 * i + 1] = v_idx[:, -1]
+
+        # flatten and concatenate
+        return cat([v.flatten() for v in v_list])
