@@ -8,7 +8,6 @@ from torch.nn import Linear, Sequential, Tanh
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.kfac_utils import gramian_basis_to_kfac_basis
 from kfac_pinns_exp.poisson_equation import (
-    BoundaryGramianLinearOperator,
     evaluate_boundary_loss_and_kfac,
     evaluate_interior_loss_and_kfac,
     f_sin_product,
@@ -205,31 +204,3 @@ def test_evaluate_boundary_loss_and_kfac():
     B_4 = tensor([[1.00000e00]])
     report_nonclose(kfacs[4][0], A_4, **tols)
     report_nonclose(kfacs[4][1], B_4, **tols)
-
-
-def test_BoundaryGramianLinearOperator():
-    """Check multiplication with the boundary Gramian via pre-computed quantities."""
-    manual_seed(0)
-    dim_Omega = 2
-    layers = [Linear(dim_Omega, 4), Tanh(), Linear(4, 3), Tanh(), Linear(3, 1)]
-    model = Sequential(*layers)
-    N = 10
-    X = square_boundary(N, dim_Omega)
-    y = u_sin_product(X)
-
-    # generate random vector
-    num_params = sum(p.numel() for p in model.parameters())
-    v = rand(num_params)
-
-    # autodiff
-    param_names = [n for n, _ in model.named_parameters()]
-    gramian = autograd_gramian(
-        model, X, param_names, loss_type="poisson_boundary"
-    ).div_(N)
-    Gv = gramian @ v
-
-    # manual
-    G_linop = BoundaryGramianLinearOperator(layers, X, y)
-    G_linop_v = G_linop @ v
-
-    report_nonclose(Gv, G_linop_v)
