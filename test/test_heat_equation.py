@@ -4,7 +4,7 @@ from test.utils import report_nonclose
 
 from einops import einsum
 from pytest import mark
-from torch import allclose, cat, isclose, manual_seed, rand, tensor, zeros, zeros_like
+from torch import allclose, cat, manual_seed, rand, tensor, zeros, zeros_like
 from torch.autograd import grad
 from torch.nn import Linear, Sequential, Tanh
 
@@ -246,7 +246,7 @@ def test_evaluate_boundary_loss_and_kfac():
 
     loss, kfacs = evaluate_boundary_loss_and_kfac(layers, X, y)
     assert list(kfacs.keys()) == [0, 2, 4]
-    assert isclose(loss, tensor(3.21899e-1), **tols)
+    report_nonclose(loss, tensor(3.21899e-1), **tols)
 
     # first Linear KFAC
     A_0 = tensor(
