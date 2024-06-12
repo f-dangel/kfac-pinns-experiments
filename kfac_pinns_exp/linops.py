@@ -99,7 +99,7 @@ class _GramianLinearOperator:
             X: The input data tensor.
             y: The target data tensor.
 
-        Returns:
+        Returns: # noqa: DAR202
             The loss, and dictionaries of layer inputs and output gradients.
             Keys are indices of the layer.
 
@@ -170,7 +170,7 @@ class _GramianLinearOperator:
         """Multiply the per-layer Gramian onto a vector.
 
         Args:
-            v: The vector to multiply with the Gramian in list format.
+            v_list: The vector to multiply with the Gramian in list format.
 
         Returns:
             The result of the per-layer Gramian-vector product in list format.
