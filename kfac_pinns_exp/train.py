@@ -9,6 +9,7 @@ python train.py --help
 from argparse import ArgumentParser, Namespace
 from functools import partial
 from itertools import count
+from math import sqrt
 from os import makedirs, path
 from sys import argv
 from time import time
@@ -34,6 +35,7 @@ from torch.optim import LBFGS
 from kfac_pinns_exp import heat_equation, poisson_equation
 from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
+from kfac_pinns_exp.optim.hessianfree_cached import HessianFreeCached
 from kfac_pinns_exp.optim.kfac import KFAC
 from kfac_pinns_exp.parse_utils import (
     check_all_args_parsed,
@@ -43,22 +45,30 @@ from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
 from kfac_pinns_exp.train_utils import DataLoader, KillTrigger, LoggingTrigger
 from kfac_pinns_exp.utils import latex_float
 
-SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
-SUPPORTED_EQUATIONS = ["poisson", "heat"]
-SUPPORTED_MODELS = [
+SUPPORTED_OPTIMIZERS = {
+    "KFAC",
+    "SGD",
+    "Adam",
+    "ENGD",
+    "LBFGS",
+    "HessianFree",
+    "HessianFreeCached",
+}
+SUPPORTED_EQUATIONS = {"poisson", "heat"}
+SUPPORTED_MODELS = {
     "mlp-tanh-64",
     "mlp-tanh-64-48-32-16",
     "mlp-tanh-64-64-48-48",
     "mlp-tanh-256-256-128-128",
     "mlp-tanh-768-768-512-512",
-]
-SUPPORTED_BOUNDARY_CONDITIONS = [
+}
+SUPPORTED_BOUNDARY_CONDITIONS = {
     "sin_product",
     "cos_sum",
     "u_weinan",
     "u_weinan_norm",
     "sin_sum",
-]
+}
 
 SOLUTIONS = {
     "poisson": {
@@ -578,7 +588,7 @@ def main():  # noqa: C901
             loss_interior = loss_original._loss_interior
             loss_boundary = loss_original._loss_boundary
 
-        elif isinstance(optimizer, HessianFree):
+        elif isinstance(optimizer, (HessianFree, HessianFreeCached)):
             # HessianFree requires a closure that produces the linearization
             # point and the loss
 
@@ -616,8 +626,13 @@ def main():  # noqa: C901
                 # we want to linearize residual w.r.t. the parameters to obtain
                 # the GGN. This established the connection between the loss and
                 # the concatenated boundary and interior residuals.
-                residual = cat([residual_interior, residual_boundary])
-                loss = 0.5 * (residual**2).mean()
+                residual = cat(
+                    [
+                        residual_interior / sqrt(N_Omega),
+                        residual_boundary / sqrt(N_dOmega),
+                    ]
+                )
+                loss = 0.5 * (residual**2).sum()
 
                 # HOTFIX Append the interior and boundary loss to loss_storage
                 # so we can extract them for logging and plotting
@@ -626,7 +641,10 @@ def main():  # noqa: C901
                 return loss, residual
 
             forward = partial(forward, loss_storage=loss_storage)
-            optimizer.step(forward)
+            if isinstance(optimizer, HessianFreeCached):
+                optimizer.step(X_Omega, y_Omega, X_dOmega, y_dOmega, forward)
+            else:
+                optimizer.step(forward)
             loss_interior, loss_boundary = loss_storage[0]
 
         else:

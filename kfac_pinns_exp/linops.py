@@ -297,10 +297,9 @@ class InteriorGramianLinearOperator(_GramianLinearOperator):
             )
 
             # layer inputs
-            intermediates_idx = intermediates.pop(idx)
-            forward = intermediates_idx.pop("forward")
-            directional_gradients = intermediates_idx.pop("directional_gradients")
-            laplacian = intermediates_idx.pop("laplacian")
+            forward = intermediates[idx]["forward"]
+            directional_gradients = intermediates[idx]["directional_gradients"]
+            laplacian = intermediates[idx]["laplacian"]
             layer_inputs[idx] = cat(  # noqa: B909
                 [
                     bias_augmentation(forward.detach(), 1).unsqueeze(1),
