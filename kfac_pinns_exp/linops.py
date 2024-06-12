@@ -58,7 +58,7 @@ class _GramianLinearOperator:
 
         if approximation not in self.SUPPORTED_APPROXIMATIONS:
             raise ValueError(
-                f"Approximation '{approximation}' not supported. "
+                f"Approximation {approximation!r} not supported. "
                 f"Choose from {self.SUPPORTED_APPROXIMATIONS}."
             )
         self.approximation = approximation
@@ -254,18 +254,18 @@ class InteriorGramianLinearOperator(_GramianLinearOperator):
         }[self.equation]
         loss, residual, intermediates = loss_evaluator(self.layers, X, y)
 
-        # collect all layer output gradients
-        layer_outputs = []
-
-        for idx in self.layer_idxs:
-            layer_outputs.extend(
+        # compute all layer output gradients
+        layer_outputs = sum(
+            (
                 [
                     intermediates[idx + 1]["forward"],
                     intermediates[idx + 1]["directional_gradients"],
                     intermediates[idx + 1]["laplacian"],
                 ]
-            )
-
+                for idx in self.layer_idxs
+            ),
+            [],
+        )
         error = get_backpropagated_error(residual, self.ggn_type).mul_(
             sqrt(self.batch_size)
         )
@@ -279,13 +279,15 @@ class InteriorGramianLinearOperator(_GramianLinearOperator):
                 materialize_grads=True,
             )
         )
-        layer_grad_outputs = {}
+
+        # collect all layer inputs and output gradients
+        layer_inputs, layer_grad_outputs = {}, {}
         for idx in self.layer_idxs:
+            # layer output gradients
             grad_forward = grad_outputs.pop(0)
             grad_directional_gradients = grad_outputs.pop(0)
             grad_laplacian = grad_outputs.pop(0)
-
-            g = cat(
+            layer_grad_outputs[idx] = cat(  # noqa: B909
                 [
                     grad_forward.detach().unsqueeze(1),
                     grad_directional_gradients.detach(),
@@ -293,16 +295,13 @@ class InteriorGramianLinearOperator(_GramianLinearOperator):
                 ],
                 dim=1,
             )
-            layer_grad_outputs[idx] = g
 
-        # collect all layer inputs
-        layer_inputs = {}
-        for idx in self.layer_idxs:
-            forward = intermediates[idx]["forward"]
-            directional_gradients = intermediates[idx]["directional_gradients"]
-            laplacian = intermediates[idx]["laplacian"]
-
-            z = cat(
+            # layer inputs
+            intermediates_idx = intermediates.pop(idx)
+            forward = intermediates_idx.pop("forward")
+            directional_gradients = intermediates_idx.pop("directional_gradients")
+            laplacian = intermediates_idx.pop("laplacian")
+            layer_inputs[idx] = cat(  # noqa: B909
                 [
                     bias_augmentation(forward.detach(), 1).unsqueeze(1),
                     bias_augmentation(directional_gradients.detach(), 0),
@@ -310,6 +309,5 @@ class InteriorGramianLinearOperator(_GramianLinearOperator):
                 ],
                 dim=1,
             )
-            layer_inputs[idx] = z
 
         return loss, layer_inputs, layer_grad_outputs
