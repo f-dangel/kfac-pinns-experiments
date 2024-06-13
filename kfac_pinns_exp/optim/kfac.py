@@ -118,6 +118,12 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         default=5,
     )
     parser.add_argument(
+        f"--{prefix}tr_size_adaption",
+        type=float,
+        help="Constant which multiplicatively regulates the trust region size.",
+        default=0.95,
+    )
+    parser.add_argument(
         f"--{prefix}damping_heuristic",
         type=str,
         choices=KFAC.SUPPORTED_DAMPING_HEURISTICS,
@@ -188,6 +194,7 @@ class KFAC(Optimizer):
         T_inv: int = 1,
         T_update_damping: int = 5,
         ema_factor: float = 0.95,
+        tr_size_adaption: float = 0.95,
         kfac_approx: str = "expand",
         inv_strategy: str = "invert kronecker sum",
         ggn_type: str = "type-2",
@@ -224,6 +231,12 @@ class KFAC(Optimizer):
                 trust region based damping. Default is `5`.
             ema_factor: Exponential moving average factor for the KFAC factors. Must be
                 in `[0, 1)`. Default is `0.95`.
+            tr_size_adaption: float in (0,1). Influences the factor by which the trust
+                region should be enlarged or shrinked. Default is 0.95 which is from
+                the KFAC paper (https://arxiv.org/pdf/1503.05671), see Section 6.5.
+                The factor `w1` which multiplicatively shrinks or enlarges the trust
+                region is also influenced by `T_update_damping` via the formula
+                `w1 = tr_size_adaption ** T_update_damping`.
             kfac_approx: KFAC approximation method. Must be either `'expand'`, or
                 `'reduce'`. Defaults to `'expand'`.
             ggn_type: Type of the GGN to use. This influences the backpropagted error
@@ -256,6 +269,7 @@ class KFAC(Optimizer):
             T_inv=T_inv,
             T_update_damping=T_update_damping,
             ema_factor=ema_factor,
+            tr_size_adaption=tr_size_adaption,
             kfac_approx=kfac_approx,
             ggn_type=ggn_type,
             inv_strategy=inv_strategy,
@@ -613,6 +627,9 @@ class KFAC(Optimizer):
 
         Returns:
             A tuple of the damped KFAC factors.
+
+        Raises:
+            ValueError: If the damping-heuristic is unsupported.
         """
         (dim_A,), (dim_B,) = set(A.shape), set(B.shape)
 
@@ -695,7 +712,7 @@ class KFAC(Optimizer):
 
         # adapt damping
         rho = real_reduction / model_reduction
-        w1 = (19 / 20) ** group["T_update_damping"]
+        w1 = group["tr_size_adaption"] ** group["T_update_damping"]
         if rho < 0.25:
             new_damping = damping / w1
         elif rho > 0.75:
