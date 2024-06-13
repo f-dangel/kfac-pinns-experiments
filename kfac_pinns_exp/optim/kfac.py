@@ -193,7 +193,6 @@ class KFAC(Optimizer):
         T_kfac: int = 1,
         T_inv: int = 1,
         T_update_damping: int = 5,
-        T_update_damping: int = 5,
         ema_factor: float = 0.95,
         tr_size_adaption: float = 0.95,
         kfac_approx: str = "expand",
@@ -228,8 +227,6 @@ class KFAC(Optimizer):
                 the boundary and the interior terms' KFACs. Default is `1`.
             T_inv: Positive integer specifying the preconditioner update
                 frequency. Default is `1`.
-            T_update_damping: Positive integer specifying the update frequency for the
-                trust region based damping. Default is `5`.
             T_update_damping: Positive integer specifying the update frequency for the
                 trust region based damping. Default is `5`.
             ema_factor: Exponential moving average factor for the KFAC factors. Must be
@@ -270,7 +267,6 @@ class KFAC(Optimizer):
             damping_boundary=damping,
             T_kfac=T_kfac,
             T_inv=T_inv,
-            T_update_damping=T_update_damping,
             T_update_damping=T_update_damping,
             ema_factor=ema_factor,
             tr_size_adaption=tr_size_adaption,
@@ -339,17 +335,12 @@ class KFAC(Optimizer):
         T_update_damping = group["T_update_damping"]
 
         if self.adaptive_damping and self.steps % T_update_damping == 0:
-        group = self.param_groups[0]
-        T_update_damping = group["T_update_damping"]
-
-        if self.adaptive_damping and self.steps % T_update_damping == 0:
             before = sum(
                 ([p.clone() for p in mod.parameters()] for mod in self.layers), []
             )
 
         self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
 
-        if self.adaptive_damping and self.steps % T_update_damping == 0:
         if self.adaptive_damping and self.steps % T_update_damping == 0:
             now = sum((list(mod.parameters()) for mod in self.layers), [])
             step = [n - b for n, b in zip(now, before)]
@@ -636,9 +627,6 @@ class KFAC(Optimizer):
 
         Returns:
             A tuple of the damped KFAC factors.
-
-        Raises:
-            ValueError: If the damping-heuristic is unsupported.
 
         Raises:
             ValueError: If the damping-heuristic is unsupported.
