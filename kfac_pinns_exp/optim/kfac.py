@@ -770,7 +770,9 @@ class KFAC(Optimizer):
             The learning rate and momentum for the current step.
         """
         group = self.param_groups[0]
-        damping = group["damping"]  # = λ + η in the KFAC paper
+        damping_interior = group["damping_interior"]  # = λ + η in the KFAC paper but we
+        damping_boundary = group["damping_boundary"]  # treat int and bdry separately
+        damping = damping_interior + damping_boundary  # here we need the sum
         params = sum((list(layer.parameters()) for layer in self.layers), [])
         d, D = previous, direction  # = δ, Δ in the KFAC paper
         g = [p.grad for p in params]  # = ∇h in the KFAC paper
