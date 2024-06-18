@@ -1,13 +1,15 @@
 """Test `kfac_pinns_exp.autodiff_utils`."""
 
+from itertools import product
+from test.utils import report_nonclose
 from typing import List, Union
 
 from pytest import mark
 from torch import Tensor, allclose, cat, manual_seed, outer, rand, zeros, zeros_like
 from torch.autograd import grad
-from torch.nn import Linear, Module, Sequential, Tanh
+from torch.nn import Linear, Module, Sequential, Sigmoid, Tanh
 
-from kfac_pinns_exp.autodiff_utils import autograd_gramian
+from kfac_pinns_exp.autodiff_utils import autograd_gramian, autograd_input_divergence
 
 LOSS_TYPES = ["poisson_boundary", "poisson_interior", "heat_boundary", "heat_interior"]
 APPROXIMATIONS = ["full", "diagonal", "per_layer"]
@@ -167,3 +169,29 @@ def extract_approximation(
         return [gramian[b][b] for b in range(len(sizes))]
 
     raise ValueError(f"Unknown approximation: {approximation}.")
+
+
+def test_autograd_input_divergence():
+    """Test computation of the divergence with `functorch`."""
+    manual_seed(0)
+
+    # setup
+    N, S, D = 5, 4, 3
+    X = rand(N, S, D, requires_grad=True)
+    X.requires_grad_(True)
+    model = Sequential(Linear(D, D), Tanh(), Linear(D, D), Sigmoid())
+
+    # compute the divergence with `autograd`
+    div_true = zeros(N)
+
+    f_X = model(X)
+
+    for n, d, s in product(range(N), range(D), range(S)):
+        e = zeros_like(f_X)
+        e[n, s, d] = 1.0
+        div_true[n] += grad(f_X, X, grad_outputs=e, retain_graph=True)[0][n, s, d]
+
+    # compute the divergence with `functorch`
+    div = autograd_input_divergence(model, X)
+
+    report_nonclose(div, div_true)
