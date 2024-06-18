@@ -13,7 +13,7 @@ from kfac_pinns_exp.poisson_equation import get_backpropagated_error
 from kfac_pinns_exp.utils import bias_augmentation
 
 
-class _GramianLinearOperator:
+class GramianLinearOperator:
     """Base class for linear operators representing a Gramian.
 
     Pre-computes the information required to multiply with the Gramian in one
@@ -23,9 +23,12 @@ class _GramianLinearOperator:
 
     Attributes:
         SUPPORTED_APPROXIMATIONS: The supported Gramian approximations.
+        SUPPORTED_GGN_TYPES: The supported GGN types.
     """
 
     SUPPORTED_APPROXIMATIONS = {"full", "per_layer"}
+    SUPPORTED_GGN_TYPES = {"type-2"}
+    SUPPORTED_LOSS_TYPES = {"interior", "boundary"}
 
     def __init__(
         self,
@@ -33,6 +36,7 @@ class _GramianLinearOperator:
         layers: List[Module],
         X: Tensor,
         y: Tensor,
+        loss_type: str,
         ggn_type: str = "type-2",
         approximation: str = "full",
     ):
@@ -50,11 +54,19 @@ class _GramianLinearOperator:
             NotImplementedError: If there are trainable parameters in unsupported
                 layers.
             ValueError: For unsupported values of `approximation`.
+            ValueError: For unsupported values of `ggn_type`.
         """
         self.layers = layers
         self.batch_size = X.shape[0]
         self.ggn_type = ggn_type
         self.equation = equation
+        self.loss_type = loss_type
+
+        if ggn_type not in self.SUPPORTED_GGN_TYPES:
+            raise ValueError(
+                f"GGN type {ggn_type!r} not supported. "
+                f"Choose from {self.SUPPORTED_GGN_TYPES}."
+            )
 
         if approximation not in self.SUPPORTED_APPROXIMATIONS:
             raise ValueError(
@@ -85,28 +97,26 @@ class _GramianLinearOperator:
             (list(layers[idx].parameters()) for idx in self.layer_idxs), []
         )
         # compute quantities required for Gramian-vector products
-        loss, self.layer_inputs, self.layer_grad_outputs = (
-            self.compute_layer_inputs_and_grad_outputs(X, y)
+        eval_fn = {
+            "poisson": {
+                "interior": poisson_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,
+                "boundary": poisson_equation.evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+            },
+            "heat": {
+                "interior": heat_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,
+                "boundary": heat_equation.evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+            },
+        }[loss_type][equation]
+        loss, self.layer_inputs, self.layer_grad_outputs = eval_fn(
+            layers, X, y, ggn_type
         )
+
+        # `grad_outputs` have scaling `1/N`, but we need `1/sqrt(N)` for the matvec
+        batch_size = X.shape[0]
+        for g_out in self.layer_grad_outputs.values():
+            g_out.mul_(sqrt(batch_size))
+
         self.grad = grad(loss, self.params, allow_unused=True, materialize_grads=True)
-
-    def compute_layer_inputs_and_grad_outputs(
-        self, X: Tensor, y: Tensor
-    ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
-        """Pre-compute loss as well as inputs and output gradients of supported layers.
-
-        Args:
-            X: The input data tensor.
-            y: The target data tensor.
-
-        Returns: # noqa: DAR202
-            The loss, and dictionaries of layer inputs and output gradients.
-            Keys are indices of the layer.
-
-        Raises:
-            NotImplementedError: Must be implemented by a subclass.
-        """
-        raise NotImplementedError
 
     def __matmul__(self, v: Tensor) -> Tensor:
         """Multiply the Gramian onto a vector.
@@ -192,121 +202,121 @@ class _GramianLinearOperator:
         return result
 
 
-class BoundaryGramianLinearOperator(_GramianLinearOperator):
-    """Linear operator for a boundary Gramian."""
+# class BoundaryGramianLinearOperator(_GramianLinearOperator):
+#     """Linear operator for a boundary Gramian."""
 
-    def compute_layer_inputs_and_grad_outputs(
-        self, X: Tensor, y: Tensor
-    ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
-        """Pre-compute loss as well as inputs and output gradients of supported layers.
+#     def compute_layer_inputs_and_grad_outputs(
+#         self, X: Tensor, y: Tensor
+#     ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+#         """Pre-compute loss as well as inputs and output gradients of supported layers.
 
-        Args:
-            X: The input data tensor.
-            y: The target data tensor.
+#         Args:
+#             X: The input data tensor.
+#             y: The target data tensor.
 
-        Returns:
-            The loss, and dictionaries of layer inputs and output gradients.
-            Keys are indices of the layer.
-        """
-        loss_evaluator = {
-            "poisson": poisson_equation.evaluate_boundary_loss,
-            "heat": heat_equation.evaluate_boundary_loss,
-        }[self.equation]
-        loss, residual, intermediates = loss_evaluator(self.layers, X, y)
+#         Returns:
+#             The loss, and dictionaries of layer inputs and output gradients.
+#             Keys are indices of the layer.
+#         """
+#         loss_evaluator = {
+#             "poisson": poisson_equation.evaluate_boundary_loss,
+#             "heat": heat_equation.evaluate_boundary_loss,
+#         }[self.equation]
+#         loss, residual, intermediates = loss_evaluator(self.layers, X, y)
 
-        # collect all layer output gradients
-        layer_outputs = [intermediates[idx + 1] for idx in self.layer_idxs]
-        error = get_backpropagated_error(residual, self.ggn_type).mul_(
-            sqrt(self.batch_size)
-        )
-        grad_outputs = grad(
-            residual, layer_outputs, grad_outputs=error, retain_graph=True
-        )
-        layer_grad_outputs = {idx: g for g, idx in zip(grad_outputs, self.layer_idxs)}
+#         # collect all layer output gradients
+#         layer_outputs = [intermediates[idx + 1] for idx in self.layer_idxs]
+#         error = get_backpropagated_error(residual, self.ggn_type).mul_(
+#             sqrt(self.batch_size)
+#         )
+#         grad_outputs = grad(
+#             residual, layer_outputs, grad_outputs=error, retain_graph=True
+#         )
+#         layer_grad_outputs = {idx: g for g, idx in zip(grad_outputs, self.layer_idxs)}
 
-        # collect all layer inputs
-        layer_inputs = {
-            idx: bias_augmentation(intermediates[idx], 1) for idx in self.layer_idxs
-        }
+#         # collect all layer inputs
+#         layer_inputs = {
+#             idx: bias_augmentation(intermediates[idx], 1) for idx in self.layer_idxs
+#         }
 
-        return loss, layer_inputs, layer_grad_outputs
+#         return loss, layer_inputs, layer_grad_outputs
 
 
-class InteriorGramianLinearOperator(_GramianLinearOperator):
-    """Linear operator for an interior Gramian."""
+# class InteriorGramianLinearOperator(_GramianLinearOperator):
+#     """Linear operator for an interior Gramian."""
 
-    def compute_layer_inputs_and_grad_outputs(
-        self, X: Tensor, y: Tensor
-    ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
-        """Pre-compute loss as well as inputs and output gradients of supported layers.
+#     def compute_layer_inputs_and_grad_outputs(
+#         self, X: Tensor, y: Tensor
+#     ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+#         """Pre-compute loss as well as inputs and output gradients of supported layers.
 
-        Args:
-            X: The input data tensor.
-            y: The target data tensor.
+#         Args:
+#             X: The input data tensor.
+#             y: The target data tensor.
 
-        Returns:
-            The loss, and dictionaries of layer inputs and output gradients.
-            Keys are indices of the layer.
-        """
-        loss_evaluator = {
-            "poisson": poisson_equation.evaluate_interior_loss,
-            "heat": heat_equation.evaluate_interior_loss,
-        }[self.equation]
-        loss, residual, intermediates = loss_evaluator(self.layers, X, y)
+#         Returns:
+#             The loss, and dictionaries of layer inputs and output gradients.
+#             Keys are indices of the layer.
+#         """
+#         loss_evaluator = {
+#             "poisson": poisson_equation.evaluate_interior_loss,
+#             "heat": heat_equation.evaluate_interior_loss,
+#         }[self.equation]
+#         loss, residual, intermediates = loss_evaluator(self.layers, X, y)
 
-        # compute all layer output gradients
-        layer_outputs = sum(
-            (
-                [
-                    intermediates[idx + 1]["forward"],
-                    intermediates[idx + 1]["directional_gradients"],
-                    intermediates[idx + 1]["laplacian"],
-                ]
-                for idx in self.layer_idxs
-            ),
-            [],
-        )
-        error = get_backpropagated_error(residual, self.ggn_type).mul_(
-            sqrt(self.batch_size)
-        )
-        grad_outputs = list(
-            grad(
-                residual,
-                layer_outputs,
-                grad_outputs=error,
-                retain_graph=True,
-                allow_unused=True,
-                materialize_grads=True,
-            )
-        )
+#         # compute all layer output gradients
+#         layer_outputs = sum(
+#             (
+#                 [
+#                     intermediates[idx + 1]["forward"],
+#                     intermediates[idx + 1]["directional_gradients"],
+#                     intermediates[idx + 1]["laplacian"],
+#                 ]
+#                 for idx in self.layer_idxs
+#             ),
+#             [],
+#         )
+#         error = get_backpropagated_error(residual, self.ggn_type).mul_(
+#             sqrt(self.batch_size)
+#         )
+#         grad_outputs = list(
+#             grad(
+#                 residual,
+#                 layer_outputs,
+#                 grad_outputs=error,
+#                 retain_graph=True,
+#                 allow_unused=True,
+#                 materialize_grads=True,
+#             )
+#         )
 
-        # collect all layer inputs and output gradients
-        layer_inputs, layer_grad_outputs = {}, {}
-        for idx in self.layer_idxs:
-            # layer output gradients
-            grad_forward = grad_outputs.pop(0)
-            grad_directional_gradients = grad_outputs.pop(0)
-            grad_laplacian = grad_outputs.pop(0)
-            layer_grad_outputs[idx] = cat(  # noqa: B909
-                [
-                    grad_forward.detach().unsqueeze(1),
-                    grad_directional_gradients.detach(),
-                    grad_laplacian.detach().unsqueeze(1),
-                ],
-                dim=1,
-            )
+#         # collect all layer inputs and output gradients
+#         layer_inputs, layer_grad_outputs = {}, {}
+#         for idx in self.layer_idxs:
+#             # layer output gradients
+#             grad_forward = grad_outputs.pop(0)
+#             grad_directional_gradients = grad_outputs.pop(0)
+#             grad_laplacian = grad_outputs.pop(0)
+#             layer_grad_outputs[idx] = cat(  # noqa: B909
+#                 [
+#                     grad_forward.detach().unsqueeze(1),
+#                     grad_directional_gradients.detach(),
+#                     grad_laplacian.detach().unsqueeze(1),
+#                 ],
+#                 dim=1,
+#             )
 
-            # layer inputs
-            forward = intermediates[idx]["forward"]
-            directional_gradients = intermediates[idx]["directional_gradients"]
-            laplacian = intermediates[idx]["laplacian"]
-            layer_inputs[idx] = cat(  # noqa: B909
-                [
-                    bias_augmentation(forward.detach(), 1).unsqueeze(1),
-                    bias_augmentation(directional_gradients.detach(), 0),
-                    bias_augmentation(laplacian.detach(), 0).unsqueeze(1),
-                ],
-                dim=1,
-            )
+#             # layer inputs
+#             forward = intermediates[idx]["forward"]
+#             directional_gradients = intermediates[idx]["directional_gradients"]
+#             laplacian = intermediates[idx]["laplacian"]
+#             layer_inputs[idx] = cat(  # noqa: B909
+#                 [
+#                     bias_augmentation(forward.detach(), 1).unsqueeze(1),
+#                     bias_augmentation(directional_gradients.detach(), 0),
+#                     bias_augmentation(laplacian.detach(), 0).unsqueeze(1),
+#                 ],
+#                 dim=1,
+#             )
 
-        return loss, layer_inputs, layer_grad_outputs
+#         return loss, layer_inputs, layer_grad_outputs
