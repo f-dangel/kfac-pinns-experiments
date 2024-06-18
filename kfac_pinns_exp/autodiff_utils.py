@@ -21,9 +21,6 @@ def autograd_input_divergence(
 
     Returns:
         The divergence of the model w.r.t. X. Has shape `[batch_size]`.
-
-    Raises:
-        ValueError: If the input or output mismatch in shape.
     """
 
     def f(x: Tensor) -> Tensor:
