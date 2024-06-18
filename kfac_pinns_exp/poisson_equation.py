@@ -304,33 +304,28 @@ def evaluate_interior_loss_and_kfac(
         )
     )
 
-    ###############################################################################
-    #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
+    # Compute input-based Kronecker factors
     for layer_idx, (A, _) in kfacs.items():
-        T = layer_inputs.pop(layer_idx)
+        Z = layer_inputs.pop(layer_idx)
         if kfac_approx == "expand":
-            T = rearrange(T, "batch d_0 d_in -> (batch d_0) d_in")
+            Z = rearrange(Z, "batch d_0 d_in -> (batch d_0) d_in")
         else:  # KFAC-reduce
-            T = reduce(T, "batch d_0 d_in -> batch d_in", "mean")
-        A.add_(T.T @ T, alpha=1 / T.shape[0])
+            Z = reduce(Z, "batch d_0 d_in -> batch d_in", "mean")
+        A.add_(Z.T @ Z, alpha=1 / Z.shape[0])
 
-    ###############################################################################
-    #                   COMPUTE OUTPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
+    # Compute output-based Kronecker factor
     batch_size = X.shape[0]
     for layer_idx, (_, B) in kfacs.items():
         if ggn_type == "forward-only":
             # set all grad-output Kronecker factors to identity
-            for _, B in kfacs.values():
-                B.fill_diagonal_(1.0)
+            B.fill_diagonal_(1.0)
         else:
-            grad_T = layer_grad_outputs.pop(layer_idx)
+            G = layer_grad_outputs.pop(layer_idx)
             if kfac_approx == "expand":
-                grad_T = rearrange(grad_T, "batch d_0 d_out -> (batch d_0) d_out")
+                G = rearrange(G, "batch d_0 d_out -> (batch d_0) d_out")
             else:  # KFAC-reduce
-                grad_T = reduce(grad_T, "batch d_0 d_out -> batch d_out", "sum")
-            B.add_(grad_T.T @ grad_T, alpha=batch_size)
+                G = reduce(G, "batch d_0 d_out -> batch d_out", "sum")
+            B.add_(G.T @ G, alpha=batch_size)
 
     return loss, kfacs
 
@@ -373,26 +368,22 @@ def evaluate_boundary_loss_and_kfac(
         )
     )
 
-    ###############################################################################
-    #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
+    # Compute input-based Kronecker factors
     for layer_idx, (A, _) in kfacs.items():
         # no weight sharing here, hence KFAC expand and reduce are identical
-        x = layer_inputs.pop(layer_idx)
-        A.add_(x.T @ x, alpha=1 / x.shape[0])
+        z = layer_inputs.pop(layer_idx)
+        A.add_(z.T @ z, alpha=1 / z.shape[0])
 
-    ###############################################################################
-    #                   COMPUTE OUTPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
+    # Compute output-based Kronecker factors
     batch_size = X.shape[0]
     for layer_idx, (_, B) in kfacs.items():
         if ggn_type == "forward-only":
             # set all grad-output Kronecker factors to identity
             B.fill_diagonal_(1.0)
         else:
-            grad_out = layer_grad_outputs.pop(0)
+            g = layer_grad_outputs.pop(layer_idx)
             # no weight sharing here, hence KFAC expand and reduce are identical
-            B.add_(grad_out.T @ grad_out, alpha=batch_size)
+            B.add_(g.T @ g, alpha=batch_size)
 
     return loss, kfacs
 
@@ -511,6 +502,21 @@ def plot_solution(
 def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
     layers: List[Module], X: Tensor, y: Tensor, ggn_type: str
 ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+    """Compute the interior loss, and inputs+output gradients of Linear layers.
+
+    Args:
+        layers: The list of layers that form the neural network.
+        X: The input data.
+        y: The target data.
+        ggn_type: The type of GGN to use. Can be `'type-2'`, `'empirical'`, or
+            `'forward-only'`.
+
+    Returns:
+        A tuple containing the loss, the inputs of the Linear layers, and the output
+        gradients of the Linear layers. The layer inputs and output gradients are each
+        combined into a matrix, and layer inputs are augmented with ones or zeros to
+        account for the bias term.
+    """
     layer_idxs = [
         idx
         for idx, layer in enumerate(layers)
@@ -601,6 +607,20 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
 def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
     layers: List[Module], X: Tensor, y: Tensor, ggn_type: str
 ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+    """Compute the boundary loss, and inputs+output gradients of Linear layers.
+
+    Args:
+        layers: The list of layers that form the neural network.
+        X: The input data.
+        y: The target data.
+        ggn_type: The type of GGN to use. Can be `'type-2'`, `'empirical'`, or
+            `'forward-only'`.
+
+    Returns:
+        A tuple containing the loss, the inputs of the Linear layers, and the output
+        gradients of the Linear layers. The layer inputs are augmented with ones to
+        account for the bias term.
+    """
     layer_idxs = [
         idx
         for idx, layer in enumerate(layers)
