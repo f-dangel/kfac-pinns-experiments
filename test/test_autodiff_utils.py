@@ -194,4 +194,5 @@ def test_autograd_input_divergence():
     # compute the divergence with `functorch`
     div = autograd_input_divergence(model, X)
 
+    assert div.shape == div_true.shape == (N,)
     report_nonclose(div, div_true)
