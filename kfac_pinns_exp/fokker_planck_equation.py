@@ -3,7 +3,8 @@
 from typing import Callable, Dict, List, Tuple, Union
 
 from einops import einsum
-from torch import Tensor, cat, tensor
+from torch import Tensor, cat, eye, tensor, zeros, zeros_like
+from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.nn import Module
 
 from kfac_pinns_exp.autodiff_utils import (
@@ -107,3 +108,30 @@ def evaluate_boundary_loss(
     residual = output - y
 
     return 0.5 * (residual**2).mean(), residual, intermediates
+
+
+def p_isotropic_gaussian(X: Tensor) -> Tensor:
+    """Isotropic Gaussian solution to the Fokker-Planck equation.
+
+    Args:
+        X: Batched quadrature points of shape (N, d_Omega+1).
+
+    Returns:
+        The function values as tensor of shape (N, 1).
+    """
+    exp_t = (-X[:, 0]).exp()
+    covariance = exp_t + (1 - 2 * exp_t)  # [batch_size]
+
+    output = zeros_like(covariance)  # [batch_size]
+
+    batch_size, d = X.shape
+    d -= 1
+
+    for n in range(batch_size):
+        mean = zeros(d)
+        cov = covariance[n] * eye(d)
+        dist = MultivariateNormal(mean, cov)
+        spatial_n = X[n, 1:]
+        output[n] = dist.log_prob(spatial_n).exp()
+
+    return output.unsqueeze(-1)
