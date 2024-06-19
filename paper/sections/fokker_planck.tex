@@ -1,12 +1,12 @@
 \subsection{Abstract Equation}
 \paragraph{Stochastic Differential Equations}
-Assume we are given a drift $\mu:[0,1]\times \mathbb R^d\to\mathbb R^d$ and diffusivity $\sigma:[0,1] \to \mathbb R^{d\times d}$, we consider the SDE
+Assume we are given a drift $\mu:[0,1]\times \mathbb R^d\to\mathbb R^d$ and diffusivity $\sigma:[0,1] \times \sR^d \to \mathbb R^{d\times d}$, we consider the SDE
 \begin{align}\label{eq:sde_abstract}
     \mathrm dX_t
     &=
     \mu(t, X_t)\mathrm d t
     +
-    \sigma(t) \mathrm d W_t,
+    \sigma(t, X_t) \mathrm d W_t,
     \quad 
     X_0 \sim p_0,
 \end{align}
@@ -29,7 +29,7 @@ Note that for every time-point $p(t,\cdot)$ is a probability density on $\mathbb
 \begin{align*}
     L^{\textrm{FP}}(\vtheta)
     &=
-    \frac{1}{N}
+    \frac{1}{2N}
     \sum_{n=1}^{N}
     \big[
     \partial_t p_{\vtheta}
@@ -41,7 +41,7 @@ Note that for every time-point $p(t,\cdot)$ is a probability density on $\mathbb
     (\vx_n)
     \\
     &+
-    \frac{1}{N_0}
+    \frac{1}{2 N_0}
     \sum_{n=1}^{N_0}
     \big[
     p_{\vtheta}(\vx_n^0) - p_0(\vx_n^0)
@@ -110,7 +110,7 @@ We can enforce initial conditions in the ansatz via
 \end{equation*}
 
 \subsection{Concrete Examples}
-\paragraph{A Sanity Check Example}
+\paragraph{A Sanity Check Example (\texttt{isotropic\_gaussian})}
 Set the drift $\mu$ to $\mu(t,x) = -1/2x$ and choose $\sigma=\sqrt 2 I$. As initial condition we use $p_0 \sim \mathcal N(0,I)$. For this concrete data, the Fokker-Planck equation is
 \begin{align}\label{eq:fokker_planck_sanity_example}
     \partial_t p(t, x)
@@ -125,7 +125,7 @@ Set the drift $\mu$ to $\mu(t,x) = -1/2x$ and choose $\sigma=\sqrt 2 I$. As init
 \end{align}
 The solution to this equation is given by
 \begin{equation}
-    p^*(t, x) \sim \mathcal N(0, \exp(-t)I + (1 - \exp(-t) 2 I)).
+    p^*(t, x) \sim \mathcal N(0, \exp(-t)I + (1 - \exp(-t)) 2 I).
 \end{equation}
 
 The logarithmic Fokker-Planck equation for this data is 
