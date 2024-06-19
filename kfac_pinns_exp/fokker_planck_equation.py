@@ -1,11 +1,13 @@
 """Implements functionality to support solving the Fokker-Planck equation."""
 
+from math import sqrt
 from typing import Callable, Dict, List, Tuple, Union
+from warnings import warn
 
 from einops import einsum
 from torch import Tensor, cat, eye, tensor, zeros, zeros_like
 from torch.distributions.multivariate_normal import MultivariateNormal
-from torch.nn import Module
+from torch.nn import Module, Sequential
 
 from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
@@ -37,9 +39,12 @@ def evaluate_interior_loss(
         of the computation graph that can be used to compute (approximate) curvature.
 
     Raises:
-        ValueError: If the model is not a PyTorch `Module`.
+        ValueError: If the model is not a PyTorch `Module` or a list of layers.
     """
-    if not isinstance(model, Module):
+    if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
+        warn("Inefficient implementation!")
+        model = Sequential(*model)
+    elif not isinstance(model, Module):
         raise NotImplementedError
 
     # one datum X[n] has coordinates (t, x_1, x_2 , ..., x_d)
@@ -98,9 +103,12 @@ def evaluate_boundary_loss(
         curvature.
 
     Raises:
-        NotImplementedError: If the model is not a PyTorch `Module`.
+        NotImplementedError: If the model is not a PyTorch `Module` or a list of layers.
     """
-    if not isinstance(model, Module):
+    if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
+        warn("Inefficient implementation!")
+        model = Sequential(*model)
+    elif not isinstance(model, Module):
         raise NotImplementedError
 
     output = model(X)
@@ -108,6 +116,18 @@ def evaluate_boundary_loss(
     residual = output - y
 
     return 0.5 * (residual**2).mean(), residual, intermediates
+
+
+def mu_isotropic_gaussian(x: Tensor) -> Tensor:
+    return -0.5 * x[1:]
+
+
+def sigma_isotropic_gaussian(X: Tensor) -> Tensor:
+    (batch_size, dim) = X.shape
+    dim_Omega = dim - 1
+    # [batch_size, dim_Omega, dim_Omega]
+    # [n, :, :] ∝ I
+    return (sqrt(2) * eye(dim_Omega)).expand(batch_size, dim_Omega, dim_Omega)
 
 
 def p_isotropic_gaussian(X: Tensor) -> Tensor:
@@ -120,7 +140,7 @@ def p_isotropic_gaussian(X: Tensor) -> Tensor:
         The function values as tensor of shape (N, 1).
     """
     exp_t = (-X[:, 0]).exp()
-    covariance = exp_t + (1 - 2 * exp_t)  # [batch_size]
+    covariance = exp_t + 2 * (1 - exp_t)  # [batch_size]
 
     output = zeros_like(covariance)  # [batch_size]
 
