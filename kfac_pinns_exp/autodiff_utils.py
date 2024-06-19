@@ -8,6 +8,55 @@ from torch.func import functional_call, grad, hessian, jacrev, vmap
 from torch.nn import Module, Parameter
 
 
+def autograd_input_divergence(
+    model: Union[Module, Callable[[Tensor], Tensor]], X: Tensor
+) -> Tensor:
+    """Compute the divergence of the model w.r.t. its input.
+
+    Args:
+        model: The model whose divergence will be computed. Can either be an `nn.Module`
+            or a tensor-to-tensor function.
+        X: The input to the model. First dimension is the batch dimension.
+            Must be differentiable.
+
+    Returns:
+        The divergence of the model w.r.t. X. Has shape `[batch_size]`.
+    """
+
+    def f(x: Tensor) -> Tensor:
+        """Forward pass on an un-batched input.
+
+        Args:
+            x: Un-batched input.
+
+        Returns:
+            Un-batched output.
+
+        Raises:
+            ValueError: If the output shape does not match the input shape.
+        """
+        out = model(x)
+        if out.shape != x.shape:
+            raise ValueError(
+                f"Output shape must match input shape. Got {out.shape} != {x.shape}."
+            )
+        return out
+
+    def divergence(x: Tensor) -> Tensor:
+        """Compute the divergence of the model w.r.t. its input.
+
+        Args:
+            x: Un-batched input.
+
+        Returns:
+            Un-batched divergence.
+        """
+        jac = jacrev(f)(x)
+        return jac.reshape(x.numel(), x.numel()).trace()
+
+    return vmap(divergence)(X)
+
+
 def autograd_input_jacobian(
     model: Union[Module, Callable[[Tensor], Tensor]], X: Tensor
 ) -> Tensor:
