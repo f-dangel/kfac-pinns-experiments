@@ -351,14 +351,15 @@ def create_interior_data(
         "fokker-planck": dim_Omega + 1,
     }[equation]
 
+    # create inputs
     if equation == "fokker-planck" and condition == "isotropic_gaussian":
         t = rand(num_data, 1)
         spatial = 10 * rand(num_data, dim_Omega) - 5
         X = cat([t, spatial], dim=1)
-        y = zeros(num_data, 1)
-        return X, y
+    else:
+        X = rand(num_data, dim)
 
-    X = rand(num_data, dim)
+    # create targets
     if equation == "poisson" and condition in {
         "sin_product",
         "cos_sum",
@@ -372,10 +373,16 @@ def create_interior_data(
             "u_weinan_norm": poisson_equation.f_weinan_norm,
         }[condition]
         y = f(X)
-    elif equation == "heat" and condition in {
-        "sin_product",
-        "sin_sum",
-    }:
+    elif (
+        equation == "heat"
+        and condition
+        in {
+            "sin_product",
+            "sin_sum",
+        }
+        or equation == "fokker-planck"
+        and condition == "isotropic_gaussian"
+    ):
         y = zeros(num_data, 1)
     else:
         raise NotImplementedError(
