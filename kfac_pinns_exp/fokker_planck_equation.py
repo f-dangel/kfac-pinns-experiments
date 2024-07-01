@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Tuple, Union
 from warnings import warn
 
 from einops import einsum
-from torch import Tensor, cat, eye, tensor, zeros, zeros_like
+from torch import Tensor, cat, eye, ones, zeros, zeros_like
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.nn import Module, Sequential
 
@@ -62,7 +62,8 @@ def evaluate_interior_loss(
             Product of p(t, x) and augmented μ(t, x).
         """
         mu_x = mu(x)
-        mu_x_augmented = cat([tensor(1.0).expand_as(mu_x), mu_x], dim=0)
+        augment = ones(1, dtype=mu_x.dtype, device=mu_x.device)
+        mu_x_augmented = cat([augment, mu_x])
         return model(x) * mu_x_augmented
 
     dp_dt_plus_div_p_times_mu = autograd_input_divergence(p_times_mu, X)
@@ -164,9 +165,10 @@ def p_isotropic_gaussian(X: Tensor) -> Tensor:
     batch_size, d = X.shape
     d -= 1
 
+    # TODO Implement more efficiently
     for n in range(batch_size):
         mean = zeros(d, device=X.device, dtype=X.dtype)
-        cov = covariance[n] * eye(d)
+        cov = covariance[n] * eye(d, device=X.device, dtype=X.dtype)
         dist = MultivariateNormal(mean, cov)
         spatial_n = X[n, 1:]
         output[n] = dist.log_prob(spatial_n).exp()
