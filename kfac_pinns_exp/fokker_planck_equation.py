@@ -13,6 +13,7 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
 )
+from kfac_pinns_exp.manual_differentiation import manual_forward
 
 
 def evaluate_interior_loss(
@@ -29,10 +30,13 @@ def evaluate_interior_loss(
             layers are supplied, the forward pass will use the more efficient forward
             Laplacian framework and return a list of dictionaries containing the push-
             forwards through all layers.
-        X: Input for the interior loss.
-        y: Target for the interior loss.
-        mu: Vector field.
-        sigma: Diffusivity matrix.
+        X: Input for the interior loss. Has shape `(batch_size, 1 + dim_Omega)`. One
+            datum `X[n]` has coordinates `(t, x_1, x_2 , ..., x_dim_Omega)`.
+        y: Target for the interior loss. Has shape `(batch_size, 1)`.
+        mu: Vector field. Maps an un-batched input `x` to a tensor `mu(x)` of shape
+            `(dim_Omega)`.
+        sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
+            `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
 
     Returns:
         The differentiable interior loss, differentiable residual, and intermediates
@@ -46,13 +50,6 @@ def evaluate_interior_loss(
         model = Sequential(*model)
     elif not isinstance(model, Module):
         raise NotImplementedError
-
-    # one datum X[n] has coordinates (t, x_1, x_2 , ..., x_d)
-
-    # split time and spatial coordinates
-    spatial = X[:, 1:].requires_grad_()  # [batch_size, d]
-    t = X[:, [0]].requires_grad_()  # [batch_size, 1]
-    X = cat((t, spatial), dim=1)  # [batch_size, d + 1]
 
     # compute ∂p/∂t + div(p μ) = div[ p(t, x) (1, μ(t, x))ᵀ ]
     def p_times_mu(x: Tensor) -> Tensor:
@@ -94,8 +91,8 @@ def evaluate_boundary_loss(
 
     Args:
         model: The model.
-        X: Input for the boundary loss.
-        y: Target for the boundary loss.
+        X: Input for the boundary loss. Has shape `(batch_size, 1 + dim_Omega)`.
+        y: Target for the boundary loss. Has shape `(batch_size, 1)`.
 
     Returns:
         The differentiable boundary loss, the differentiable residual, and a list of
@@ -103,41 +100,61 @@ def evaluate_boundary_loss(
         curvature.
 
     Raises:
-        NotImplementedError: If the model is not a PyTorch `Module` or a list of layers.
+        ValueError: If the model is not a Module or a list of Modules.
     """
-    if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        warn("Inefficient implementation!")
-        model = Sequential(*model)
-    elif not isinstance(model, Module):
-        raise NotImplementedError
-
-    output = model(X)
-    intermediates = None
+    if isinstance(model, Module):
+        output = model(X)
+        intermediates = None
+    elif isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
+        intermediates = manual_forward(model, X)
+        output = intermediates[-1]
+    else:
+        raise ValueError(
+            "Model must be a Module or a list of Modules that form a sequential model."
+            f"Got: {model}."
+        )
     residual = output - y
-
     return 0.5 * (residual**2).mean(), residual, intermediates
 
 
 def mu_isotropic_gaussian(x: Tensor) -> Tensor:
+    """Vector field for isotropic Gaussian case.
+
+    Args:
+        x: Un-batched input of shape `(1 + dim_Omega)` containing time and spatial
+            coordinates.
+
+    Returns:
+        The vector field as tensor of shape `(dim_Omega)`.
+    """
     return -0.5 * x[1:]
 
 
 def sigma_isotropic_gaussian(X: Tensor) -> Tensor:
+    """Diffusivity matrix for isotropic Gaussian case.
+
+    Args:
+        X: Batched input of shape `(batch_size, 1 + dim_Omega)` containing time and
+            spatial coordinates.
+
+    Returns:
+        The diffusivity matrix as tensor of shape `(batch_size, dim_Omega, dim_Omega)`.
+    """
     (batch_size, dim) = X.shape
     dim_Omega = dim - 1
-    # [batch_size, dim_Omega, dim_Omega]
-    # [n, :, :] ∝ I
-    return (sqrt(2) * eye(dim_Omega)).expand(batch_size, dim_Omega, dim_Omega)
+    return (
+        sqrt(2) * eye(dim_Omega, dtype=X.dtype, device=X.device).unsqueeze(0)
+    ).expand(batch_size, dim_Omega, dim_Omega)
 
 
 def p_isotropic_gaussian(X: Tensor) -> Tensor:
     """Isotropic Gaussian solution to the Fokker-Planck equation.
 
     Args:
-        X: Batched quadrature points of shape (N, d_Omega+1).
+        X: Batched quadrature points of shape `(N, d_Omega + 1)`.
 
     Returns:
-        The function values as tensor of shape (N, 1).
+        The function values as tensor of shape `(N, 1)`.
     """
     exp_t = (-X[:, 0]).exp()
     covariance = exp_t + 2 * (1 - exp_t)  # [batch_size]
@@ -148,7 +165,7 @@ def p_isotropic_gaussian(X: Tensor) -> Tensor:
     d -= 1
 
     for n in range(batch_size):
-        mean = zeros(d)
+        mean = zeros(d, device=X.device, dtype=X.dtype)
         cov = covariance[n] * eye(d)
         dist = MultivariateNormal(mean, cov)
         spatial_n = X[n, 1:]
