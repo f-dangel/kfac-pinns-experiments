@@ -1,19 +1,33 @@
 """Implements functionality to support solving the Fokker-Planck equation."""
 
 from math import sqrt
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 from warnings import warn
 
 from einops import einsum
-from torch import Tensor, cat, eye, ones, zeros, zeros_like
+from matplotlib import pyplot as plt
+from torch import (
+    Tensor,
+    cat,
+    eye,
+    linspace,
+    meshgrid,
+    no_grad,
+    ones,
+    stack,
+    zeros,
+    zeros_like,
+)
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.nn import Module, Sequential
+from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
 )
 from kfac_pinns_exp.manual_differentiation import manual_forward
+from kfac_pinns_exp.plot_utils import create_animation
 
 
 def evaluate_interior_loss(
@@ -176,3 +190,106 @@ def p_isotropic_gaussian(X: Tensor) -> Tensor:
         output[n] = dist.log_prob(spatial_n).exp()
 
     return output.unsqueeze(-1)
+
+
+@no_grad()
+def plot_solution(
+    condition: str,
+    dim_Omega: int,
+    model: Module,
+    savepath: str,
+    title: Optional[str] = None,
+    usetex: bool = False,
+):
+    """Visualize the learned and true solution of the Fokker-Planck equation.
+
+    Args:
+        condition: String describing the boundary conditions of the PDE. Can be
+            `'isotropic_gaussian'`.
+        dim_Omega: The dimension of the domain Omega. Can be `1` or `2`.
+        model: The neural network model representing the learned solution.
+        savepath: The path to save the plot.
+        title: The title of the plot. Default: None.
+        usetex: Whether to use LaTeX for rendering text. Default: `True`.
+
+    Raises:
+        ValueError: If `dim_Omega` is not `1` or `2`.
+    """
+    u = {"isotropic_gaussian": p_isotropic_gaussian}[condition]
+    ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
+
+    imshow_kwargs = {
+        "vmin": 0,
+        "vmax": 1,
+        "interpolation": "none",
+        "extent": {1: [-5, 5, 0, 1], 2: [-5, 5, -5, 5]}[dim_Omega],
+        "origin": "lower",
+        "aspect": {1: 10, 2: None}[dim_Omega],
+    }
+
+    if dim_Omega == 1:
+        # set up grid, evaluate learned and true solution
+        x, y = linspace(0, 1, 50).to(dev, dt), linspace(-5, 5, 50).to(dev, dt)
+        x_grid, y_grid = meshgrid(x, y, indexing="ij")
+        xy_flat = stack([x_grid.flatten(), y_grid.flatten()], dim=1)
+        u_learned = model(xy_flat).reshape(x_grid.shape)
+        u_true = u(xy_flat).reshape(x_grid.shape)
+
+        # normalize to [0; 1]
+        u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+        u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+
+        # plot
+        with plt.rc_context(bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)):
+            fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
+            ax[0].set_title("Normalized learned solution")
+            ax[1].set_title("Normalized true solution")
+            ax[0].set_xlabel("$x$")
+            ax[1].set_xlabel("$x$")
+            ax[0].set_ylabel("$t$")
+            if title is not None:
+                fig.suptitle(title, y=0.975)
+            ax[0].imshow(u_learned, **imshow_kwargs)
+            ax[1].imshow(u_true, **imshow_kwargs)
+            plt.savefig(savepath, bbox_inches="tight")
+
+        plt.close(fig=fig)
+
+    elif dim_Omega == 2:
+        ts = linspace(0, 1, 30).to(dev, dt)
+        xs, ys = linspace(-5, 5, 50).to(dev, dt), linspace(-5, 5, 50).to(dev, dt)
+        t_grid, x_grid, y_grid = meshgrid(ts, xs, ys, indexing="ij")
+        txy_flat = stack([t_grid.flatten(), x_grid.flatten(), y_grid.flatten()], dim=1)
+        u_true = u(txy_flat).reshape(*ts.shape, *xs.shape, *ys.shape)
+        u_learned = model(txy_flat).reshape(*ts.shape, *xs.shape, *ys.shape)
+
+        # normalize to [0; 1]
+        u_learned = (u_learned - u_learned.min()) / (u_learned.max() - u_learned.min())
+        u_true = (u_true - u_true.min()) / (u_true.max() - u_true.min())
+
+        frames = []
+        for idx, t in enumerate(ts):
+            framepath = savepath.replace(".pdf", f"_frame_{idx:03g}.pdf")
+            frames.append(framepath)
+            # plot frame
+            with plt.rc_context(
+                bundles.neurips2023(rel_width=1.0, ncols=1, usetex=usetex)
+            ):
+                fig, ax = plt.subplots(1, 2, sharey=True, sharex=True)
+                ax[0].set_title("Normalized learned solution")
+                ax[1].set_title("Normalized true solution")
+                ax[0].set_xlabel("$x$")
+                ax[1].set_xlabel("$x$")
+                ax[0].set_ylabel("$y$")
+                if title is not None:
+                    fig.suptitle(title + f" ($t = {t:.2f})$", y=0.975)
+
+            ax[0].imshow(u_learned[idx], **imshow_kwargs)
+            ax[1].imshow(u_true[idx], **imshow_kwargs)
+            plt.savefig(framepath, bbox_inches="tight")
+            plt.close(fig)
+
+        create_animation(frames, savepath.replace(".pdf", ".gif"))
+
+    else:
+        raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")
