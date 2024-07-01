@@ -4,8 +4,10 @@ from argparse import ArgumentParser, Namespace
 from math import sqrt
 from typing import Dict, List, Tuple, Union
 
+from backpack.hessianfree.ggnvp import ggn_vector_product_from_plist
 from backpack.hessianfree.rop import jacobian_vector_product
-from torch import Tensor, arange, cat, dtype, float64, tensor
+from torch import Tensor, arange, cat, dtype, float64, no_grad, tensor
+from torch.autograd import grad
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -104,6 +106,24 @@ def parse_KFAC_args(verbose: bool = False, prefix="KFAC_") -> Namespace:
         default="poisson",
     )
     parser.add_argument(
+        f"--{prefix}adaptive_damping",
+        action="store_true",
+        help="Whether to use adaptive Levenberg-Marquardt damping.",
+        default=False,
+    )
+    parser.add_argument(
+        f"--{prefix}T_update_damping",
+        type=int,
+        help="Frequency of trust region update of damping.",
+        default=5,
+    )
+    parser.add_argument(
+        f"--{prefix}tr_size_adaption",
+        type=float,
+        help="Constant which multiplicatively regulates the trust region size.",
+        default=0.95,
+    )
+    parser.add_argument(
         f"--{prefix}damping_heuristic",
         type=str,
         choices=KFAC.SUPPORTED_DAMPING_HEURISTICS,
@@ -172,13 +192,16 @@ class KFAC(Optimizer):
         lr: Union[float, Tuple[str, Union[List[float], float]]] = ENGD_DEFAULT_LR,
         T_kfac: int = 1,
         T_inv: int = 1,
+        T_update_damping: int = 5,
         ema_factor: float = 0.95,
+        tr_size_adaption: float = 0.95,
         kfac_approx: str = "expand",
         inv_strategy: str = "invert kronecker sum",
         ggn_type: str = "type-2",
         inv_dtype: dtype = float64,
         initialize_to_identity: bool = False,
         equation: str = "poisson",
+        adaptive_damping: bool = False,
         damping_heuristic: str = "same",
         momentum: float = 0.0,
     ) -> None:
@@ -204,8 +227,16 @@ class KFAC(Optimizer):
                 the boundary and the interior terms' KFACs. Default is `1`.
             T_inv: Positive integer specifying the preconditioner update
                 frequency. Default is `1`.
+            T_update_damping: Positive integer specifying the update frequency for the
+                trust region based damping. Default is `5`.
             ema_factor: Exponential moving average factor for the KFAC factors. Must be
                 in `[0, 1)`. Default is `0.95`.
+            tr_size_adaption: float in (0,1). Influences the factor by which the trust
+                region should be enlarged or shrinked. Default is 0.95 which is from
+                the KFAC paper (https://arxiv.org/pdf/1503.05671), see Section 6.5.
+                The factor `w1` which multiplicatively shrinks or enlarges the trust
+                region is also influenced by `T_update_damping` via the formula
+                `w1 = tr_size_adaption ** T_update_damping`.
             kfac_approx: KFAC approximation method. Must be either `'expand'`, or
                 `'reduce'`. Defaults to `'expand'`.
             ggn_type: Type of the GGN to use. This influences the backpropagted error
@@ -220,6 +251,8 @@ class KFAC(Optimizer):
                 identity matrix. Default is `False` (initialize with zero).
             equation: Equation to solve. Currently supports `'poisson'` and `'heat'`.
                 Default: `'poisson'`.
+            adaptive_damping: Whether to use adaptive damping with LM heuristic.
+                Default is `False`. See Section 6.5 of https://arxiv.org/pdf/1503.05671.
             damping_heuristic: How to distribute the damping onto the two Kronecker
                 factors. Currently supports `'same'` and `'trace-norm` (see Section 6.3
                 of https://arxiv.org/pdf/1503.05671). Default is `'same'`.
@@ -230,10 +263,13 @@ class KFAC(Optimizer):
         """
         defaults = dict(
             lr=lr,
-            damping=damping,
+            damping_interior=damping,
+            damping_boundary=damping,
             T_kfac=T_kfac,
             T_inv=T_inv,
+            T_update_damping=T_update_damping,
             ema_factor=ema_factor,
+            tr_size_adaption=tr_size_adaption,
             kfac_approx=kfac_approx,
             ggn_type=ggn_type,
             inv_strategy=inv_strategy,
@@ -252,6 +288,7 @@ class KFAC(Optimizer):
                 f" Supported are: {self.SUPPORTED_EQUATIONS}."
             )
         self.equation = equation
+        self.adaptive_damping = adaptive_damping
 
         # initialize KFAC matrices for the interior and boundary term
         self.kfacs_interior = check_layers_and_initialize_kfac(
@@ -294,7 +331,21 @@ class KFAC(Optimizer):
             nat_grad_weight, nat_grad_bias = self.compute_natural_gradient(layer_idx)
             directions.extend([-nat_grad_weight, -nat_grad_bias])
 
+        group = self.param_groups[0]
+        T_update_damping = group["T_update_damping"]
+
+        if self.adaptive_damping and self.steps % T_update_damping == 0:
+            before = sum(
+                ([p.clone() for p in mod.parameters()] for mod in self.layers), []
+            )
+
         self._update_parameters(directions, X_Omega, y_Omega, X_dOmega, y_dOmega)
+
+        if self.adaptive_damping and self.steps % T_update_damping == 0:
+            now = sum((list(mod.parameters()) for mod in self.layers), [])
+            step = [n - b for n, b in zip(now, before)]
+            self.update_damping(step, X_Omega, y_Omega, "interior")
+            self.update_damping(step, X_dOmega, y_dOmega, "boundary")
 
         self.steps += 1
 
@@ -309,7 +360,8 @@ class KFAC(Optimizer):
             return
 
         inv_dtype = group["inv_dtype"]
-        damping = group["damping"]
+        damping_interior = group["damping_interior"]
+        damping_boundary = group["damping_boundary"]
         damping_heuristic = group["damping_heuristic"]
 
         # compute the KFAC inverse
@@ -321,8 +373,8 @@ class KFAC(Optimizer):
             A2, A1 = self.kfacs_interior[layer_idx]
             B2, B1 = self.kfacs_boundary[layer_idx]
 
-            A2, A1 = self.add_damping(A2, A1, damping, damping_heuristic)
-            B2, B1 = self.add_damping(B2, B1, damping, damping_heuristic)
+            A2, A1 = self.add_damping(A2, A1, damping_interior, damping_heuristic)
+            B2, B1 = self.add_damping(B2, B1, damping_boundary, damping_heuristic)
 
             self.inv[layer_idx] = InverseKroneckerSum(  # noqa: B909
                 A1, A2, B1, B2, inv_dtype=inv_dtype
@@ -408,9 +460,9 @@ class KFAC(Optimizer):
         else:
             raise ValueError(f"Unsupported line search: {lr[0]}.")
 
-        damping = group["damping"]
-        if damping < 0.0:
-            raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
+        for damping in [group["damping_interior"], group["damping_boundary"]]:
+            if damping < 0.0:
+                raise ValueError(f"Damping factor must be non-negative. Got {damping}.")
 
         inv_strategy = group["inv_strategy"]
         if inv_strategy != "invert kronecker sum":
@@ -577,7 +629,7 @@ class KFAC(Optimizer):
             A tuple of the damped KFAC factors.
 
         Raises:
-            ValueError: If the damping heuristic is not supported.
+            ValueError: If the damping-heuristic is unsupported.
         """
         (dim_A,), (dim_B,) = set(A.shape), set(B.shape)
 
@@ -601,6 +653,75 @@ class KFAC(Optimizer):
         B_damped[idx_B, idx_B] = B_damped.diag().add_(damping_B)
 
         return A_damped, B_damped
+
+    def update_damping(
+        self,
+        step: List[Tensor],
+        X: Tensor,
+        y: Tensor,
+        loss_type: str,
+    ):
+        """Update the damping factor.
+
+        Args:
+            step: The update step.
+            X: Input data to the loss.
+            y: Target data to the loss.
+            loss_type: Type of the loss function. Can be `'interior'` or `'boundary'`.
+        """
+        group = self.param_groups[0]
+        damping_key = f"damping_{loss_type}"
+        damping = group[damping_key]
+
+        params = sum((list(layer.parameters()) for layer in self.layers), [])
+        # reset parameters to before step
+        for p, s in zip(params, step):
+            p.data.sub_(s)
+
+        # compute the reduction according to the quadratic model anchored at the
+        # parameter before the update
+        loss_evaluator = {
+            "poisson": {
+                "interior": poisson_equation.evaluate_interior_loss,
+                "boundary": poisson_equation.evaluate_boundary_loss,
+            },
+            "heat": {
+                "interior": heat_equation.evaluate_interior_loss,
+                "boundary": heat_equation.evaluate_boundary_loss,
+            },
+        }[self.equation][loss_type]
+        loss, residual, _ = loss_evaluator(self.layers, X, y)
+
+        # second-order term: 0.5 * s^T G s with Gramian G and step s
+        G_s = ggn_vector_product_from_plist(loss, residual, params, step)
+        s_T_G_s = sum(s.flatten().dot(Gs.flatten()) for s, Gs in zip(step, G_s))
+
+        # first-order term: s^T g with step s and gradient g
+        gradient = grad(loss, params, allow_unused=True, materialize_grads=True)
+        gradient_T_s = sum(g.flatten().dot(s.flatten()) for g, s in zip(gradient, step))
+
+        model_reduction = 0.5 * s_T_G_s + gradient_T_s
+
+        # set parameters to after step
+        for p, s in zip(params, step):
+            p.data.add_(s)
+
+        with no_grad():
+            loss_after = self.eval_loss(X, y, loss_type)
+        real_reduction = loss_after - loss
+
+        # adapt damping
+        rho = real_reduction / model_reduction
+        w1 = group["tr_size_adaption"] ** group["T_update_damping"]
+        if rho < 0.25:
+            new_damping = damping / w1
+        elif rho > 0.75:
+            new_damping = damping * w1
+        else:
+            new_damping = damping
+
+        # print(f"Update {loss_type} damping {damping:2e} -> {new_damping:2e}.")
+        group[damping_key] = new_damping
 
     def add_momentum(self, directions: List[Tensor]):
         """Incorporate momentum into the update direction (in-place).
@@ -649,7 +770,9 @@ class KFAC(Optimizer):
             The learning rate and momentum for the current step.
         """
         group = self.param_groups[0]
-        damping = group["damping"]  # = λ + η in the KFAC paper
+        damping_interior = group["damping_interior"]  # = λ + η in the KFAC paper but we
+        damping_boundary = group["damping_boundary"]  # treat int and bdry separately
+        damping = damping_interior + damping_boundary  # here we need the sum
         params = sum((list(layer.parameters()) for layer in self.layers), [])
         d, D = previous, direction  # = δ, Δ in the KFAC paper
         g = [p.grad for p in params]  # = ∇h in the KFAC paper

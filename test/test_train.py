@@ -147,6 +147,16 @@ ARGS = [
         "--KFAC_damping=0.01",
         "--KFAC_damping_heuristic=trace-norm",
     ],
+    # train with KFAC+trace-norm damping heuristic + adaptive damping
+    [
+        "--num_steps=5",
+        "--optimizer=KFAC",
+        "--KFAC_damping=0.1",
+        "--KFAC_damping_heuristic=trace-norm",
+        "--KFAC_T_update_damping=2",
+        "--KFAC_tr_size_adaption=0.96",
+        "--KFAC_adaptive_damping",
+    ],
     # train with SGD + new batches every 2 steps
     [
         "--num_steps=5",
