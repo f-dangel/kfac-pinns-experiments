@@ -43,7 +43,7 @@ def evaluate_interior_loss(
         of the computation graph that can be used to compute (approximate) curvature.
 
     Raises:
-        ValueError: If the model is not a PyTorch `Module` or a list of layers.
+        NotImplementedError: If the model is not a PyTorch `Module` or a list of layers.
     """
     if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
         warn("Inefficient implementation!")
@@ -166,10 +166,12 @@ def p_isotropic_gaussian(X: Tensor) -> Tensor:
     d -= 1
 
     # TODO Implement more efficiently
+    # (using torch.distributions.independent.Independent)
+    mean = zeros(d, device=X.device, dtype=X.dtype)
+    identity = eye(d, device=X.device, dtype=X.dtype)
+
     for n in range(batch_size):
-        mean = zeros(d, device=X.device, dtype=X.dtype)
-        cov = covariance[n] * eye(d, device=X.device, dtype=X.dtype)
-        dist = MultivariateNormal(mean, cov)
+        dist = MultivariateNormal(mean, covariance[n] * identity)
         spatial_n = X[n, 1:]
         output[n] = dist.log_prob(spatial_n).exp()
 
