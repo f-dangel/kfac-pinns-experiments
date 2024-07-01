@@ -47,10 +47,15 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=SGD",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
             "--SGD_lr=0.1",
             "--SGD_momentum=0.9",
         ]
-        for equation in ["poisson", "heat"]
+        for equation, condition in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck", "isotropic_gaussian"),
+        ]
     ],
     # train with Adam
     [
