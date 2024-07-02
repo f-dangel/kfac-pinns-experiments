@@ -124,6 +124,7 @@ ARGS = [
             (2, "poisson", "cos_sum"),
             (1, "heat", "sin_product"),
             (1, "heat", "sin_sum"),
+            (1, "fokker-planck", "isotropic_gaussian"),
         ]
     ],
     # train with KFAC+momentum

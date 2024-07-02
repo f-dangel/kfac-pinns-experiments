@@ -1,7 +1,6 @@
 """Functionality for solving the heat equation."""
 
 from math import pi
-from os import remove
 from typing import Dict, List, Optional, Tuple, Union
 
 from einops import einsum, rearrange, reduce
@@ -18,8 +17,9 @@ from kfac_pinns_exp.autodiff_utils import (
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.manual_differentiation import manual_forward
+from kfac_pinns_exp.plot_utils import create_animation
 from kfac_pinns_exp.poisson_equation import get_backpropagated_error, square_boundary
-from kfac_pinns_exp.utils import bias_augmentation, run_verbose
+from kfac_pinns_exp.utils import bias_augmentation
 
 
 def square_boundary_random_time(N: int, dim: int) -> Tensor:
@@ -400,6 +400,14 @@ def plot_solution(
     }[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
+    imshow_kwargs = {
+        "vmin": 0,
+        "vmax": 1,
+        "interpolation": "none",
+        "extent": [0, 1, 0, 1],
+        "origin": "lower",
+    }
+
     if dim_Omega == 1:
         # set up grid, evaluate learned and true solution
         x, y = linspace(0, 1, 50).to(dev, dt), linspace(0, 1, 50).to(dev, dt)
@@ -422,16 +430,8 @@ def plot_solution(
             ax[0].set_ylabel("$t$")
             if title is not None:
                 fig.suptitle(title, y=0.975)
-
-            kwargs = {
-                "vmin": 0,
-                "vmax": 1,
-                "interpolation": "none",
-                "extent": [0, 1, 0, 1],
-                "origin": "lower",
-            }
-            ax[0].imshow(u_learned, **kwargs)
-            ax[1].imshow(u_true, **kwargs)
+            ax[0].imshow(u_learned, **imshow_kwargs)
+            ax[1].imshow(u_true, **imshow_kwargs)
             plt.savefig(savepath, bbox_inches="tight")
 
         plt.close(fig=fig)
@@ -464,40 +464,12 @@ def plot_solution(
                 ax[0].set_ylabel("$t$")
                 if title is not None:
                     fig.suptitle(title + f" ($t = {t:.2f})$", y=0.975)
-
-            kwargs = {
-                "vmin": 0,
-                "vmax": 1,
-                "interpolation": "none",
-                "extent": [0, 1, 0, 1],
-                "origin": "lower",
-            }
-            ax[0].imshow(u_learned[idx], **kwargs)
-            ax[1].imshow(u_true[idx], **kwargs)
+            ax[0].imshow(u_learned[idx], **imshow_kwargs)
+            ax[1].imshow(u_true[idx], **imshow_kwargs)
             plt.savefig(framepath, bbox_inches="tight")
             plt.close(fig)
 
-        # unite the pdfs (NOTE: `pdfunite` requires `poppler` library)
-        cmd = ["pdfunite", *frames, savepath]
-        run_verbose(cmd)
-        # delete the individual frames
-        for f in frames:
-            remove(f)
-
-        # create the animation (NOTE: `convert` requires `imagemagick` library)
-        cmd = [
-            "convert",
-            "-verbose",
-            "-delay",
-            "20",
-            "-loop",
-            "0",
-            "-density",
-            "300",
-            savepath,
-            savepath.replace(".pdf", ".gif"),
-        ]
-        run_verbose(cmd)
+        create_animation(frames, savepath.replace(".pdf", ".gif"))
 
     else:
         raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")

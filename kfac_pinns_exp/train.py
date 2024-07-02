@@ -722,6 +722,7 @@ def main():  # noqa: C901
                 plot_fn = {
                     "poisson": poisson_equation.plot_solution,
                     "heat": heat_equation.plot_solution,
+                    "fokker-planck": fokker_planck_equation.plot_solution,
                 }[equation]
                 plot_fn(
                     condition,
