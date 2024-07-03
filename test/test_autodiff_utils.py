@@ -199,7 +199,7 @@ def test_autograd_input_divergence():
 
 
 def test_autograd_input_divergence_with_coordinates():
-    """Test computation of the divergence with `functorch` with specified coordinates."""
+    """Test computation of the divergence with specified coordinates."""
     manual_seed(0)
 
     # setup

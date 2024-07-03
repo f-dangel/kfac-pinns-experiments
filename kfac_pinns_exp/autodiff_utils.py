@@ -20,11 +20,12 @@ def autograd_input_divergence(
             or a tensor-to-tensor function.
         X: The input to the model. First dimension is the batch dimension.
             Must be differentiable.
-        coordinates: List of indices specifying the coordinates w.r.t. which the divergence
-            is taken. For example, if the function's arguments are 3d, but its output is 2d,
-            we can specify `coordinates=[0, 1]` to compute the divergence w.r.t. the first
-            two dimensions. Length of `coordinates` must correspond to the output dimension
-            of the model. If `None`, the full divergence is computed. Default: `None`.
+        coordinates: List of indices specifying the coordinates w.r.t. which the
+            divergence is taken. For example, if the function's arguments are 3d, but
+            its output is 2d, we can specify `coordinates=[0, 1]` to compute the
+            divergence w.r.t. the first two dimensions. Length of `coordinates` must
+            correspond to the output dimension of the model. If `None`, the full
+            divergence is computed. Default: `None`.
 
     Returns:
         The divergence of the model w.r.t. X. Has shape `[batch_size, 1]`.
