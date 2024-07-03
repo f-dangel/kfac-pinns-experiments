@@ -231,7 +231,7 @@ def evaluate_boundary_loss_and_kfac(
         )
     )
     kfacs = compute_kronecker_factors(
-        layers, layer_inputs, layer_grad_outputs, kfac_approx, ggn_type
+        layers, layer_inputs, layer_grad_outputs, ggn_type, kfac_approx
     )
     return loss, kfacs
 

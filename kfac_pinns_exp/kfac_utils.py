@@ -65,6 +65,8 @@ def compute_kronecker_factors(
             the forward pass, arranged into a matrix.
         grad_outputs: A dictionary from layer indices to gradient of the loss with
             respect to their output. Can be empty if the GGN type is `'forward-only`.
+        ggn_type: The type of GGN to use. Can be `'forward-only'`, `'type-2'`, or
+            `'empirical'`.
         kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
             `'reduce'`.
 
