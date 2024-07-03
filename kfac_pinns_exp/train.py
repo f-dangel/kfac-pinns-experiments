@@ -69,7 +69,7 @@ SUPPORTED_BOUNDARY_CONDITIONS = {
     "u_weinan_norm",
     "sin_sum",
     "isotropic_gaussian",
-]
+}
 
 SOLUTIONS = {
     "poisson": {
