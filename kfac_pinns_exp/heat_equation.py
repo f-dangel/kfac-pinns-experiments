@@ -3,7 +3,7 @@
 from math import pi
 from typing import Dict, List, Optional, Tuple, Union
 
-from einops import einsum, rearrange, reduce
+from einops import einsum
 from matplotlib import pyplot as plt
 from torch import Tensor, cat, linspace, meshgrid, no_grad, rand, stack, zeros
 from torch.autograd import grad
@@ -15,10 +15,7 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_jacobian,
 )
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
-from kfac_pinns_exp.kfac_utils import (
-    check_layers_and_initialize_kfac,
-    compute_kronecker_factors,
-)
+from kfac_pinns_exp.kfac_utils import compute_kronecker_factors
 from kfac_pinns_exp.manual_differentiation import manual_forward
 from kfac_pinns_exp.plot_utils import create_animation
 from kfac_pinns_exp.poisson_equation import get_backpropagated_error, square_boundary
