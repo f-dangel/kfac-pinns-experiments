@@ -35,6 +35,7 @@ from torch.optim import LBFGS
 from kfac_pinns_exp import fokker_planck_equation, heat_equation, poisson_equation
 from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
+from kfac_pinns_exp.optim.hessianfree_cached import HessianFreeCached
 from kfac_pinns_exp.optim.kfac import KFAC
 from kfac_pinns_exp.parse_utils import (
     check_all_args_parsed,
@@ -44,24 +45,31 @@ from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
 from kfac_pinns_exp.train_utils import DataLoader, KillTrigger, LoggingTrigger
 from kfac_pinns_exp.utils import latex_float
 
-SUPPORTED_OPTIMIZERS = ["KFAC", "SGD", "Adam", "ENGD", "LBFGS", "HessianFree"]
-SUPPORTED_EQUATIONS = ["poisson", "heat", "fokker-planck-isotropic"]
-SUPPORTED_MODELS = [
+SUPPORTED_OPTIMIZERS = {
+    "KFAC",
+    "SGD",
+    "Adam",
+    "ENGD",
+    "LBFGS",
+    "HessianFree",
+    "HessianFreeCached",
+}
+SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck"}
+SUPPORTED_MODELS = {
     "mlp-tanh-64",
     "mlp-tanh-64-48-32-16",
     "mlp-tanh-64-64-48-48",
     "mlp-tanh-256-256-128-128",
     "mlp-tanh-768-768-512-512",
-]
-SUPPORTED_BOUNDARY_CONDITIONS = [
+}
+SUPPORTED_BOUNDARY_CONDITIONS = {
     "sin_product",
     "cos_sum",
     "u_weinan",
     "u_weinan_norm",
     "sin_sum",
     "gaussian",
-]
-
+}
 SOLUTIONS = {
     "poisson": {
         "sin_product": poisson_equation.u_sin_product,
@@ -613,7 +621,7 @@ def main():  # noqa: C901
             loss_interior = loss_original._loss_interior
             loss_boundary = loss_original._loss_boundary
 
-        elif isinstance(optimizer, HessianFree):
+        elif isinstance(optimizer, (HessianFree, HessianFreeCached)):
             # HessianFree requires a closure that produces the linearization
             # point and the loss
 
@@ -666,7 +674,10 @@ def main():  # noqa: C901
                 return loss, residual
 
             forward = partial(forward, loss_storage=loss_storage)
-            optimizer.step(forward)
+            if isinstance(optimizer, HessianFreeCached):
+                optimizer.step(X_Omega, y_Omega, X_dOmega, y_dOmega, forward)
+            else:
+                optimizer.step(forward)
             loss_interior, loss_boundary = loss_storage[0]
 
         else:
