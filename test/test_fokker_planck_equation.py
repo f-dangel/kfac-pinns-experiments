@@ -10,9 +10,9 @@ from torch.nn import Linear, Sequential, Tanh
 from kfac_pinns_exp.fokker_planck_equation import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
-    mu_isotropic_gaussian,
+    mu_isotropic,
     p_isotropic_gaussian,
-    sigma_isotropic_gaussian,
+    sigma_isotropic,
 )
 
 DIM_OMEGAS = [1, 3]
@@ -47,13 +47,13 @@ def test_evaluate_interior_loss(dim_Omega: int):
 
     # compute via Sequential (using autograd)
     loss_auto, residual_auto, _ = evaluate_interior_loss(
-        model, X, y, mu_isotropic_gaussian, sigma_isotropic_gaussian
+        model, X, y, mu_isotropic, sigma_isotropic
     )
     grad_auto = grad(loss_auto, params)
 
     # compute via layers (using manual forward)
     loss_manual, residual_manual, _ = evaluate_interior_loss(
-        layers, X, y, mu_isotropic_gaussian, sigma_isotropic_gaussian
+        layers, X, y, mu_isotropic, sigma_isotropic
     )
     grad_manual = grad(loss_manual, params)
 

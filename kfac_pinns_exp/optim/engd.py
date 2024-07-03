@@ -1,14 +1,15 @@
 """Implements enery-natural gradient descent flavours from Mueller et al. 2023."""
 
 from argparse import ArgumentParser, Namespace
-from typing import List, Set, Tuple, Union
+from functools import partial
+from typing import Callable, Dict, List, Set, Tuple, Union
 
 from torch import Tensor, cat, eye, logspace, ones, zeros
 from torch.linalg import lstsq
 from torch.nn import Module
 from torch.optim import Optimizer
 
-from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp import fokker_planck_equation, heat_equation, poisson_equation
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
@@ -103,10 +104,28 @@ class ENGD(Optimizer):
     Attributes:
         SUPPORTED_APPROXIMATIONS: Set of supported Gramian approximations.
         SUPPORTED_EQUATIONS: Set of supported PDEs.
+        LOSS_EVALUATORS: A mapping from loss_type and equation to a function that
+            evaluates the residual and loss.
     """
 
     SUPPORTED_APPROXIMATIONS: Set[str] = {"full", "diagonal", "per_layer"}
-    SUPPORTED_EQUATIONS: Set[str] = {"poisson", "heat"}
+    SUPPORTED_EQUATIONS: Set[str] = {"poisson", "heat", "fokker-planck-isotropic"}
+    LOSS_EVALUATORS: Dict[str, Dict[str, Callable]] = {
+        "interior": {
+            "poisson": poisson_equation.evaluate_interior_loss,
+            "heat": heat_equation.evaluate_interior_loss,
+            "fokker-planck-isotropic": partial(
+                fokker_planck_equation.evaluate_interior_loss,
+                sigma=fokker_planck_equation.sigma_isotropic,
+                mu=fokker_planck_equation.mu_isotropic,
+            ),
+        },
+        "boundary": {
+            "poisson": poisson_equation.evaluate_boundary_loss,
+            "heat": heat_equation.evaluate_boundary_loss,
+            "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
+        },
+    }
 
     def __init__(
         self,
@@ -133,8 +152,8 @@ class ENGD(Optimizer):
             initialize_to_identity: Whether to initialize the Gramian to the identity
                 matrix. Default: `False`. If `True`, the Gramian is initialized to
                 identity.
-            equation: PDE to solve. Can be `'poisson'` or `'heat'`.
-                Default: `'poisson'`.
+            equation: PDE to solve. Can be `'poisson'`, `'heat'`, or
+                'fokker-planck-isotropic'. Default: `'poisson'`.
         """
         self._check_hyperparameters(
             model, lr, damping, ema_factor, approximation, equation
@@ -434,16 +453,7 @@ class ENGD(Optimizer):
         Returns:
             The differentiable loss.
         """
-        loss_evaluator = {
-            "poisson": {
-                "interior": poisson_equation.evaluate_interior_loss,
-                "boundary": poisson_equation.evaluate_boundary_loss,
-            },
-            "heat": {
-                "interior": heat_equation.evaluate_interior_loss,
-                "boundary": heat_equation.evaluate_boundary_loss,
-            },
-        }[self.equation][loss_type]
+        loss_evaluator = self.LOSS_EVALUATORS[loss_type][self.equation]
         loss, _, _ = loss_evaluator(self.model, X, y)
         return loss
 

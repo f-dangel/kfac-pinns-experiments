@@ -169,8 +169,8 @@ def evaluate_boundary_loss(
     return 0.5 * (residual**2).mean(), residual, intermediates
 
 
-def mu_isotropic_gaussian(x: Tensor) -> Tensor:
-    """Vector field for isotropic Gaussian case.
+def mu_isotropic(x: Tensor) -> Tensor:
+    """Isotropic vector field.
 
     Args:
         x: Un-batched input of shape `(1 + dim_Omega)` containing time and spatial
@@ -185,8 +185,8 @@ def mu_isotropic_gaussian(x: Tensor) -> Tensor:
     return -0.5 * spatial
 
 
-def sigma_isotropic_gaussian(X: Tensor) -> Tensor:
-    """Diffusivity matrix for isotropic Gaussian case.
+def sigma_isotropic(X: Tensor) -> Tensor:
+    """Isotropic diffusivity matrix.
 
     Args:
         X: Batched input of shape `(batch_size, 1 + dim_Omega)` containing time and
@@ -245,7 +245,7 @@ def plot_solution(
 
     Args:
         condition: String describing the boundary conditions of the PDE. Can be
-            `'isotropic_gaussian'`.
+            `'gaussian'`.
         dim_Omega: The dimension of the domain Omega. Can be `1` or `2`.
         model: The neural network model representing the learned solution.
         savepath: The path to save the plot.
@@ -255,7 +255,7 @@ def plot_solution(
     Raises:
         ValueError: If `dim_Omega` is not `1` or `2`.
     """
-    u = {"isotropic_gaussian": p_isotropic_gaussian}[condition]
+    u = {"gaussian": p_isotropic_gaussian}[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
     imshow_kwargs = {
