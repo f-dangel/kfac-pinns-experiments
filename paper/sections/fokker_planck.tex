@@ -1,15 +1,19 @@
-\paragraph{SDEs and the Fokker-Planck Equation}
-Assume we are given a drift $\mu:[0,1]\times \mathbb R^d\to\mathbb R^d$ and diffusivity $\sigma:[0,1] \to \mathbb R^{d\times d}$, we consider the SDE
+\subsection{Abstract Equation}
+\paragraph{Stochastic Differential Equations}
+Assume we are given a drift $\mu:[0,1]\times \mathbb R^d\to\mathbb R^d$ and diffusivity $\sigma:[0,1] \times \sR^d \to \mathbb R^{d\times d}$, we consider the SDE
 \begin{align}\label{eq:sde_abstract}
     \mathrm dX_t
     &=
     \mu(t, X_t)\mathrm d t
     +
-    \sigma(t) \mathrm d W_t,
+    \sigma(t, X_t) \mathrm d W_t,
     \quad 
     X_0 \sim p_0,
 \end{align}
-where $W_t$ is a standard Brownian motion and $X_0$ is distributed according to $p_0$. To solve this SDE, i.e., to obtain the dynamics of the associated probability density we can solve the \emph{Fokker-Planck equation}, which is given by
+where $W_t$ is a standard Brownian motion and $X_0$ is distributed according to $p_0$. 
+
+\paragraph{The Fokker-Planck Equation}
+To solve the SDE \eqref{eq:sde_abstract}, i.e., to obtain the dynamics of the associated probability density we can solve the \emph{Fokker-Planck equation}, which is given by
 \begin{align}\label{eq:fokker_planck_abstract}
     \partial_t p
     +
@@ -21,8 +25,42 @@ where $W_t$ is a standard Brownian motion and $X_0$ is distributed according to 
     \quad
     p(0) = p_0.
 \end{align}
+Note that for every time-point $p(t,\cdot)$ is a probability density on $\mathbb R^d$, hence $p:[0,1]\times\mathbb R^d \to \mathbb R$. The PINN loss of the Fokker-Planck equation is, after parametrizing $p$ as a neural network $p_{\vtheta}$, given by
+\begin{align*}
+    L^{\textrm{FP}}(\vtheta)
+    &=
+    \frac{1}{2N}
+    \sum_{n=1}^{N}
+    \big[
+    \partial_t p_{\vtheta}
+    +
+    \operatorname{div}(\mu p_{\vtheta})
+    -
+    \frac12 \operatorname{tr}(\sigma\sigma^\top\nabla^2 p_{\vtheta})
+    \big]^2
+    (\vx_n)
+    \\
+    &+
+    \frac{1}{2 N_0}
+    \sum_{n=1}^{N_0}
+    \big[
+    p_{\vtheta}(\vx_n^0) - p_0(\vx_n^0)
+    \big]^2.
+\end{align*}
+To make sampling tractable, we replace $\mathbb R^d$ by a compactum\footnote{If this is really the smartest way to handle infinite domains is not clear to me, I think it seems rather naive, but I am not familiar enough with the literature.}, say $[-L, L]^d$ for suitable $L>0$. Then we draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$.
+
+\paragraph{Exact Initial Conditions*}
+We can (and probably should) use a trick to automatically satisfy the initial conditions. To achieve this, we replace the neural network ansatz by 
+\begin{equation}
+    (t,\vx) 
+    \mapsto
+    t p_\vtheta(t,\vx) + p_0(\vx).
+\end{equation}
+By abuse of notation we again denote this function by $p_\vtheta$. This trick can also be used for the heat equation, of course. It is known in the literature and often facilitates training.
+
+\paragraph{The Fokker-Planck Equation in Log-Space}
 For numerical stability, transferring this PDE into $\log$-space is commonly employed. The ansatz $q = \log p$ lets us solve \eqref{eq:fokker_planck_abstract} via the \emph{nonlinear} PDE (which is a special case of a Hamilton-Jacobi-Bellman equation) given by
-\begin{align}
+\begin{align}\label{eq:log_fokker_planck_abstract}
     \partial_t q
     +
     \operatorname{div}(\mu)
@@ -37,8 +75,42 @@ For numerical stability, transferring this PDE into $\log$-space is commonly emp
     \quad
     q(0) = \log p_0.
 \end{align}
+Again, parametrizing $q$ by a neural network $q_\vtheta$ yields for the PINN loss of \eqref{eq:log_fokker_planck_abstract}
+\begin{align*}
+    L^{\textrm{logFP}}(\vtheta)
+    &=
+    \frac{1}{N}
+    \sum_{n=1}^{N}
+    \big[
+    \partial_t q_{\vtheta}
+    +
+    \operatorname{div}(\mu)
+    +
+    \nabla q_\vtheta \cdot \mu
+    -
+    \frac12 \| \sigma^\top\nabla q_\vtheta \|^2
+    -
+    \frac12 \operatorname{tr}(\sigma\sigma^\top\nabla^2 q_{\vtheta})
+    \big]^2
+    (\vx_n)
+    \\
+    &+
+    \frac{1}{N_0}
+    \sum_{n=1}^{N_0}
+    \big[
+    q_{\vtheta}(\vx_n^0) - \log p_0(\vx_n^0)
+    \big]^2.
+\end{align*}
+We draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$ as before.
 
-\paragraph{A Sanity Check Example}
+\paragraph{Exact Initial Conditions*}
+We can enforce initial conditions in the ansatz via 
+\begin{equation*}
+    (t,\vx) \mapsto t q_\vtheta(t, \vx) + \log p_0(\vx)
+\end{equation*}
+
+\subsection{Concrete Examples}
+\paragraph{A Sanity Check Example (\texttt{isotropic\_gaussian})}
 Set the drift $\mu$ to $\mu(t,x) = -1/2x$ and choose $\sigma=\sqrt 2 I$. As initial condition we use $p_0 \sim \mathcal N(0,I)$. For this concrete data, the Fokker-Planck equation is
 \begin{align}\label{eq:fokker_planck_sanity_example}
     \partial_t p(t, x)
@@ -53,7 +125,7 @@ Set the drift $\mu$ to $\mu(t,x) = -1/2x$ and choose $\sigma=\sqrt 2 I$. As init
 \end{align}
 The solution to this equation is given by
 \begin{equation}
-    p^*(t, x) \sim \mathcal N(0, \exp(-t)I + (1 - \exp(-t) 2 I)).
+    p^*(t, x) \sim \mathcal N(0, \exp(-t)I + (1 - \exp(-t)) 2 I).
 \end{equation}
 
 The logarithmic Fokker-Planck equation for this data is 
@@ -88,4 +160,10 @@ with solution $q^* = \log(p^*)$.
     \item The Fokker-Planck equation is a PDE on an unbounded domain, typically $\mathbb R^d$, so we need to artificially restrict ourselves to some compact interval. This causes issues with numerical accuracy and the optimization.
     \item The Fokker-Planck equation is interesting for PINNs as it frequently appears for high-dimensional settings. Hence grid-based methods are intractable. This is our motivation to look at this equation.
     \item The example above will not work well for high dimensions when using the original Fokker-Planck equation. The log-space ansatz is expected to help and seems to be the standard in the community.
+\end{itemize}
+
+\subsection{Literature}
+\begin{itemize}
+    \item \cite{hu2024score} PINNs for Fokker-Planck in dimensions 100 and 250. The paper discusses the original Fokker-Planck equation, the log space version and another reformulation based on the score -- which we haven't looked into yet. Our sanity check example is motivated from Section 4.1.1 in this paper. 
+    \item \cite{wang20222} claimes that the log space Fokker-Planck equation should not be trained with an $L^2$ loss because the $L^2$ loss does not control the error. I am unsure if this is relevant for numerical experiments, though. We can have it in mind if we manage to drive the loss down but don't observe the same for the error. 
 \end{itemize}
