@@ -4,7 +4,7 @@ from math import pi
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from warnings import warn
 
-from einops import einsum, rearrange, reduce
+from einops import einsum
 from matplotlib import pyplot as plt
 from torch import (
     Tensor,
@@ -29,7 +29,7 @@ from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
-from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
+from kfac_pinns_exp.kfac_utils import compute_kronecker_factors
 from kfac_pinns_exp.manual_differentiation import manual_forward
 from kfac_pinns_exp.utils import bias_augmentation
 
@@ -288,45 +288,15 @@ def evaluate_interior_loss_and_kfac(
     Returns:
         The (differentiable) interior loss and a dictionary whose keys are the layer
         indices and whose values are the two Kronecker factors.
-
-    Raises:
-        ValueError: If `kfac_approx` is not `'expand'` or `'reduce'`.
     """
-    if kfac_approx not in {"expand", "reduce"}:
-        raise ValueError(
-            f"kfac_approx must be 'expand' or 'reduce'. Got {kfac_approx}."
-        )
-    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
-
     loss, layer_inputs, layer_grad_outputs = (
         evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             layers, X, y, ggn_type
         )
     )
-
-    # Compute input-based Kronecker factors
-    for layer_idx, (A, _) in kfacs.items():
-        Z = layer_inputs.pop(layer_idx)
-        if kfac_approx == "expand":
-            Z = rearrange(Z, "batch d_0 d_in -> (batch d_0) d_in")
-        else:  # KFAC-reduce
-            Z = reduce(Z, "batch d_0 d_in -> batch d_in", "mean")
-        A.add_(Z.T @ Z, alpha=1 / Z.shape[0])
-
-    # Compute output-based Kronecker factor
-    batch_size = X.shape[0]
-    for layer_idx, (_, B) in kfacs.items():
-        if ggn_type == "forward-only":
-            # set all grad-output Kronecker factors to identity
-            B.fill_diagonal_(1.0)
-        else:
-            G = layer_grad_outputs.pop(layer_idx)
-            if kfac_approx == "expand":
-                G = rearrange(G, "batch d_0 d_out -> (batch d_0) d_out")
-            else:  # KFAC-reduce
-                G = reduce(G, "batch d_0 d_out -> batch d_out", "sum")
-            B.add_(G.T @ G, alpha=batch_size)
-
+    kfacs = compute_kronecker_factors(
+        layers, layer_inputs, layer_grad_outputs, ggn_type, kfac_approx
+    )
     return loss, kfacs
 
 
@@ -351,40 +321,16 @@ def evaluate_boundary_loss_and_kfac(
     Returns:
         The (differentiable) boundary loss and a dictionary whose keys are the layer
         indices and whose values are the two Kronecker factors.
-
-    Raises:
-        ValueError: If `kfac_approx` is not `'expand'` or `'reduce'`.
     """
-    if kfac_approx not in {"expand", "reduce"}:
-        raise ValueError(
-            f"kfac_approx must be 'expand' or 'reduce'. Got {kfac_approx}."
-        )
-    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
-
     # Compute the NN prediction, boundary loss, and all intermediates
     loss, layer_inputs, layer_grad_outputs = (
         evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
             layers, X, y, ggn_type
         )
     )
-
-    # Compute input-based Kronecker factors
-    for layer_idx, (A, _) in kfacs.items():
-        # no weight sharing here, hence KFAC expand and reduce are identical
-        z = layer_inputs.pop(layer_idx)
-        A.add_(z.T @ z, alpha=1 / z.shape[0])
-
-    # Compute output-based Kronecker factors
-    batch_size = X.shape[0]
-    for layer_idx, (_, B) in kfacs.items():
-        if ggn_type == "forward-only":
-            # set all grad-output Kronecker factors to identity
-            B.fill_diagonal_(1.0)
-        else:
-            g = layer_grad_outputs.pop(layer_idx)
-            # no weight sharing here, hence KFAC expand and reduce are identical
-            B.add_(g.T @ g, alpha=batch_size)
-
+    kfacs = compute_kronecker_factors(
+        layers, layer_inputs, layer_grad_outputs, ggn_type, kfac_approx
+    )
     return loss, kfacs
 
 

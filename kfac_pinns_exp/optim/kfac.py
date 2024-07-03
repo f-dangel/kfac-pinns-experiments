@@ -1,6 +1,7 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
+from functools import partial
 from math import sqrt
 from typing import Dict, List, Tuple, Union
 
@@ -9,7 +10,12 @@ from torch import Tensor, arange, cat, dtype, float64, tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 
-from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp import (
+    fokker_planck_equation,
+    fokker_planck_isotropic_equation,
+    heat_equation,
+    poisson_equation,
+)
 from kfac_pinns_exp.inverse_kronecker_sum import InverseKroneckerSum
 from kfac_pinns_exp.kfac_utils import check_layers_and_initialize_kfac
 from kfac_pinns_exp.optim.engd import ENGD_DEFAULT_LR
@@ -153,16 +159,57 @@ class KFAC(Optimizer):
             KFAC. Currently supports `'type-2'`, `'empirical'`, and `'forward-only'`
             (ordered in descending computational cost and approximation quality).
         SUPPORTED_EQUATIONS: Available equations to solve. Currently supports the
-            Poisson (`'poisson'`) and heat (`'heat'`) equations.
+            Poisson (`'poisson'`), heat (`'heat'`) and Fokker-Planck equation with
+            isotropic diffusivity and vector field (`'fokker-planck-isotropic'`).
         SUPPORTED_DAMPING_HEURISTICS: Available damping heuristics how to distribute
             the damping onto the two Kronecker factors. Currently supports `'same'`
             and `'trace-norm'` (from Martens et al. (2015), Section 6.3 in
             https://arxiv.org/pdf/1503.05671).
+        LOSS_AND_KFAC_EVALUATORS: Dictionary from equation and loss type to functions
+            that evaluate the loss and KFAC matrices on a batch.
+        LOSS_EVALUATORS: Dictionary from equation and loss type to functions that
+            evaluate the loss on a batch.
     """
 
+    LOSS_AND_KFAC_EVALUATORS = {
+        "poisson": {
+            "interior": poisson_equation.evaluate_interior_loss_and_kfac,
+            "boundary": poisson_equation.evaluate_boundary_loss_and_kfac,
+        },
+        "heat": {
+            "interior": heat_equation.evaluate_interior_loss_and_kfac,
+            "boundary": heat_equation.evaluate_boundary_loss_and_kfac,
+        },
+        "fokker-planck-isotropic": {
+            "interior": partial(
+                fokker_planck_equation.evaluate_interior_loss_and_kfac,
+                mu=fokker_planck_isotropic_equation.mu_isotropic,
+                sigma=fokker_planck_isotropic_equation.sigma_isotropic,
+            ),
+            "boundary": fokker_planck_equation.evaluate_boundary_loss_and_kfac,
+        },
+    }
+    LOSS_EVALUATORS = {
+        "poisson": {
+            "interior": poisson_equation.evaluate_interior_loss,
+            "boundary": poisson_equation.evaluate_boundary_loss,
+        },
+        "heat": {
+            "interior": heat_equation.evaluate_interior_loss,
+            "boundary": heat_equation.evaluate_boundary_loss,
+        },
+        "fokker-planck-isotropic": {
+            "interior": partial(
+                fokker_planck_equation.evaluate_interior_loss,
+                mu=fokker_planck_isotropic_equation.mu_isotropic,
+                sigma=fokker_planck_isotropic_equation.sigma_isotropic,
+            ),
+            "boundary": fokker_planck_equation.evaluate_boundary_loss,
+        },
+    }
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
-    SUPPORTED_EQUATIONS = {"poisson", "heat"}
+    SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck-isotropic"}
     SUPPORTED_DAMPING_HEURISTICS = {"same", "trace-norm"}
 
     def __init__(
@@ -218,8 +265,8 @@ class KFAC(Optimizer):
                 data type as the parameters after the inversion.
             initialize_to_identity: Whether to initialize the KFAC factors to the
                 identity matrix. Default is `False` (initialize with zero).
-            equation: Equation to solve. Currently supports `'poisson'` and `'heat'`.
-                Default: `'poisson'`.
+            equation: Equation to solve. Currently supports `'poisson'`, `'heat'`, and
+                `'fokker-planck-isotropic'`. Default: `'poisson'`.
             damping_heuristic: How to distribute the damping onto the two Kronecker
                 factors. Currently supports `'same'` and `'trace-norm` (see Section 6.3
                 of https://arxiv.org/pdf/1503.05671). Default is `'same'`.
@@ -503,16 +550,7 @@ class KFAC(Optimizer):
         Returns:
             The differentiable loss.
         """
-        loss_evaluator = {
-            "poisson": {
-                "interior": poisson_equation.evaluate_interior_loss,
-                "boundary": poisson_equation.evaluate_boundary_loss,
-            },
-            "heat": {
-                "interior": heat_equation.evaluate_interior_loss,
-                "boundary": heat_equation.evaluate_boundary_loss,
-            },
-        }[self.equation][loss_type]
+        loss_evaluator = self.LOSS_EVALUATORS[self.equation][loss_type]
         loss, _, _ = loss_evaluator(self.layers, X, y)
         return loss
 
@@ -535,16 +573,9 @@ class KFAC(Optimizer):
         # compute loss and KFAC matrices
         ggn_type = group["ggn_type"]
         kfac_approx = group["kfac_approx"]
-        loss_and_kfac_evaluator = {
-            "poisson": {
-                "interior": poisson_equation.evaluate_interior_loss_and_kfac,
-                "boundary": poisson_equation.evaluate_boundary_loss_and_kfac,
-            },
-            "heat": {
-                "interior": heat_equation.evaluate_interior_loss_and_kfac,
-                "boundary": heat_equation.evaluate_boundary_loss_and_kfac,
-            },
-        }[self.equation][loss_type]
+        loss_and_kfac_evaluator = self.LOSS_AND_KFAC_EVALUATORS[self.equation][
+            loss_type
+        ]
         loss, kfacs = loss_and_kfac_evaluator(
             self.layers, X, y, ggn_type=ggn_type, kfac_approx=kfac_approx
         )
@@ -661,16 +692,8 @@ class KFAC(Optimizer):
         gD = sum((g_ * D_).sum() for g_, D_ in zip(g, D))  # = ∇hᵀΔ
 
         # compute Gramian-vector products along δ and Δ
-        eval_interior_loss, eval_boundary_loss = {
-            "poisson": (
-                poisson_equation.evaluate_interior_loss,
-                poisson_equation.evaluate_boundary_loss,
-            ),
-            "heat": (
-                heat_equation.evaluate_interior_loss,
-                heat_equation.evaluate_boundary_loss,
-            ),
-        }[self.equation]
+        eval_interior_loss = self.LOSS_EVALUATORS[self.equation]["interior"]
+        eval_boundary_loss = self.LOSS_EVALUATORS[self.equation]["boundary"]
 
         # multiply with the boundary Gramian and add
         _, residual, _ = eval_interior_loss(self.layers, X_Omega, y_Omega)
