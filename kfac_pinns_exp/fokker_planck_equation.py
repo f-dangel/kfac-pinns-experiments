@@ -48,6 +48,7 @@ def evaluate_interior_loss(
             datum `X[n]` has coordinates `(t, x_1, x_2 , ..., x_dim_Omega)`.
         y: Target for the interior loss. Has shape `(batch_size, 1)`.
         mu: Vector field. Maps an un-batched input `x` to a tensor `mu(x)` of shape
+            `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
 
@@ -94,6 +95,8 @@ def evaluate_interior_loss(
         dp_dt_plus_div_p_times_mu = dp_dt + div_p_times_mu
 
     elif isinstance(model, Module):
+        intermediates = None
+
         # compute div(p μ)
         def p_times_mu(x: Tensor) -> Tensor:
             """Compute the product between p(t, x) and the augmented μ(t, x).
@@ -129,7 +132,6 @@ def evaluate_interior_loss(
     # compute residual and loss
     residual = (dp_dt_plus_div_p_times_mu - 0.5 * tr_sigma_outer_hessian) - y
     loss = 0.5 * (residual**2).mean()
-    intermediates = None
 
     return loss, residual, intermediates
 
