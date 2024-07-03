@@ -32,9 +32,13 @@ def report_nonclose(
 
     if not allclose(tensor1, tensor2, **kwargs):
         if verbose:
-            for t1, t2 in zip(tensor1.flatten(), tensor2.flatten()):
+            correct = 0
+            for idx, (t1, t2) in enumerate(zip(tensor1.flatten(), tensor2.flatten())):
                 if not isclose(t1, t2, **kwargs):
-                    print(f"{t1} ≠ {t2} (ratio {t1 / t2:.5f})")
+                    print(f"{idx}: {t1} ≠ {t2} (ratio {t1 / t2:.5f})")
+                else:
+                    correct += 1
+            print(f"Matches: {correct} / {tensor1.numel()}")
             print(f"Max: {tensor1.max():.5f}, {tensor2.max():.5f}")
             print(f"Min: {tensor1.min():.5f}, {tensor2.min():.5f}")
         raise ValueError("Compared arrays don't match.")
