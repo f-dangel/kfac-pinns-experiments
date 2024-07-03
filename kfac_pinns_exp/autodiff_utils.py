@@ -9,7 +9,9 @@ from torch.nn import Module, Parameter
 
 
 def autograd_input_divergence(
-    model: Union[Module, Callable[[Tensor], Tensor]], X: Tensor
+    model: Union[Module, Callable[[Tensor], Tensor]],
+    X: Tensor,
+    coordinates: Optional[List[int]] = None,
 ) -> Tensor:
     """Compute the divergence of the model w.r.t. its input.
 
@@ -18,10 +20,31 @@ def autograd_input_divergence(
             or a tensor-to-tensor function.
         X: The input to the model. First dimension is the batch dimension.
             Must be differentiable.
+        coordinates: List of indices specifying the coordinates w.r.t. which the
+            divergence is taken. For example, if the function's arguments are 3d, but
+            its output is 2d, we can specify `coordinates=[0, 1]` to compute the
+            divergence w.r.t. the first two dimensions. Length of `coordinates` must
+            correspond to the output dimension of the model. If `None`, the full
+            divergence is computed. Default: `None`.
 
     Returns:
-        The divergence of the model w.r.t. X. Has shape `[batch_size]`.
+        The divergence of the model w.r.t. X. Has shape `[batch_size, 1]`.
+
+    Raises:
+        ValueError: If `coordinates` are specified but not unique or out of range.
     """
+    num_features = X.shape[1:].numel()
+
+    if coordinates is not None:
+        if len(set(coordinates)) != len(coordinates) or len(coordinates) == 0:
+            raise ValueError(
+                f"Coordinates must be unique and non-empty. Got {coordinates}."
+            )
+        if any(c < 0 or c >= num_features for c in coordinates):
+            raise ValueError(
+                f"Coordinates must be in the range [0, {num_features})."
+                f" Got {coordinates}."
+            )
 
     def f(x: Tensor) -> Tensor:
         """Forward pass on an un-batched input.
@@ -33,12 +56,17 @@ def autograd_input_divergence(
             Un-batched output.
 
         Raises:
-            ValueError: If the output shape does not match the input shape.
+            ValueError: If the output shape does not match the combination of input
+                shape and specified coordinates.
         """
         out = model(x)
-        if out.shape != x.shape:
+        expected_shape = x.shape if coordinates is None else (len(coordinates),)
+        if expected_shape != (
+            out.shape if coordinates is None else (out.shape.numel(),)
+        ):
             raise ValueError(
-                f"Output shape must match input shape. Got {out.shape} != {x.shape}."
+                "Output shape must match input shape or length of coordinates."
+                f" Got {out.shape} output, {x.shape} input, {coordinates} coordinates."
             )
         return out
 
@@ -52,7 +80,11 @@ def autograd_input_divergence(
             Un-batched divergence.
         """
         jac = jacrev(f)(x)
-        return jac.reshape(x.numel(), x.numel()).trace()
+        if coordinates is None:
+            jac = jac.reshape(x.numel(), x.numel())
+        else:
+            jac = jac.reshape(-1, x.numel())[:, coordinates]
+        return jac.trace().unsqueeze(0)
 
     return vmap(divergence)(X)
 
