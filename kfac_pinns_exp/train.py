@@ -9,6 +9,7 @@ python train.py --help
 from argparse import ArgumentParser, Namespace
 from functools import partial
 from itertools import count
+from math import sqrt
 from os import makedirs, path
 from sys import argv
 from time import time
@@ -655,8 +656,13 @@ def main():  # noqa: C901
                 # we want to linearize residual w.r.t. the parameters to obtain
                 # the GGN. This established the connection between the loss and
                 # the concatenated boundary and interior residuals.
-                residual = cat([residual_interior, residual_boundary])
-                loss = 0.5 * (residual**2).mean()
+                residual = cat(
+                    [
+                        residual_interior / sqrt(residual_interior.numel()),
+                        residual_boundary / sqrt(residual_boundary.numel()),
+                    ]
+                )
+                loss = 0.5 * (residual**2).sum()
 
                 # HOTFIX Append the interior and boundary loss to loss_storage
                 # so we can extract them for logging and plotting
