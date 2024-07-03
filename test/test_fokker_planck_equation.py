@@ -10,6 +10,8 @@ from torch.nn import Linear, Sequential, Tanh
 from kfac_pinns_exp.fokker_planck_equation import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
+)
+from kfac_pinns_exp.fokker_planck_isotropic_equation import (
     mu_isotropic,
     p_isotropic_gaussian,
     sigma_isotropic,

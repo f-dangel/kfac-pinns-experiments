@@ -32,7 +32,12 @@ from torch import (
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
 
-from kfac_pinns_exp import fokker_planck_equation, heat_equation, poisson_equation
+from kfac_pinns_exp import (
+    fokker_planck_equation,
+    fokker_planck_isotropic_equation,
+    heat_equation,
+    poisson_equation,
+)
 from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
 from kfac_pinns_exp.optim.hessianfree_cached import HessianFreeCached
@@ -54,7 +59,7 @@ SUPPORTED_OPTIMIZERS = {
     "HessianFree",
     "HessianFreeCached",
 }
-SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck"}
+SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck-isotropic"}
 SUPPORTED_MODELS = {
     "mlp-tanh-64",
     "mlp-tanh-64-48-32-16",
@@ -90,8 +95,8 @@ INTERIOR_LOSS_EVALUATORS = {
     "heat": heat_equation.evaluate_interior_loss,
     "fokker-planck-isotropic": partial(
         fokker_planck_equation.evaluate_interior_loss,
-        sigma=fokker_planck_equation.sigma_isotropic,
-        mu=fokker_planck_equation.mu_isotropic,
+        sigma=fokker_planck_isotropic_equation.sigma_isotropic,
+        mu=fokker_planck_isotropic_equation.mu_isotropic,
     ),
 }
 BOUNDARY_LOSS_EVALUATORS = {

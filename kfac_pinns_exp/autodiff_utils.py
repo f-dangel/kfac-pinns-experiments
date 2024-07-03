@@ -7,7 +7,7 @@ from torch import Tensor, cat, ones
 from torch.func import functional_call, grad, hessian, jacrev, vmap
 from torch.nn import Module, Parameter
 
-from kfac_pinns_exp import fokker_planck_equation
+from kfac_pinns_exp import fokker_planck_isotropic_equation
 
 
 def autograd_input_divergence(
@@ -310,7 +310,7 @@ def autograd_gram_grads(
                 Has the same shape as `x`.
             """
             p = f(x, *params)
-            mu = fokker_planck_equation.mu_isotropic(x)
+            mu = fokker_planck_isotropic_equation.mu_isotropic(x)
             augment = ones(1, dtype=p.dtype, device=p.device)
             return p * cat([augment, mu])
 
@@ -318,7 +318,9 @@ def autograd_gram_grads(
         dp_dt_plus_div_p_times_mu = jacobian_p_times_mu(x, *params).trace()
 
         hess_f = hessian(f, argnums=0)  # (x, θ) → ∇²_{(t, x)} f((t, x), θ)
-        sigma = fokker_planck_equation.sigma_isotropic(x.unsqueeze(0)).squeeze(0)
+        sigma = fokker_planck_isotropic_equation.sigma_isotropic(
+            x.unsqueeze(0)
+        ).squeeze(0)
         hess = hess_f(x, *params)[1:][:, 1:]
         tr_sigma_outer_hess = einsum(sigma, sigma, hess, "i j, k j, k i->")
 

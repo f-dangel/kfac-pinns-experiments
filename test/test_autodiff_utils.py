@@ -9,7 +9,7 @@ from torch import Tensor, allclose, cat, manual_seed, outer, rand, zeros, zeros_
 from torch.autograd import grad
 from torch.nn import Linear, Module, Sequential, Sigmoid, Tanh
 
-from kfac_pinns_exp import fokker_planck_equation
+from kfac_pinns_exp import fokker_planck_isotropic_equation
 from kfac_pinns_exp.autodiff_utils import autograd_gramian, autograd_input_divergence
 
 LOSS_TYPES = [
@@ -139,7 +139,7 @@ def test_autograd_gramian(loss_type: str, approximation: str):  # noqa: C901
             dp_dt = dp_dX[0]
 
             # compute div(p * μ)
-            p_times_mu = p * fokker_planck_equation.mu_isotropic(X_n)
+            p_times_mu = p * fokker_planck_isotropic_equation.mu_isotropic(X_n)
             div_p_times_mu = 0
             for d in range(1, D_in):
                 (jac,) = grad(p_times_mu[d - 1], X_n, create_graph=True)
@@ -157,7 +157,9 @@ def test_autograd_gramian(loss_type: str, approximation: str):  # noqa: C901
             hess = hess[1:,][:, 1:]
 
             # compute 0.5 * tr(σ σᵀ ∇²ₓp)
-            sigma = fokker_planck_equation.sigma_isotropic(X_n.unsqueeze(0)).squeeze(0)
+            sigma = fokker_planck_isotropic_equation.sigma_isotropic(
+                X_n.unsqueeze(0)
+            ).squeeze(0)
             tr_sigma_outer_hess = (sigma @ sigma.T @ hess).trace()
 
             gram_grad = grad(

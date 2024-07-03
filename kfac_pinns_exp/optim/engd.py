@@ -9,7 +9,12 @@ from torch.linalg import lstsq
 from torch.nn import Module
 from torch.optim import Optimizer
 
-from kfac_pinns_exp import fokker_planck_equation, heat_equation, poisson_equation
+from kfac_pinns_exp import (
+    fokker_planck_equation,
+    fokker_planck_isotropic_equation,
+    heat_equation,
+    poisson_equation,
+)
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
@@ -116,8 +121,8 @@ class ENGD(Optimizer):
             "heat": heat_equation.evaluate_interior_loss,
             "fokker-planck-isotropic": partial(
                 fokker_planck_equation.evaluate_interior_loss,
-                sigma=fokker_planck_equation.sigma_isotropic,
-                mu=fokker_planck_equation.mu_isotropic,
+                sigma=fokker_planck_isotropic_equation.sigma_isotropic,
+                mu=fokker_planck_isotropic_equation.mu_isotropic,
             ),
         },
         "boundary": {
