@@ -363,14 +363,19 @@ As mentioned in \Cref{sec:taylor-mode-tutorial}, this requires a generalization 
 \begin{align}
   \label{eq:taylor-mode-multi-directional}
   \partial^K f(\vx)[\vv_1, \dots, \vv_K]
-  =
+  & =
   \sum_{\sigma \in \mathrm{part}(\{1, \dots, K\})}
   \partial^{|\sigma|}g(h(\vx))
   \left[
   \otimes_{\eta \in \sigma} \partial^{|\eta|}h(\vx) \left[ \otimes_{l \in \eta} \vv_l \right]
-  \right]\,.
+  \right]
+  %\\ & 
+  %= \sum_{\lvert\alpha\rvert = K}
+  %\partial^{\alpha}g(h(\vx))
+  %\vv^\alpha
+  \,.
 \end{align}
-Here, $\mathrm{part}(\{1, \dots, K\})$ denotes the set of all partitions of $\{1, \dots, K\}$, a set of sets. For instance,
+Here, $\mathrm{part}(\{1, \dots, K\})$ denotes the set of all set partitions of $\{1, \dots, K\}$ ($\sigma$ is a set of sets). E.g.,
 \begin{align*}
   \mathrm{part}(\{1\})
   &=
@@ -420,7 +425,7 @@ From \Cref{eq:taylor-mode-multi-directional-1-2}, we can see that if we want to 
       \partial g(h(\vx))
       \left[
       \sum_{i,j} c_{i,j}
-      \partial^2 h(\vx) [\vv_1, \vv_2]
+      \partial^2 h(\vx) [\vv_i, \vv_j]
       \right]\,.
   \end{split}
 \end{align}

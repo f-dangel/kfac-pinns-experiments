@@ -34,29 +34,29 @@ The PINN loss for this problem consists of three terms: a PDE term, an initial v
   &=
     \frac{1}{N_{\Omega}}
     \sum_{n=1}^{N_{\Omega}}
-    \left\lVert
+    \left(
     \partial_t u_{\vtheta}(\vx_n^{\Omega})
     -
     \frac{1}{4} \Delta_{\tilde{\vx}_n} u_{\vtheta}(\vx_n^{\Omega})
-    \right\rVert^2_2
+    \right)^2
   \\
   &+
     \frac{1}{N_{\partial\Omega}}
     \sum_{n=1}^{N_{\partial\Omega}}
-    \left\lVert
+    \left(
     u_{\vtheta}(\vx_n^{\partial\Omega})
     -
     g(\vx_n^{\partial\Omega})
-    \right\rVert^2_2
+    \right)^2
   \\
   &+
     \frac{1}{N_0}
     \sum_{n=1}^{N_0}
-    \left\lVert
+    \left(
     u_{\vtheta}(0, \vx_n^0)
     -
     u_0( \vx_n^0)
-    \right\rVert^2_2
+    \right)^2
 \end{align*}
 with $\vx_n^{\Omega} \sim \mathrm{T} \times \Omega$, and $\vx_n^{\partial\Omega} \sim \mathrm{T} \times \partial\Omega$, and $\vx_n^0 \sim \{0\} \times \Omega$.
 To fit this loss into our framework which assumes two loss terms, each of whose curvature is approximated with a Kronecker factor, we combine the initial value and boundary value conditions into a single term.

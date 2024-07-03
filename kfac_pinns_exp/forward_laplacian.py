@@ -3,15 +3,15 @@
 from typing import Dict, List, Optional, Union
 
 from einops import einsum
-from torch import Tensor, eye, gt, zeros_like
+from torch import Tensor, eye, gt, stack, zeros_like
 from torch.nn import Linear, Module, ReLU, Sigmoid, Tanh
 
 
-def manual_forward_laplacian(
+def manual_forward_laplacian(  # noqa: C901
     layers: List[Module],
     x: Tensor,
     coordinates: Optional[List[int]] = None,
-    coefficients: Optional[Tensor] = None,
+    coefficients: Optional[Union[Tensor, List[Tensor]]] = None,
 ) -> List[Dict[str, Tensor]]:
     """Compute the NN prediction and Laplacian (or weighted sum of second derivatives).
 
@@ -25,6 +25,10 @@ def manual_forward_laplacian(
             sum `∑ᵢⱼ cᵢⱼ ∂²f/∂xᵢ∂xⱼ` instead of the Laplacian. If `None`, the Laplacian
             is computed, i.e. `cᵢⱼ = δᵢⱼ`. If `coordinates` is specified, the
             coefficients must match the size of the sub-space implied by `coordinates`.
+            The coefficients can be specified in different formats:
+            - Directly as square matrix `A` such that `cᵢⱼ = A[i, j]`.
+            - In outer product form, as list of vectors `[v₁, ..., v_N]` such that
+              `cᵢⱼ = [∑_n v_n v_nᵀ ]ᵢⱼ`. This structure is useful to reduce computation.
 
     Returns:
         A list of dictionaries, each containing the Taylor coefficients (0th-, 1st-, and
@@ -63,11 +67,26 @@ def manual_forward_laplacian(
 
     if coefficients is not None:
         dim = num_features if coordinates is None else len(coordinates)
-        expected_shape = (dim, dim)
-        if coefficients.shape != expected_shape:
+        if isinstance(coefficients, Tensor):
+            expected_shape = (dim, dim)
+            if coefficients.shape != expected_shape:
+                raise ValueError(
+                    f"Expected coefficients of shape {expected_shape}."
+                    f" Got {coefficients.shape}."
+                )
+        elif isinstance(coefficients, list) and all(
+            isinstance(c, Tensor) for c in coefficients
+        ):
+            expected_shape = (dim,)
+            if any(c.shape != expected_shape for c in coefficients):
+                raise ValueError(
+                    f"Expected coefficients of shape {expected_shape}."
+                    f" Got {[c.shape for c in coefficients]}."
+                )
+        else:
             raise ValueError(
-                f"Expected coefficients of shape {expected_shape}."
-                f" Got {coefficients.shape}."
+                f"Expected coefficients to be a tensor or a list of tensors."
+                f" Got {type(coefficients)}."
             )
 
     # pass Taylor coefficients through the network
@@ -90,7 +109,7 @@ def manual_forward_laplacian_layer(
     layer: Module,
     derivatives: Dict[str, Tensor],
     coordinates: Union[List[int], None],
-    coefficients: Union[Tensor, None],
+    coefficients: Union[Tensor, List[Tensor], None],
 ) -> Dict[str, Tensor]:
     """Propagate the 0th, 1st, and summed 2nd-order Taylor coefficients through a layer.
 
@@ -104,12 +123,17 @@ def manual_forward_laplacian_layer(
             sum `∑ᵢⱼ cᵢⱼ ∂²f/∂xᵢ∂xⱼ` instead of the Laplacian. If `None`, the Laplacian
             is computed, i.e. `cᵢⱼ = δᵢⱼ`. If `coordinates` is specified, the
             coefficients must match the size of the sub-space implied by `coordinates`.
+            The coefficients can be specified in different formats:
+            - Directly as square matrix `A` such that `cᵢⱼ = A[i, j]`.
+            - In outer product form, as list of vectors `[v₁, ..., v_N]` such that
+              `cᵢⱼ = [∑_n v_n v_nᵀ ]ᵢⱼ`. This structure is useful to reduce computation.
 
     Returns:
         A dictionary containing the new Taylor coefficients.
 
     Raises:
         NotImplementedError: If the layer type is not supported.
+        ValueError: If the coefficients are specified in incorrect format.
     """
     old_forward = derivatives["forward"]
     old_directional_gradients = derivatives["directional_gradients"]
@@ -152,11 +176,16 @@ def manual_forward_laplacian_layer(
                 if coordinates is None
                 else old_directional_gradients[:, coordinates]
             )
-            if coefficients is None:
+            if coefficients is None or isinstance(coefficients, list):
+                if isinstance(coefficients, list):
+                    coefficients = stack(coefficients)
+                    coordinate_gradients = einsum(
+                        coefficients, coordinate_gradients, "c d0, n d0 ... -> n c ..."
+                    )
                 contribution = einsum(
                     hess, coordinate_gradients**2, "n ..., n d0 ... -> n ..."
                 )
-            else:
+            elif isinstance(coefficients, Tensor):
                 contribution = einsum(
                     hess,
                     coordinate_gradients,
@@ -164,6 +193,9 @@ def manual_forward_laplacian_layer(
                     coefficients,
                     "n ..., n i ..., n j ..., i j -> n ...",
                 )
+            else:
+                raise ValueError(f"Unsupported coefficients: {coefficients}")
+
             new_laplacian.add_(contribution)
     else:
         raise NotImplementedError(f"Layer type not supported: {layer}.")

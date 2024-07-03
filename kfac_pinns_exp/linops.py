@@ -1,7 +1,7 @@
 """Implements linear operators."""
 
 from math import sqrt
-from typing import List
+from typing import Dict, List, Tuple
 
 from einops import einsum
 from torch import Tensor, cat, zeros
@@ -9,10 +9,12 @@ from torch.autograd import grad
 from torch.nn import Linear, Module
 
 from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp.poisson_equation import get_backpropagated_error
+from kfac_pinns_exp.utils import bias_augmentation
 
 
 class GramianLinearOperator:
-    """Base class for linear operators representing a Gramian.
+    """Class for linear operators representing a Gramian.
 
     Pre-computes the information required to multiply with the Gramian in one
     backward pass. This saves computation when doing multiple Gramian-vector

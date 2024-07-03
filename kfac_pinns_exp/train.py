@@ -32,7 +32,7 @@ from torch import (
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
 
-from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp import fokker_planck_equation, heat_equation, poisson_equation
 from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
 from kfac_pinns_exp.optim.hessianfree_cached import HessianFreeCached
@@ -54,7 +54,7 @@ SUPPORTED_OPTIMIZERS = {
     "HessianFree",
     "HessianFreeCached",
 }
-SUPPORTED_EQUATIONS = {"poisson", "heat"}
+SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck"}
 SUPPORTED_MODELS = {
     "mlp-tanh-64",
     "mlp-tanh-64-48-32-16",
@@ -68,6 +68,7 @@ SUPPORTED_BOUNDARY_CONDITIONS = {
     "u_weinan",
     "u_weinan_norm",
     "sin_sum",
+    "isotropic_gaussian",
 }
 
 SOLUTIONS = {
@@ -81,6 +82,9 @@ SOLUTIONS = {
         "sin_product": heat_equation.u_sin_product,
         "sin_sum": heat_equation.u_sin_sum,
     },
+    "fokker-planck": {
+        "isotropic_gaussian": fokker_planck_equation.p_isotropic_gaussian,
+    },
 }
 INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS = {
     "poisson": (
@@ -90,6 +94,14 @@ INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS = {
     "heat": (
         heat_equation.evaluate_interior_loss,
         heat_equation.evaluate_boundary_loss,
+    ),
+    "fokker-planck": (
+        partial(
+            fokker_planck_equation.evaluate_interior_loss,
+            sigma=fokker_planck_equation.sigma_isotropic_gaussian,
+            mu=fokker_planck_equation.mu_isotropic_gaussian,
+        ),
+        fokker_planck_equation.evaluate_boundary_loss,
     ),
 }
 
@@ -256,7 +268,11 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
     Raises:
         ValueError: If the model is not supported.
     """
-    in_dim = {"poisson": dim_Omega, "heat": dim_Omega + 1}[equation]
+    in_dim = {
+        "poisson": dim_Omega,
+        "heat": dim_Omega + 1,
+        "fokker-planck": dim_Omega + 1,
+    }[equation]
     if model == "mlp-tanh-64":
         layers = [
             Linear(in_dim, 64),
@@ -339,8 +355,21 @@ def create_interior_data(
         NotImplementedError: If the combination of equation and condition is not
             supported.
     """
-    dim = {"poisson": dim_Omega, "heat": dim_Omega + 1}[equation]
-    X = rand(num_data, dim)
+    dim = {
+        "poisson": dim_Omega,
+        "heat": dim_Omega + 1,
+        "fokker-planck": dim_Omega + 1,
+    }[equation]
+
+    # create inputs
+    if equation == "fokker-planck" and condition == "isotropic_gaussian":
+        t = rand(num_data, 1)
+        spatial = 10 * rand(num_data, dim_Omega) - 5
+        X = cat([t, spatial], dim=1)
+    else:
+        X = rand(num_data, dim)
+
+    # create targets
     if equation == "poisson" and condition in {
         "sin_product",
         "cos_sum",
@@ -354,10 +383,16 @@ def create_interior_data(
             "u_weinan_norm": poisson_equation.f_weinan_norm,
         }[condition]
         y = f(X)
-    elif equation == "heat" and condition in {
-        "sin_product",
-        "sin_sum",
-    }:
+    elif (
+        equation == "heat"
+        and condition
+        in {
+            "sin_product",
+            "sin_sum",
+        }
+        or equation == "fokker-planck"
+        and condition == "isotropic_gaussian"
+    ):
         y = zeros(num_data, 1)
     else:
         raise NotImplementedError(
@@ -405,6 +440,10 @@ def create_condition_data(
         # initial value condition
         X_dOmega2 = heat_equation.unit_square_at_start(num_data // 2, dim_Omega)
         X_dOmega = cat([X_dOmega1, X_dOmega2])
+    elif equation == "fokker-planck" and condition == "isotropic_gaussian":
+        X_no_t = 10 * rand(num_data, dim_Omega) - 5
+        t = zeros(num_data, 1)
+        X_dOmega = cat([t, X_no_t], dim=1)
     else:
         raise NotImplementedError(
             f"Equation {equation} and condition {condition} not supported."
@@ -628,8 +667,8 @@ def main():  # noqa: C901
                 # the concatenated boundary and interior residuals.
                 residual = cat(
                     [
-                        residual_interior / sqrt(N_Omega),
-                        residual_boundary / sqrt(N_dOmega),
+                        residual_interior / sqrt(residual_interior.numel()),
+                        residual_boundary / sqrt(residual_boundary.numel()),
                     ]
                 )
                 loss = 0.5 * (residual**2).sum()
@@ -701,6 +740,7 @@ def main():  # noqa: C901
                 plot_fn = {
                     "poisson": poisson_equation.plot_solution,
                     "heat": heat_equation.plot_solution,
+                    "fokker-planck": fokker_planck_equation.plot_solution,
                 }[equation]
                 plot_fn(
                     condition,

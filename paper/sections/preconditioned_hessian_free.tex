@@ -1,0 +1,73 @@
+\paragraph{Preconditioned Conjugate Gradient (PCG) Method}
+Suppose for a PSD matrix $A$ and right-hand side $b$ we want to solve
+\[
+    Ax = b
+\]
+with the preconditioned conjugate gradient method and the preconditioner $B$. The PCG method is (for reference):
+\begin{algorithm}[!h]
+  \centering
+  %\begin{small}
+    \begin{algorithmic}
+      \Require \\
+      An initial guess $x_0$. 
+
+      \\
+      \State \textbf{Initialization}
+      Set $r_0 = b - Ax_0$, $z_0 = Br_0$ and $p_0=z_0$, $k=0$, maximal number of iterations $K$
+      
+      \State \textbf{Loop}
+      
+      \For {$k < K$ and $r_k \neq 0$}
+      
+        $\alpha_k = \frac{z_k \cdot r_k}{Ap_k\cdot p_k}$
+
+        $x_{k+1} = x_k + \alpha_k p_k$
+
+        $r_{k+1} = r_k - \alpha_k Ap_k$
+
+        $z_{k+1} = B r_{k+1}$
+
+        $\beta_k = \frac{z_{k+1} \cdot r_{k+1}}{z_k \cdot r_k}$
+
+        $p_{k+1} = z_{k+1} + \beta_k p_k$
+
+        $k = k + 1$
+      
+        %\State $\mA_{\Omega}^{(l)}, \mB_{\Omega}^{(l)}, \mA_{\partial\Omega}^{(l)}, \mB_{\partial\Omega}^{(l)} \gets \vzero \text{ or } \mI$ \Comment Initialize Kronecker factors
+      \EndFor
+    \end{algorithmic}
+  %\end{small}
+    \caption{Preconditioned Conjugate Gradient Method.}
+\end{algorithm}
+
+\paragraph{KFAC* is PCG with one Step and Zero Initial Step}
+In Section 6.4 of Martens the natural gradient is called $\Delta$ and if we denote our KFAC approximation by the letter $P$ it holds 
+\[
+    \Delta = P^{-1}(-\nabla h).
+\]
+If we apply the PCG method for one step with initial value $x_0 = 0$ and $A = G + \lambda I$ (and $G$ is the exact Gramian) we get
+\begin{align*}
+    x_1
+    &=
+    x_0 + \alpha_0 p_0
+    \\
+    &=
+    \alpha_0p_0
+    \\
+    &=
+    \alpha_0 P^{-1}(-\nabla h)
+    \\
+    &=
+    \frac{-P^{-1}(\nabla h)\cdot\nabla h}{\| -P^{-1}(\nabla h) \|^2_{G+\lambda I}}P^{-1}(-\nabla h)
+    \\
+    &=
+    \frac{-\nabla h \cdot \Delta }{\Delta \cdot G \Delta + \lambda \|\Delta\|^2}\Delta
+\end{align*}
+which shows that PCG is KFAC* (the last expression is exactly what Martens has in his paper).
+
+\paragraph{Comments}
+\begin{itemize}
+    \item Hope: Run Hessian free with KFAC preconditioner and on the order of 10 PCG steps works well. 
+    \item What is a smart way to apply $P^{-1}$ several times? 
+    \item How to we integrate it in the existing codebase?
+\end{itemize}
