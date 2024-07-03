@@ -47,18 +47,32 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=SGD",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
             "--SGD_lr=0.1",
             "--SGD_momentum=0.9",
         ]
-        for equation in ["poisson", "heat"]
+        for equation, condition in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck", "isotropic_gaussian"),
+        ]
     ],
     # train with Adam
-    [
-        "--num_steps=3",
-        "--optimizer=Adam",
-        "--Adam_lr=0.01",
-        "--Adam_beta1=0.8",
-        "--Adam_beta2=0.99",
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=Adam",
+            "--Adam_lr=0.01",
+            "--Adam_beta1=0.8",
+            "--Adam_beta2=0.99",
+            f"--equation={equation}",
+            f"--boundary_condition={condition}",
+        ]
+        for equation, condition in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck", "isotropic_gaussian"),
+        ]
     ],
     # train with LBFGS
     *[
@@ -66,8 +80,13 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=LBFGS",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
         ]
-        for equation in ["poisson", "heat"]
+        for (equation, condition) in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck", "isotropic_gaussian"),
+        ]
     ],
     # train with HessianFree
     *[
@@ -75,8 +94,13 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=HessianFree",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
         ]
-        for equation in ["poisson", "heat"]
+        for (equation, condition) in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck", "isotropic_gaussian"),
+        ]
     ],
     # train with HessianFreeCached
     *[
@@ -128,6 +152,7 @@ ARGS = [
             (2, "poisson", "cos_sum"),
             (1, "heat", "sin_product"),
             (1, "heat", "sin_sum"),
+            (1, "fokker-planck", "isotropic_gaussian"),
         ]
     ],
     # train with KFAC+momentum
