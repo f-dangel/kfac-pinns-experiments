@@ -15,13 +15,19 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=ENGD",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
             "--ENGD_ema_factor=0.99",
             "--ENGD_damping=0.0001",
             "--ENGD_lr=0.1",
             f"--ENGD_approximation={approximation}",
         ]
-        for equation, approximation in product(
-            ["poisson", "heat"], ["full", "per_layer", "diagonal"]
+        for (equation, condition), approximation in product(
+            [
+                ("poisson", "sin_product"),
+                ("heat", "sin_product"),
+                ("fokker-planck-isotropic", "gaussian"),
+            ],
+            ["full", "per_layer", "diagonal"],
         )
     ],
     # train with KFAC
@@ -54,7 +60,7 @@ ARGS = [
         for equation, condition in [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
-            ("fokker-planck", "isotropic_gaussian"),
+            ("fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with Adam
@@ -71,7 +77,7 @@ ARGS = [
         for equation, condition in [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
-            ("fokker-planck", "isotropic_gaussian"),
+            ("fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with LBFGS
@@ -85,7 +91,7 @@ ARGS = [
         for (equation, condition) in [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
-            ("fokker-planck", "isotropic_gaussian"),
+            ("fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with HessianFree
@@ -99,7 +105,7 @@ ARGS = [
         for (equation, condition) in [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
-            ("fokker-planck", "isotropic_gaussian"),
+            ("fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with HessianFreeCached
@@ -161,7 +167,7 @@ ARGS = [
             (2, "poisson", "cos_sum"),
             (1, "heat", "sin_product"),
             (1, "heat", "sin_sum"),
-            (1, "fokker-planck", "isotropic_gaussian"),
+            (1, "fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with KFAC+momentum

@@ -1,23 +1,10 @@
 """Implements functionality to support solving the Fokker-Planck equation."""
 
-from math import sqrt
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from einops import einsum
 from matplotlib import pyplot as plt
-from torch import (
-    Tensor,
-    cat,
-    eye,
-    linspace,
-    meshgrid,
-    no_grad,
-    ones,
-    stack,
-    zeros,
-    zeros_like,
-)
-from torch.distributions.multivariate_normal import MultivariateNormal
+from torch import Tensor, cat, linspace, meshgrid, no_grad, ones, stack
 from torch.nn import Module
 from tueplots import bundles
 
@@ -25,6 +12,7 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
 )
+from kfac_pinns_exp.fokker_planck_isotropic_equation import p_isotropic_gaussian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.manual_differentiation import manual_forward
 from kfac_pinns_exp.plot_utils import create_animation
@@ -169,69 +157,6 @@ def evaluate_boundary_loss(
     return 0.5 * (residual**2).mean(), residual, intermediates
 
 
-def mu_isotropic_gaussian(x: Tensor) -> Tensor:
-    """Vector field for isotropic Gaussian case.
-
-    Args:
-        x: Un-batched input of shape `(1 + dim_Omega)` containing time and spatial
-            coordinates, or batched input of shape `(batch_size, 1 + dim_Omega)`.
-
-    Returns:
-        The vector field as tensor of shape `(dim_Omega)`, or `(batch_size, dim_Omega)`
-        if `x` is batched.
-    """
-    dim = x.shape[-1]
-    _, spatial = x.split([1, dim - 1], dim=-1)
-    return -0.5 * spatial
-
-
-def sigma_isotropic_gaussian(X: Tensor) -> Tensor:
-    """Diffusivity matrix for isotropic Gaussian case.
-
-    Args:
-        X: Batched input of shape `(batch_size, 1 + dim_Omega)` containing time and
-            spatial coordinates.
-
-    Returns:
-        The diffusivity matrix as tensor of shape `(batch_size, dim_Omega, dim_Omega)`.
-    """
-    (batch_size, dim) = X.shape
-    dim_Omega = dim - 1
-    return (
-        sqrt(2) * eye(dim_Omega, dtype=X.dtype, device=X.device).unsqueeze(0)
-    ).expand(batch_size, dim_Omega, dim_Omega)
-
-
-def p_isotropic_gaussian(X: Tensor) -> Tensor:
-    """Isotropic Gaussian solution to the Fokker-Planck equation.
-
-    Args:
-        X: Batched quadrature points of shape `(N, d_Omega + 1)`.
-
-    Returns:
-        The function values as tensor of shape `(N, 1)`.
-    """
-    exp_t = (-X[:, 0]).exp()
-    covariance = exp_t + 2 * (1 - exp_t)  # [batch_size]
-
-    output = zeros_like(covariance)  # [batch_size]
-
-    batch_size, d = X.shape
-    d -= 1
-
-    # TODO Implement more efficiently
-    # (using torch.distributions.independent.Independent)
-    mean = zeros(d, device=X.device, dtype=X.dtype)
-    identity = eye(d, device=X.device, dtype=X.dtype)
-
-    for n in range(batch_size):
-        dist = MultivariateNormal(mean, covariance[n] * identity)
-        spatial_n = X[n, 1:]
-        output[n] = dist.log_prob(spatial_n).exp()
-
-    return output.unsqueeze(-1)
-
-
 @no_grad()
 def plot_solution(
     condition: str,
@@ -245,7 +170,7 @@ def plot_solution(
 
     Args:
         condition: String describing the boundary conditions of the PDE. Can be
-            `'isotropic_gaussian'`.
+            `'gaussian'`.
         dim_Omega: The dimension of the domain Omega. Can be `1` or `2`.
         model: The neural network model representing the learned solution.
         savepath: The path to save the plot.
@@ -255,7 +180,7 @@ def plot_solution(
     Raises:
         ValueError: If `dim_Omega` is not `1` or `2`.
     """
-    u = {"isotropic_gaussian": p_isotropic_gaussian}[condition]
+    u = {"gaussian": p_isotropic_gaussian}[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
     imshow_kwargs = {

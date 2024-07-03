@@ -32,7 +32,12 @@ from torch import (
 from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
 
-from kfac_pinns_exp import fokker_planck_equation, heat_equation, poisson_equation
+from kfac_pinns_exp import (
+    fokker_planck_equation,
+    fokker_planck_isotropic_equation,
+    heat_equation,
+    poisson_equation,
+)
 from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
 from kfac_pinns_exp.optim.hessianfree_cached import HessianFreeCached
@@ -54,7 +59,7 @@ SUPPORTED_OPTIMIZERS = {
     "HessianFree",
     "HessianFreeCached",
 }
-SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck"}
+SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck-isotropic"}
 SUPPORTED_MODELS = {
     "mlp-tanh-64",
     "mlp-tanh-64-48-32-16",
@@ -68,9 +73,8 @@ SUPPORTED_BOUNDARY_CONDITIONS = {
     "u_weinan",
     "u_weinan_norm",
     "sin_sum",
-    "isotropic_gaussian",
+    "gaussian",
 }
-
 SOLUTIONS = {
     "poisson": {
         "sin_product": poisson_equation.u_sin_product,
@@ -82,27 +86,23 @@ SOLUTIONS = {
         "sin_product": heat_equation.u_sin_product,
         "sin_sum": heat_equation.u_sin_sum,
     },
-    "fokker-planck": {
-        "isotropic_gaussian": fokker_planck_equation.p_isotropic_gaussian,
+    "fokker-planck-isotropic": {
+        "gaussian": fokker_planck_equation.p_isotropic_gaussian,
     },
 }
-INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS = {
-    "poisson": (
-        poisson_equation.evaluate_interior_loss,
-        poisson_equation.evaluate_boundary_loss,
+INTERIOR_LOSS_EVALUATORS = {
+    "poisson": poisson_equation.evaluate_interior_loss,
+    "heat": heat_equation.evaluate_interior_loss,
+    "fokker-planck-isotropic": partial(
+        fokker_planck_equation.evaluate_interior_loss,
+        sigma=fokker_planck_isotropic_equation.sigma_isotropic,
+        mu=fokker_planck_isotropic_equation.mu_isotropic,
     ),
-    "heat": (
-        heat_equation.evaluate_interior_loss,
-        heat_equation.evaluate_boundary_loss,
-    ),
-    "fokker-planck": (
-        partial(
-            fokker_planck_equation.evaluate_interior_loss,
-            sigma=fokker_planck_equation.sigma_isotropic_gaussian,
-            mu=fokker_planck_equation.mu_isotropic_gaussian,
-        ),
-        fokker_planck_equation.evaluate_boundary_loss,
-    ),
+}
+BOUNDARY_LOSS_EVALUATORS = {
+    "poisson": poisson_equation.evaluate_boundary_loss,
+    "heat": heat_equation.evaluate_boundary_loss,
+    "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
 }
 
 
@@ -271,7 +271,7 @@ def set_up_layers(model: str, equation: str, dim_Omega: int) -> List[Module]:
     in_dim = {
         "poisson": dim_Omega,
         "heat": dim_Omega + 1,
-        "fokker-planck": dim_Omega + 1,
+        "fokker-planck-isotropic": dim_Omega + 1,
     }[equation]
     if model == "mlp-tanh-64":
         layers = [
@@ -358,11 +358,11 @@ def create_interior_data(
     dim = {
         "poisson": dim_Omega,
         "heat": dim_Omega + 1,
-        "fokker-planck": dim_Omega + 1,
+        "fokker-planck-isotropic": dim_Omega + 1,
     }[equation]
 
     # create inputs
-    if equation == "fokker-planck" and condition == "isotropic_gaussian":
+    if equation == "fokker-planck-isotropic" and condition == "gaussian":
         t = rand(num_data, 1)
         spatial = 10 * rand(num_data, dim_Omega) - 5
         X = cat([t, spatial], dim=1)
@@ -390,8 +390,8 @@ def create_interior_data(
             "sin_product",
             "sin_sum",
         }
-        or equation == "fokker-planck"
-        and condition == "isotropic_gaussian"
+        or equation == "fokker-planck-isotropic"
+        and condition == "gaussian"
     ):
         y = zeros(num_data, 1)
     else:
@@ -440,7 +440,7 @@ def create_condition_data(
         # initial value condition
         X_dOmega2 = heat_equation.unit_square_at_start(num_data // 2, dim_Omega)
         X_dOmega = cat([X_dOmega1, X_dOmega2])
-    elif equation == "fokker-planck" and condition == "isotropic_gaussian":
+    elif equation == "fokker-planck-isotropic" and condition == "gaussian":
         X_no_t = 10 * rand(num_data, dim_Omega) - 5
         t = zeros(num_data, 1)
         X_dOmega = cat([t, X_no_t], dim=1)
@@ -563,9 +563,8 @@ def main():  # noqa: C901
         wandb.init(config=config)
 
     # functions used to evaluate the interior and boundary/condition losses
-    eval_interior_loss, eval_boundary_loss = INTERIOR_AND_BOUNDARY_LOSS_EVALUATORS[
-        equation
-    ]
+    eval_interior_loss = INTERIOR_LOSS_EVALUATORS[equation]
+    eval_boundary_loss = BOUNDARY_LOSS_EVALUATORS[equation]
 
     # TRAINING
     logging_trigger = LoggingTrigger(args.num_steps, args.max_logs, args.num_seconds)
@@ -740,7 +739,7 @@ def main():  # noqa: C901
                 plot_fn = {
                     "poisson": poisson_equation.plot_solution,
                     "heat": heat_equation.plot_solution,
-                    "fokker-planck": fokker_planck_equation.plot_solution,
+                    "fokker-planck-isotropic": fokker_planck_equation.plot_solution,
                 }[equation]
                 plot_fn(
                     condition,

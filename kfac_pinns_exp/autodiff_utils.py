@@ -3,9 +3,11 @@
 from typing import Callable, List, Optional, Tuple, Union
 
 from einops import einsum, rearrange
-from torch import Tensor, cat
+from torch import Tensor, cat, ones
 from torch.func import functional_call, grad, hessian, jacrev, vmap
 from torch.nn import Module, Parameter
+
+from kfac_pinns_exp import fokker_planck_isotropic_equation
 
 
 def autograd_input_divergence(
@@ -281,12 +283,57 @@ def autograd_gram_grads(
 
         return jacobian - laplacian / 4
 
+    def fokker_planck_isotropic_pde_operator(x: Tensor, *params: Parameter) -> Tensor:
+        """Evaluate the isotropic FP equation's differential operator.
+
+        Args:
+            x: Un-batched 1d input.
+            params: The parameters forming the block of the Gramian in same order as
+                supplied in `param_names`.
+
+        Returns:
+            The isotropic FP operator, i.e.
+            `∂_t f(t, x) + divₓ(f(t, x) * μ(t, x)) - 0.5 * Tr( σσᵀ ∇²ₓ f(t, x) )
+            = div( f(t, x) * (1, μ(t, x)) ) - 0.5 * Tr( σσᵀ ∇²ₓ f(t, x) )`.
+        """
+
+        def p_times_mu(x: Tensor, *params: Parameter) -> Tensor:
+            """Compute the product between the probability density and the vector field.
+
+            Args:
+                x: Un-batched 1d input.
+                params: The parameters forming the block of the Gramian in same order as
+                    supplied in `param_names`.
+
+            Returns:
+                The product between the probability density and the vector field.
+                Has the same shape as `x`.
+            """
+            p = f(x, *params)
+            mu = fokker_planck_isotropic_equation.mu_isotropic(x)
+            augment = ones(1, dtype=p.dtype, device=p.device)
+            return p * cat([augment, mu])
+
+        jacobian_p_times_mu = jacrev(p_times_mu, argnums=0)
+        dp_dt_plus_div_p_times_mu = jacobian_p_times_mu(x, *params).trace()
+
+        hess_f = hessian(f, argnums=0)  # (x, θ) → ∇²_{(t, x)} f((t, x), θ)
+        sigma = fokker_planck_isotropic_equation.sigma_isotropic(
+            x.unsqueeze(0)
+        ).squeeze(0)
+        hess = hess_f(x, *params)[1:][:, 1:]
+        tr_sigma_outer_hess = einsum(sigma, sigma, hess, "i j, k j, k i->")
+
+        return dp_dt_plus_div_p_times_mu - 0.5 * tr_sigma_outer_hess
+
     # function that will be differentiated w.r.t. the parameters
     func = {
         "poisson_interior": poisson_pde_operator,
         "heat_interior": heat_pde_operator,
+        "fokker-planck-isotropic_interior": fokker_planck_isotropic_pde_operator,
         "poisson_boundary": f,
         "heat_boundary": f,
+        "fokker-planck-isotropic_boundary": f,
     }[loss_type]
     argnums = tuple(range(1, len(param_names) + 1))
 
