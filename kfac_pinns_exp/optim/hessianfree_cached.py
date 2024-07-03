@@ -4,7 +4,7 @@ The implementation is at https://github.com/ltatzel/PyTorchHessianFree.
 """
 
 from argparse import ArgumentParser, Namespace
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
 from hessianfree.optimizer import HessianFree
 from torch import Tensor, cat
@@ -207,8 +207,6 @@ class HessianFreeCached(HessianFree):
         """Perform a single optimization step.
 
         Args:
-            equation: A string specifying the PDE.
-            layers: A list of PyTorch modules representing the neural network.
             X_Omega: The input data for the interior loss.
             y_Omega: The target data for the interior loss.
             X_dOmega: The input data for the boundary loss.
