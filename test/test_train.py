@@ -111,6 +111,15 @@ ARGS = [
         ]
         for equation in ["poisson", "heat"]
     ],
+    # train with HessianFreeCached
+    *[
+        [
+            "--num_steps=3",
+            "--optimizer=HessianFreeCached",
+            f"--equation={equation}",
+        ]
+        for equation in ["poisson", "heat"]
+    ],
     # train with a deeper net
     *[
         [

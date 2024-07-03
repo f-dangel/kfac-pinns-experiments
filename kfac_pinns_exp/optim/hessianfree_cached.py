@@ -10,10 +10,7 @@ from hessianfree.optimizer import HessianFree
 from torch import Tensor, cat
 from torch.nn import Linear, Module
 
-from kfac_pinns_exp.linops import (
-    BoundaryGramianLinearOperator,
-    InteriorGramianLinearOperator,
-)
+from kfac_pinns_exp.linops import GramianLinearOperator
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 
 
@@ -218,11 +215,11 @@ class HessianFreeCached(HessianFree):
         Returns:
             The loss after the optimization step.
         """
-        linop_interior = InteriorGramianLinearOperator(
-            self.equation, self.layers, X_Omega, y_Omega
+        linop_interior = GramianLinearOperator(
+            self.equation, self.layers, X_Omega, y_Omega, "interior"
         )
-        linop_boundary = BoundaryGramianLinearOperator(
-            self.equation, self.layers, X_dOmega, y_dOmega
+        linop_boundary = GramianLinearOperator(
+            self.equation, self.layers, X_dOmega, y_dOmega, "boundary"
         )
         grad = cat(
             [

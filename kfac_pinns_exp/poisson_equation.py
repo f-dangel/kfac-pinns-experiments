@@ -24,7 +24,7 @@ from torch import (
 from torch import sum as torch_sum
 from torch import zeros
 from torch.autograd import grad
-from torch.nn import Module
+from torch.nn import Linear, Module
 from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_hessian
@@ -298,97 +298,34 @@ def evaluate_interior_loss_and_kfac(
         )
     kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
-    # Compute the forward Laplacian and all the intermediates
-    loss, residual, intermediates = evaluate_interior_loss(layers, X, y)
-
-    ###############################################################################
-    #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
-    for layer_idx, (A, _) in kfacs.items():
-        layer_in = intermediates[layer_idx]
-        # batch_size x d_in
-        forward = layer_in["forward"]
-        # batch_size x d_0 x d_in
-        directional_gradients = layer_in["directional_gradients"]
-        # batch_size x d_in
-        laplacian = layer_in["laplacian"]
-        # batch_size x (d_0 + 2) x (d_in + 1)
-        T = cat(
-            [
-                bias_augmentation(forward.detach(), 1).unsqueeze(1),
-                bias_augmentation(directional_gradients.detach(), 0),
-                bias_augmentation(laplacian.detach(), 0).unsqueeze(1),
-            ],
-            dim=1,
-        )
-        if kfac_approx == "expand":
-            T = rearrange(T, "batch d_0 d_in -> (batch d_0) d_in")
-        else:  # KFAC-reduce
-            T = reduce(T, "batch d_0 d_in -> batch d_in", "mean")
-        A.add_(T.T @ T, alpha=1 / T.shape[0])
-
-    if ggn_type == "forward-only":
-        # set all grad-output Kronecker factors to identity, no backward pass required
-        for _, B in kfacs.values():
-            B.fill_diagonal_(1.0)
-        return loss, kfacs
-
-    ###############################################################################
-    #                   COMPUTE OUTPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
-    error = get_backpropagated_error(residual, ggn_type)
-
-    # compute the gradient w.r.t. all relevant layer outputs
-    outputs = []
-    for layer_idx in kfacs:
-        layer_out = intermediates[layer_idx + 1]
-        outputs.extend(
-            [
-                layer_out["forward"],
-                layer_out["directional_gradients"],
-                layer_out["laplacian"],
-            ]
-        )
-    # We used the residual in the loss and don't want its graph to be free
-    # Therefore, set `retain_graph=True`.
-    grad_outputs = list(
-        grad(
-            residual,
-            outputs,
-            grad_outputs=error,
-            retain_graph=True,
-            # only the Laplacian of the last layer output is used, hence the
-            # directional gradients and forward outputs of the last layer are
-            # not used. Hence we must set this flag to true and also enable
-            # `materialize_grads` which sets these gradients to explicit zeros.
-            allow_unused=True,
-            materialize_grads=True,
+    loss, layer_inputs, layer_grad_outputs = (
+        evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
+            layers, X, y, ggn_type
         )
     )
 
-    # concatenate gradients w.r.t. all layer outputs into grad_T and form B
-    batch_size = X.shape[0]
-    for _, B in kfacs.values():
-        # batch_size x d_out
-        grad_forward = grad_outputs.pop(0)
-        # batch_size x d_0 x d_out
-        grad_directional_gradients = grad_outputs.pop(0)
-        # batch_size x d_out
-        grad_laplacian = grad_outputs.pop(0)
-        # batch_size x (d_0 + 2) x d_out
-        grad_T = cat(
-            [
-                grad_forward.detach().unsqueeze(1),
-                grad_directional_gradients.detach(),
-                grad_laplacian.detach().unsqueeze(1),
-            ],
-            dim=1,
-        )
+    # Compute input-based Kronecker factors
+    for layer_idx, (A, _) in kfacs.items():
+        Z = layer_inputs.pop(layer_idx)
         if kfac_approx == "expand":
-            grad_T = rearrange(grad_T, "batch d_0 d_out -> (batch d_0) d_out")
+            Z = rearrange(Z, "batch d_0 d_in -> (batch d_0) d_in")
         else:  # KFAC-reduce
-            grad_T = reduce(grad_T, "batch d_0 d_out -> batch d_out", "sum")
-        B.add_(grad_T.T @ grad_T, alpha=batch_size)
+            Z = reduce(Z, "batch d_0 d_in -> batch d_in", "mean")
+        A.add_(Z.T @ Z, alpha=1 / Z.shape[0])
+
+    # Compute output-based Kronecker factor
+    batch_size = X.shape[0]
+    for layer_idx, (_, B) in kfacs.items():
+        if ggn_type == "forward-only":
+            # set all grad-output Kronecker factors to identity
+            B.fill_diagonal_(1.0)
+        else:
+            G = layer_grad_outputs.pop(layer_idx)
+            if kfac_approx == "expand":
+                G = rearrange(G, "batch d_0 d_out -> (batch d_0) d_out")
+            else:  # KFAC-reduce
+                G = reduce(G, "batch d_0 d_out -> batch d_out", "sum")
+            B.add_(G.T @ G, alpha=batch_size)
 
     return loss, kfacs
 
@@ -425,39 +362,28 @@ def evaluate_boundary_loss_and_kfac(
     kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
 
     # Compute the NN prediction, boundary loss, and all intermediates
-    loss, residual, intermediates = evaluate_boundary_loss(layers, X, y)
+    loss, layer_inputs, layer_grad_outputs = (
+        evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
+            layers, X, y, ggn_type
+        )
+    )
 
-    ###############################################################################
-    #                    COMPUTE INPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
+    # Compute input-based Kronecker factors
     for layer_idx, (A, _) in kfacs.items():
         # no weight sharing here, hence KFAC expand and reduce are identical
-        x = bias_augmentation(intermediates[layer_idx], 1).detach()
-        A.add_(x.T @ x, alpha=1 / x.shape[0])
+        z = layer_inputs.pop(layer_idx)
+        A.add_(z.T @ z, alpha=1 / z.shape[0])
 
-    if ggn_type == "forward-only":
-        # set all grad-output Kronecker factors to identity, no backward pass required
-        for _, B in kfacs.values():
-            B.fill_diagonal_(1.0)
-        return loss, kfacs
-
-    ###############################################################################
-    #                   COMPUTE OUTPUT-BASED KRONECKER FACTORS                    #
-    ###############################################################################
-    error = get_backpropagated_error(residual, ggn_type)
-
-    # compute the gradient w.r.t. all relevant layer outputs
-    outputs = [intermediates[layer_idx + 1] for layer_idx in kfacs]
-    # We used the residual in the loss and don't want its graph to be free
-    # Therefore, set `retain_graph=True`.
-    grad_outputs = list(grad(residual, outputs, grad_outputs=error, retain_graph=True))
-
-    # compute the grad-output covariance for each layer
+    # Compute output-based Kronecker factors
     batch_size = X.shape[0]
-    for _, B in kfacs.values():
-        grad_out = grad_outputs.pop(0).detach()
-        # no weight sharing here, hence KFAC expand and reduce are identical
-        B.add_(grad_out.T @ grad_out, alpha=batch_size)
+    for layer_idx, (_, B) in kfacs.items():
+        if ggn_type == "forward-only":
+            # set all grad-output Kronecker factors to identity
+            B.fill_diagonal_(1.0)
+        else:
+            g = layer_grad_outputs.pop(layer_idx)
+            # no weight sharing here, hence KFAC expand and reduce are identical
+            B.add_(g.T @ g, alpha=batch_size)
 
     return loss, kfacs
 
@@ -571,3 +497,152 @@ def plot_solution(
         raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")
 
     plt.close(fig=fig)
+
+
+def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
+    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str
+) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+    """Compute the interior loss, and inputs+output gradients of Linear layers.
+
+    Args:
+        layers: The list of layers that form the neural network.
+        X: The input data.
+        y: The target data.
+        ggn_type: The type of GGN to use. Can be `'type-2'`, `'empirical'`, or
+            `'forward-only'`.
+
+    Returns:
+        A tuple containing the loss, the inputs of the Linear layers, and the output
+        gradients of the Linear layers. The layer inputs and output gradients are each
+        combined into a matrix, and layer inputs are augmented with ones or zeros to
+        account for the bias term.
+    """
+    layer_idxs = [
+        idx
+        for idx, layer in enumerate(layers)
+        if (
+            isinstance(layer, Linear)
+            and layer.bias is not None
+            and layer.bias.requires_grad
+            and layer.weight.requires_grad
+        )
+    ]
+    loss, residual, intermediates = evaluate_interior_loss(layers, X, y)
+
+    layer_inputs = {}
+    # layer inputs
+    for idx in layer_idxs:
+        # batch_size x d_in
+        forward = intermediates[idx]["forward"]
+        # batch_size x d_0 x d_in
+        directional_gradients = intermediates[idx]["directional_gradients"]
+        # batch_size x d_in
+        laplacian = intermediates[idx]["laplacian"]
+        # batch_size x (d_0 + 2) x (d_in + 1)
+        layer_inputs[idx] = cat(  # noqa: B909
+            [
+                bias_augmentation(forward.detach(), 1).unsqueeze(1),
+                bias_augmentation(directional_gradients.detach(), 0),
+                bias_augmentation(laplacian.detach(), 0).unsqueeze(1),
+            ],
+            dim=1,
+        )
+
+    if ggn_type == "forward-only":
+        return loss, layer_inputs, {}
+
+    # compute all layer output gradients
+    layer_outputs = sum(
+        (
+            [
+                intermediates[idx + 1]["forward"],
+                intermediates[idx + 1]["directional_gradients"],
+                intermediates[idx + 1]["laplacian"],
+            ]
+            for idx in layer_idxs
+        ),
+        [],
+    )
+    # compute the gradient w.r.t. all relevant layer outputs
+    error = get_backpropagated_error(residual, ggn_type)
+    grad_outputs = list(
+        grad(
+            residual,
+            layer_outputs,
+            grad_outputs=error,
+            # We used the residual in the loss and don't want its graph to be free
+            # Therefore, set `retain_graph=True`.
+            retain_graph=True,
+            # only the Laplacian of the last layer output is used, hence the
+            # directional gradients and forward outputs of the last layer are
+            # not used. Hence we must set this flag to true and also enable
+            # `materialize_grads` which sets these gradients to explicit zeros.
+            allow_unused=True,
+            materialize_grads=True,
+        )
+    )
+
+    # collect all layer output gradients
+    layer_grad_outputs = {}
+    for idx in layer_idxs:
+        # batch_size x d_out
+        grad_forward = grad_outputs.pop(0)
+        # batch_size x d_0 x d_out
+        grad_directional_gradients = grad_outputs.pop(0)
+        # batch_size x d_out
+        grad_laplacian = grad_outputs.pop(0)
+        # batch_size x (d_0 + 2) x d_out
+        layer_grad_outputs[idx] = cat(  # noqa: B909
+            [
+                grad_forward.detach().unsqueeze(1),
+                grad_directional_gradients.detach(),
+                grad_laplacian.detach().unsqueeze(1),
+            ],
+            dim=1,
+        )
+
+    return loss, layer_inputs, layer_grad_outputs
+
+
+def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
+    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str
+) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+    """Compute the boundary loss, and inputs+output gradients of Linear layers.
+
+    Args:
+        layers: The list of layers that form the neural network.
+        X: The input data.
+        y: The target data.
+        ggn_type: The type of GGN to use. Can be `'type-2'`, `'empirical'`, or
+            `'forward-only'`.
+
+    Returns:
+        A tuple containing the loss, the inputs of the Linear layers, and the output
+        gradients of the Linear layers. The layer inputs are augmented with ones to
+        account for the bias term.
+    """
+    layer_idxs = [
+        idx
+        for idx, layer in enumerate(layers)
+        if (
+            isinstance(layer, Linear)
+            and layer.bias is not None
+            and layer.bias.requires_grad
+            and layer.weight.requires_grad
+        )
+    ]
+    loss, residual, intermediates = evaluate_boundary_loss(layers, X, y)
+
+    # collect all layer inputs
+    layer_inputs = {idx: bias_augmentation(intermediates[idx], 1) for idx in layer_idxs}
+
+    if ggn_type == "forward-only":
+        return loss, layer_inputs, {}
+
+    # collect all layer output gradients
+    layer_outputs = [intermediates[idx + 1] for idx in layer_idxs]
+    error = get_backpropagated_error(residual, ggn_type)
+    grad_outputs = grad(residual, layer_outputs, grad_outputs=error, retain_graph=True)
+    layer_grad_outputs = {idx: g for g, idx in zip(grad_outputs, layer_idxs)}
+
+    return loss, layer_inputs, layer_grad_outputs

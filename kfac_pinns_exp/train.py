@@ -54,7 +54,7 @@ SUPPORTED_OPTIMIZERS = {
     "HessianFree",
     "HessianFreeCached",
 }
-SUPPORTED_EQUATIONS = ["poisson", "heat", "fokker-planck"]
+SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck"}
 SUPPORTED_MODELS = {
     "mlp-tanh-64",
     "mlp-tanh-64-48-32-16",

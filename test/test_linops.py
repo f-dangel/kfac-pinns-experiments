@@ -7,10 +7,7 @@ from torch import block_diag, manual_seed, rand
 from torch.nn import Linear, Sequential, Tanh
 
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
-from kfac_pinns_exp.linops import (
-    BoundaryGramianLinearOperator,
-    InteriorGramianLinearOperator,
-)
+from kfac_pinns_exp.linops import GramianLinearOperator
 from kfac_pinns_exp.train import create_condition_data, create_interior_data
 
 EQUATIONS = ["poisson", "heat"]
@@ -68,11 +65,9 @@ def test_GramianLinearOperator(equation: str, approximation: str, loss_type: str
     Gv = gramian @ v
 
     # manual
-    linop = {
-        "boundary": BoundaryGramianLinearOperator,
-        "interior": InteriorGramianLinearOperator,
-    }[loss_type]
-    G_linop = linop(equation, layers, X, y, approximation=approximation)
+    G_linop = GramianLinearOperator(
+        equation, layers, X, y, loss_type, approximation=approximation
+    )
     G_linop_v = G_linop @ v
 
     report_nonclose(Gv, G_linop_v)
