@@ -1,7 +1,7 @@
 """Implements linear operators."""
 
 from math import sqrt
-from typing import Dict, List, Tuple
+from typing import List
 
 from einops import einsum
 from torch import Tensor, cat, zeros
@@ -9,8 +9,6 @@ from torch.autograd import grad
 from torch.nn import Linear, Module
 
 from kfac_pinns_exp import heat_equation, poisson_equation
-from kfac_pinns_exp.poisson_equation import get_backpropagated_error
-from kfac_pinns_exp.utils import bias_augmentation
 
 
 class GramianLinearOperator:
