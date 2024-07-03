@@ -2,7 +2,6 @@
 
 from math import sqrt
 from typing import Callable, Dict, List, Optional, Tuple, Union
-from warnings import warn
 
 from einops import einsum
 from matplotlib import pyplot as plt
@@ -19,13 +18,14 @@ from torch import (
     zeros_like,
 )
 from torch.distributions.multivariate_normal import MultivariateNormal
-from torch.nn import Module, Sequential
+from torch.nn import Module
 from tueplots import bundles
 
 from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
 )
+from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.manual_differentiation import manual_forward
 from kfac_pinns_exp.plot_utils import create_animation
 
@@ -48,7 +48,6 @@ def evaluate_interior_loss(
             datum `X[n]` has coordinates `(t, x_1, x_2 , ..., x_dim_Omega)`.
         y: Target for the interior loss. Has shape `(batch_size, 1)`.
         mu: Vector field. Maps an un-batched input `x` to a tensor `mu(x)` of shape
-            `(dim_Omega)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
 
@@ -57,46 +56,82 @@ def evaluate_interior_loss(
         of the computation graph that can be used to compute (approximate) curvature.
 
     Raises:
-        NotImplementedError: If the model is not a PyTorch `Module` or a list of layers.
+        ValueError: If the model is not a PyTorch `Module` or a list of layers.
+        NotImplementedError: If the sigma matrix is not identical for each datum in the
+            batch.
     """
-    if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        warn("Inefficient implementation!")
-        model = Sequential(*model)
-    elif not isinstance(model, Module):
-        raise NotImplementedError
-
-    # compute ∂p/∂t + div(p μ) = div[ p(t, x) (1, μ(t, x))ᵀ ]
-    def p_times_mu(x: Tensor) -> Tensor:
-        """Compute the product between p(t, x) and the augmented μ(t, x).
-
-        Args:
-            x: Un-batched input (time and spatial coordinates).
-
-        Returns:
-            Product of p(t, x) and augmented μ(t, x).
-        """
-        mu_x = mu(x)
-        augment = ones(1, dtype=mu_x.dtype, device=mu_x.device)
-        mu_x_augmented = cat([augment, mu_x])
-        return model(x) * mu_x_augmented
-
-    dp_dt_plus_div_p_times_mu = autograd_input_divergence(p_times_mu, X)
-
-    # compute 1/2 Tr(σ σᵀ ∂²p/∂x²)
-    hessian_X = autograd_input_hessian(model, X)  # [batch_size, d + 1, d + 1]
-    hessian_spatial = hessian_X[:, 1:, 1:]  # [batch_size, d, d]
-
+    batch_size, dim = X.shape
     sigma_X = sigma(X)
     sigma_outer = einsum(sigma_X, sigma_X, "batch i j, batch k j -> batch i k")
-    sigma_outer_hessian = einsum(
-        sigma_outer, hessian_spatial, "batch i k, batch k j -> batch i j"
-    )
-    tr_sigma_outer_hessian = einsum(sigma_outer_hessian, "batch i i -> batch")
+
+    if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
+        # TODO Make sure that sigma_X is identical along batch dimension
+        if not sigma_outer.allclose(
+            sigma_outer[0].unsqueeze(0).expand(batch_size, -1, -1)
+        ):
+            raise NotImplementedError(
+                "Sigma must be identical for each datum in the batch."
+            )
+
+        sigma_outer = sigma_outer[0]
+        intermediates = manual_forward_laplacian(
+            model, X, coordinates=list(range(1, dim)), coefficients=sigma_outer
+        )
+        tr_sigma_outer_hessian = intermediates[-1]["laplacian"]
+
+        # compute div(p μ) = div[ p(t, x) μ(t, x) ] (fixed t) using the product rule
+        dp_dx = intermediates[-1]["directional_gradients"][:, 1:].squeeze(-1)
+        div_mu = autograd_input_divergence(mu, X, coordinates=list(range(1, dim)))
+        mu_X = mu(X)
+        p = intermediates[-1]["forward"]
+
+        div_p_times_mu = (
+            einsum(dp_dx, mu_X, "batch i, batch i -> batch").unsqueeze(-1) + p * div_mu
+        )
+
+        # compute ∂p/∂t + div(p μ)
+        dp_dt = intermediates[-1]["directional_gradients"][:, 0]
+        dp_dt_plus_div_p_times_mu = dp_dt + div_p_times_mu
+
+    elif isinstance(model, Module):
+        # compute div(p μ)
+        def p_times_mu(x: Tensor) -> Tensor:
+            """Compute the product between p(t, x) and the augmented μ(t, x).
+
+            Args:
+                x: Un-batched input (time and spatial coordinates).
+
+            Returns:
+                Product of p(t, x) and augmented μ(t, x).
+            """
+            mu_x = mu(x)
+            augment = ones(1, dtype=mu_x.dtype, device=mu_x.device)
+            mu_x_augmented = cat([augment, mu_x])
+            return model(x) * mu_x_augmented
+
+        dp_dt_plus_div_p_times_mu = autograd_input_divergence(p_times_mu, X)
+
+        # compute Tr(σ σᵀ ∂²p/∂x²)
+        hessian_X = autograd_input_hessian(model, X)  # [batch_size, d + 1, d + 1]
+        hessian_spatial = hessian_X[:, 1:, 1:]  # [batch_size, d, d]
+        sigma_outer_hessian = einsum(
+            sigma_outer, hessian_spatial, "batch i k, batch k j -> batch i j"
+        )
+        tr_sigma_outer_hessian = einsum(
+            sigma_outer_hessian, "batch i i -> batch"
+        ).unsqueeze(-1)
+
+    else:
+        raise ValueError(
+            f"Model must be a PyTorch Module or a list of layers. Got {model}."
+        )
 
     # compute residual and loss
     residual = (dp_dt_plus_div_p_times_mu - 0.5 * tr_sigma_outer_hessian) - y
     loss = 0.5 * (residual**2).mean()
-    return loss, residual, None
+    intermediates = None
+
+    return loss, residual, intermediates
 
 
 def evaluate_boundary_loss(
@@ -137,12 +172,15 @@ def mu_isotropic_gaussian(x: Tensor) -> Tensor:
 
     Args:
         x: Un-batched input of shape `(1 + dim_Omega)` containing time and spatial
-            coordinates.
+            coordinates, or batched input of shape `(batch_size, 1 + dim_Omega)`.
 
     Returns:
-        The vector field as tensor of shape `(dim_Omega)`.
+        The vector field as tensor of shape `(dim_Omega)`, or `(batch_size, dim_Omega)`
+        if `x` is batched.
     """
-    return -0.5 * x[1:]
+    dim = x.shape[-1]
+    _, spatial = x.split([1, dim - 1], dim=-1)
+    return -0.5 * spatial
 
 
 def sigma_isotropic_gaussian(X: Tensor) -> Tensor:
