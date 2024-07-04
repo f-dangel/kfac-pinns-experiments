@@ -36,6 +36,7 @@ ARGS = [
             "--num_steps=10",
             "--optimizer=KFAC",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
             "--KFAC_T_kfac=2",
             "--KFAC_T_inv=4",
             "--KFAC_ema_factor=0.95",
@@ -43,8 +44,13 @@ ARGS = [
             "--KFAC_lr=0.1",
             f"--KFAC_ggn_type={ggn_type}",
         ]
-        for equation, ggn_type in product(
-            ["poisson", "heat"], ["type-2", "empirical", "forward-only"]
+        for (equation, condition), ggn_type in product(
+            [
+                ("poisson", "sin_product"),
+                ("heat", "sin_product"),
+                ("fokker-planck-isotropic", "gaussian"),
+            ],
+            ["type-2", "empirical", "forward-only"],
         )
     ],
     # train with SGD

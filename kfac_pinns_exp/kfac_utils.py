@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Tuple
 
+from einops import rearrange, reduce
 from torch import Tensor, arange, cat, eye, zeros
 from torch.nn import Linear, Module
 
@@ -44,6 +45,73 @@ def check_layers_and_initialize_kfac(
                 A = zeros(d_in + 1, d_in + 1, **kwargs)
                 B = zeros(d_out, d_out, **kwargs)
             kfacs[layer_idx] = (A, B)
+
+    return kfacs
+
+
+def compute_kronecker_factors(
+    layers: List[Module],
+    inputs: Dict[int, Tensor],
+    grad_outputs: Dict[int, Tensor],
+    ggn_type: str,
+    kfac_approx: str,
+) -> Dict[int, Tuple[Tensor, Tensor]]:
+    """Compute KFAC's Kronecker factors from layers inputs and output gradients.
+
+    Args:
+        layers: The list of layers in the neural network.
+        inputs: A dictionary whose keys are the indices of layers for which the
+            Kronecker factors are computed. The value is the input to the layer from
+            the forward pass, arranged into a matrix.
+        grad_outputs: A dictionary from layer indices to gradient of the loss with
+            respect to their output. Can be empty if the GGN type is `'forward-only`.
+        ggn_type: The type of GGN to use. Can be `'forward-only'`, `'type-2'`, or
+            `'empirical'`.
+        kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
+            `'reduce'`.
+
+    Raises:
+        ValueError: If `kfac_approx` is not `'expand'` or `'reduce'`.
+        ValueError: If `ggn_type` is not `'forward-only'`, `'type-2'`, or `'empirical'`.
+
+    Returns:
+        A dictionary whose keys are the layer indices and whose values are the two
+        Kronecker factors.
+    """
+    if kfac_approx not in {"expand", "reduce"}:
+        raise ValueError(
+            f"kfac_approx must be 'expand' or 'reduce'. Got {kfac_approx}."
+        )
+    if ggn_type not in {"forward-only", "type-2", "empirical"}:
+        raise ValueError(
+            "ggn_type must be 'forward-only', 'type-2', or 'empirical'."
+            f" Got {ggn_type}."
+        )
+
+    kfacs = check_layers_and_initialize_kfac(layers, initialize_to_identity=False)
+    (batch_size,) = {Z.shape[0] for Z in inputs.values()}
+
+    # Compute input-based Kronecker factors
+    for layer_idx, (A, _) in kfacs.items():
+        Z = inputs.pop(layer_idx)
+        if kfac_approx == "expand":
+            Z = rearrange(Z, "batch ... d_in -> (batch ...) d_in")
+        else:  # KFAC-reduce
+            Z = reduce(Z, "batch ... d_in -> batch d_in", "mean")
+        A.add_(Z.T @ Z, alpha=1 / Z.shape[0])
+
+    # Compute output-gradient-based Kronecker factor
+    for layer_idx, (_, B) in kfacs.items():
+        if ggn_type == "forward-only":
+            # set all grad-output Kronecker factors to identity
+            B.fill_diagonal_(1.0)
+        else:
+            G = grad_outputs.pop(layer_idx)
+            if kfac_approx == "expand":
+                G = rearrange(G, "batch ... d_out -> (batch ...) d_out")
+            else:  # KFAC-reduce
+                G = reduce(G, "batch ... d_out -> batch d_out", "sum")
+            B.add_(G.T @ G, alpha=batch_size)
 
     return kfacs
 
