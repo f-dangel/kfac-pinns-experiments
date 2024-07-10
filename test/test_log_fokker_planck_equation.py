@@ -95,10 +95,7 @@ def test_evaluate_boundary_loss(dim_Omega: int):
     X_no_t = 10 * rand(batch_size, dim_Omega) - 5
     t = zeros(batch_size, 1)
     X = cat([t, X_no_t], dim=1)
-    print(X)
-    # TODO Remove conversion to double once `q_isotropic_gaussian` is implemented
-    # in a numerically stable fashion
-    y = q_isotropic_gaussian(X.double()).to(X.dtype)
+    y = q_isotropic_gaussian(X)
 
     # compute via Sequential (using autograd)
     loss_auto, residual_auto, _ = evaluate_boundary_loss(model, X, y)
