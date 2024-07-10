@@ -13,6 +13,8 @@ from kfac_pinns_exp import (
     fokker_planck_equation,
     fokker_planck_isotropic_equation,
     heat_equation,
+    log_fokker_planck_equation,
+    log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
 from kfac_pinns_exp.autodiff_utils import autograd_gramian
@@ -114,7 +116,12 @@ class ENGD(Optimizer):
     """
 
     SUPPORTED_APPROXIMATIONS: Set[str] = {"full", "diagonal", "per_layer"}
-    SUPPORTED_EQUATIONS: Set[str] = {"poisson", "heat", "fokker-planck-isotropic"}
+    SUPPORTED_EQUATIONS: Set[str] = {
+        "poisson",
+        "heat",
+        "fokker-planck-isotropic",
+        "log-fokker-planck-isotropic",
+    }
     LOSS_EVALUATORS: Dict[str, Dict[str, Callable]] = {
         "interior": {
             "poisson": poisson_equation.evaluate_interior_loss,
@@ -124,11 +131,17 @@ class ENGD(Optimizer):
                 sigma=fokker_planck_isotropic_equation.sigma_isotropic,
                 mu=fokker_planck_isotropic_equation.mu_isotropic,
             ),
+            "log-fokker-planck-isotropic": partial(
+                log_fokker_planck_equation.evaluate_interior_loss,
+                sigma=log_fokker_planck_isotropic_equation.sigma_isotropic,
+                mu=log_fokker_planck_isotropic_equation.mu_isotropic,
+            ),
         },
         "boundary": {
             "poisson": poisson_equation.evaluate_boundary_loss,
             "heat": heat_equation.evaluate_boundary_loss,
             "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
+            "log-fokker-planck-isotropic": log_fokker_planck_equation.evaluate_boundary_loss,  # noqa: B950
         },
     }
 
@@ -157,8 +170,9 @@ class ENGD(Optimizer):
             initialize_to_identity: Whether to initialize the Gramian to the identity
                 matrix. Default: `False`. If `True`, the Gramian is initialized to
                 identity.
-            equation: PDE to solve. Can be `'poisson'`, `'heat'`, or
-                'fokker-planck-isotropic'. Default: `'poisson'`.
+            equation: PDE to solve. Can be `'poisson'`, `'heat'`,
+                'fokker-planck-isotropic', or 'log-fokker-planck-isotropic'.
+                Default: `'poisson'`.
         """
         self._check_hyperparameters(
             model, lr, damping, ema_factor, approximation, equation
