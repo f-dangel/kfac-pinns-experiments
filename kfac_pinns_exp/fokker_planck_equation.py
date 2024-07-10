@@ -319,12 +319,6 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             # We used the residual in the loss and don't want its graph to be free
             # Therefore, set `retain_graph=True`.
             retain_graph=True,
-            # only the Laplacian of the last layer output is used, hence the
-            # directional gradients and forward outputs of the last layer are
-            # not used. Hence we must set this flag to true and also enable
-            # `materialize_grads` which sets these gradients to explicit zeros.
-            allow_unused=True,
-            materialize_grads=True,
         )
     )
 

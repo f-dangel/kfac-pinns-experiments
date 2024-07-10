@@ -14,6 +14,8 @@ from kfac_pinns_exp import (
     fokker_planck_equation,
     fokker_planck_isotropic_equation,
     heat_equation,
+    log_fokker_planck_equation,
+    log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
 from kfac_pinns_exp.inverse_kronecker_sum import InverseKroneckerSum
@@ -188,6 +190,14 @@ class KFAC(Optimizer):
             ),
             "boundary": fokker_planck_equation.evaluate_boundary_loss_and_kfac,
         },
+        "log-fokker-planck-isotropic": {
+            "interior": partial(
+                log_fokker_planck_equation.evaluate_interior_loss_and_kfac,
+                mu=log_fokker_planck_isotropic_equation.mu_isotropic,
+                sigma=log_fokker_planck_isotropic_equation.sigma_isotropic,
+            ),
+            "boundary": log_fokker_planck_equation.evaluate_boundary_loss_and_kfac,
+        },
     }
     LOSS_EVALUATORS = {
         "poisson": {
@@ -206,10 +216,23 @@ class KFAC(Optimizer):
             ),
             "boundary": fokker_planck_equation.evaluate_boundary_loss,
         },
+        "log-fokker-planck-isotropic": {
+            "interior": partial(
+                log_fokker_planck_equation.evaluate_interior_loss,
+                mu=log_fokker_planck_isotropic_equation.mu_isotropic,
+                sigma=log_fokker_planck_isotropic_equation.sigma_isotropic,
+            ),
+            "boundary": log_fokker_planck_equation.evaluate_boundary_loss,
+        },
     }
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}
     SUPPORTED_GGN_TYPES = {"type-2", "empirical", "forward-only"}
-    SUPPORTED_EQUATIONS = {"poisson", "heat", "fokker-planck-isotropic"}
+    SUPPORTED_EQUATIONS = {
+        "poisson",
+        "heat",
+        "fokker-planck-isotropic",
+        "log-fokker-planck-isotropic",
+    }
     SUPPORTED_DAMPING_HEURISTICS = {"same", "trace-norm"}
 
     def __init__(

@@ -50,6 +50,7 @@ ARGS = [
                 ("poisson", "sin_product"),
                 ("heat", "sin_product"),
                 ("fokker-planck-isotropic", "gaussian"),
+                ("log-fokker-planck-isotropic", "gaussian"),
             ],
             ["type-2", "empirical", "forward-only"],
         )
