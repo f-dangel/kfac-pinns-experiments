@@ -9,13 +9,13 @@ from numpy import cumsum
 from torch import allclose, manual_seed, rand, zeros_like
 from torch.nn import Linear, Sequential, Sigmoid
 
-from kfac_pinns_exp.autodiff_utils import autograd_gramian
 from kfac_pinns_exp.exp04_gramian_contributions.demo_gramian_contributions import (
     CHILDREN,
     get_block_idx,
     get_layer_idx_and_name,
     gramian_term,
 )
+from kfac_pinns_exp.gramian_utils import autograd_gramian
 from kfac_pinns_exp.utils import combine_tiles, separate_into_tiles
 
 HEREDIR = path.dirname(path.abspath(__file__))

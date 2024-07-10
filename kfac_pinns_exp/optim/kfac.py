@@ -1,7 +1,6 @@
 """Implements the KFAC-for-PINNs optimizer."""
 
 from argparse import ArgumentParser, Namespace
-from functools import partial
 from math import sqrt
 from typing import Dict, List, Tuple, Union
 
@@ -183,19 +182,11 @@ class KFAC(Optimizer):
             "boundary": heat_equation.evaluate_boundary_loss_and_kfac,
         },
         "fokker-planck-isotropic": {
-            "interior": partial(
-                fokker_planck_equation.evaluate_interior_loss_and_kfac,
-                mu=fokker_planck_isotropic_equation.mu_isotropic,
-                sigma=fokker_planck_isotropic_equation.sigma_isotropic,
-            ),
+            "interior": fokker_planck_isotropic_equation.evaluate_interior_loss_and_kfac,  # noqa: B950
             "boundary": fokker_planck_equation.evaluate_boundary_loss_and_kfac,
         },
         "log-fokker-planck-isotropic": {
-            "interior": partial(
-                log_fokker_planck_equation.evaluate_interior_loss_and_kfac,
-                mu=log_fokker_planck_isotropic_equation.mu_isotropic,
-                sigma=log_fokker_planck_isotropic_equation.sigma_isotropic,
-            ),
+            "interior": log_fokker_planck_isotropic_equation.evaluate_interior_loss_and_kfac,  # noqa: B950
             "boundary": log_fokker_planck_equation.evaluate_boundary_loss_and_kfac,
         },
     }
@@ -209,19 +200,11 @@ class KFAC(Optimizer):
             "boundary": heat_equation.evaluate_boundary_loss,
         },
         "fokker-planck-isotropic": {
-            "interior": partial(
-                fokker_planck_equation.evaluate_interior_loss,
-                mu=fokker_planck_isotropic_equation.mu_isotropic,
-                sigma=fokker_planck_isotropic_equation.sigma_isotropic,
-            ),
+            "interior": fokker_planck_isotropic_equation.evaluate_interior_loss,
             "boundary": fokker_planck_equation.evaluate_boundary_loss,
         },
         "log-fokker-planck-isotropic": {
-            "interior": partial(
-                log_fokker_planck_equation.evaluate_interior_loss,
-                mu=log_fokker_planck_isotropic_equation.mu_isotropic,
-                sigma=log_fokker_planck_isotropic_equation.sigma_isotropic,
-            ),
+            "interior": log_fokker_planck_isotropic_equation.evaluate_interior_loss,
             "boundary": log_fokker_planck_equation.evaluate_boundary_loss,
         },
     }

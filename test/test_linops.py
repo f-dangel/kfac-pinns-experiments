@@ -6,7 +6,7 @@ from pytest import mark
 from torch import block_diag, manual_seed, rand
 from torch.nn import Linear, Sequential, Tanh
 
-from kfac_pinns_exp.autodiff_utils import autograd_gramian
+from kfac_pinns_exp.gramian_utils import autograd_gramian
 from kfac_pinns_exp.linops import GramianLinearOperator
 from kfac_pinns_exp.train import create_condition_data, create_interior_data
 

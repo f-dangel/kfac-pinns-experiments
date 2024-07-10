@@ -7,11 +7,13 @@ from torch import allclose, cat, manual_seed, rand, zeros, zeros_like
 from torch.autograd import grad
 from torch.nn import Linear, Sequential, Tanh
 
+from kfac_pinns_exp.autodiff_utils import autograd_input_divergence
 from kfac_pinns_exp.fokker_planck_equation import (
     evaluate_boundary_loss,
     evaluate_interior_loss,
 )
 from kfac_pinns_exp.fokker_planck_isotropic_equation import (
+    div_mu_isotropic,
     mu_isotropic,
     p_isotropic_gaussian,
     sigma_isotropic,
@@ -110,3 +112,36 @@ def test_evaluate_boundary_loss(dim_Omega: int):
     for g_auto, g_manual in zip(grad_auto, grad_manual):
         report_nonclose(g_auto, g_manual)
         assert not allclose(g_auto, zeros_like(g_auto))
+
+
+@mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
+def test_div_mu_isotropic(dim_Omega: int):
+    """Compare manual and automatic computation of the vector field divergence.
+
+    Args:
+        dim_Omega: The spatial dimension of the domain.
+    """
+    manual_seed(0)
+
+    # batched
+    batch_size = 20
+    X_no_t = 10 * rand(batch_size, dim_Omega) - 5
+    t = rand(batch_size, 1)
+    X = cat([t, X_no_t], dim=1)
+
+    div_mu_autograd = autograd_input_divergence(
+        mu_isotropic, X, coordinates=list(range(1, dim_Omega + 1))
+    )
+    div_mu_manual = div_mu_isotropic(X)
+    report_nonclose(div_mu_autograd, div_mu_manual)
+
+    # un-batched
+    X_no_t = 10 * rand(dim_Omega) - 5
+    t = rand(1)
+    X = cat([t, X_no_t], dim=0)
+
+    div_mu_autograd = autograd_input_divergence(
+        mu_isotropic, X.unsqueeze(0), coordinates=list(range(1, dim_Omega + 1))
+    ).squeeze(0)
+    div_mu_manual = div_mu_isotropic(X)
+    report_nonclose(div_mu_autograd, div_mu_manual)
