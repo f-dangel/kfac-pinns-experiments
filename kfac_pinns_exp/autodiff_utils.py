@@ -384,7 +384,7 @@ def autograd_gram_grads(
         "poisson_interior": poisson_pde_operator,
         "heat_interior": heat_pde_operator,
         "fokker-planck-isotropic_interior": fokker_planck_isotropic_pde_operator,
-        "log-fokker-planck-isotropic_interior": log_fokker_planck_isotropic_pde_operator,
+        "log-fokker-planck-isotropic_interior": log_fokker_planck_isotropic_pde_operator,  # noqa: B950
         "poisson_boundary": f,
         "heat_boundary": f,
         "fokker-planck-isotropic_boundary": f,

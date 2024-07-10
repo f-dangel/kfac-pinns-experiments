@@ -141,7 +141,7 @@ class ENGD(Optimizer):
             "poisson": poisson_equation.evaluate_boundary_loss,
             "heat": heat_equation.evaluate_boundary_loss,
             "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
-            "log-fokker-planck-isotropic": log_fokker_planck_equation.evaluate_boundary_loss,
+            "log-fokker-planck-isotropic": log_fokker_planck_equation.evaluate_boundary_loss,  # noqa: B950
         },
     }
 
