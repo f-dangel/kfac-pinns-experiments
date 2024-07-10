@@ -1,12 +1,11 @@
 """Implements functionality to solve the Fokker-Planck equation in log-space."""
 
 from typing import Callable, Dict, List, Optional, Tuple, Union
-from warnings import warn
 
 from einops import einsum
 from matplotlib import pyplot as plt
 from torch import Tensor, linspace, meshgrid, no_grad, stack
-from torch.nn import Module, Sequential
+from torch.nn import Module
 from tueplots import bundles
 
 from kfac_pinns_exp import fokker_planck_equation
@@ -15,6 +14,7 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_hessian,
     autograd_input_jacobian,
 )
+from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.log_fokker_planck_isotropic_equation import q_isotropic_gaussian
 from kfac_pinns_exp.plot_utils import create_animation
 
@@ -47,6 +47,8 @@ def evaluate_interior_loss(
 
     Raises:
         ValueError: If the model is not a PyTorch `Module` or a list of layers.
+        NotImplementedError: If the sigma matrix is not identical for each datum in the
+            batch.
     """
     batch_size, dim = X.shape
     sigma_X = sigma(X)
@@ -55,10 +57,25 @@ def evaluate_interior_loss(
     div_mu = autograd_input_divergence(mu, X, coordinates=list(range(1, dim)))
 
     if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        warn("Inefficient implementation")
-        model = Sequential(*model)
+        if not sigma_outer.allclose(
+            sigma_outer[0].unsqueeze(0).expand(batch_size, -1, -1)
+        ):
+            raise NotImplementedError(
+                "Sigma must be identical for each datum in the batch."
+            )
 
-    if isinstance(model, Module):
+        # compute Tr(σ σᵀ ∂²p/∂x²)
+        sigma_outer = sigma_outer[0]
+        intermediates = manual_forward_laplacian(
+            model, X, coordinates=list(range(1, dim)), coefficients=sigma_outer
+        )
+        tr_sigma_outer_hessian = intermediates[-1]["laplacian"]
+
+        # compute first derivatives of q
+        nabla_q = intermediates[-1]["directional_gradients"][:, 1:].squeeze(-1)
+        dq_dt = intermediates[-1]["directional_gradients"][:, 0]
+
+    elif isinstance(model, Module):
         intermediates = None
 
         # compute first derivatives of q
