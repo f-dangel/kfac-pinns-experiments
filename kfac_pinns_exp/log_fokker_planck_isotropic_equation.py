@@ -1,6 +1,6 @@
 """Diffusivity, vector fields, and solutions of an isotropic Fokker-Planck equation."""
 
-from torch import Tensor, linspace, meshgrid
+from torch import Tensor
 
 from kfac_pinns_exp import fokker_planck_isotropic_equation
 

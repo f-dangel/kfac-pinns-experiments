@@ -120,6 +120,12 @@ BOUNDARY_LOSS_EVALUATORS = {
     "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
     "log-fokker-planck-isotropic": log_fokker_planck_equation.evaluate_boundary_loss,
 }
+PLOT_FNS = {
+    "poisson": poisson_equation.plot_solution,
+    "heat": heat_equation.plot_solution,
+    "fokker-planck-isotropic": fokker_planck_equation.plot_solution,
+    "log-fokker-planck-isotropic": log_fokker_planck_equation.plot_solution,
+}
 
 
 def parse_general_args(verbose: bool = False) -> Namespace:
@@ -760,12 +766,7 @@ def main():  # noqa: C901
                     + f" $L_2$ loss: ${latex_float(l2.item())}$"
                 )
                 makedirs(args.plot_dir, exist_ok=True)
-                plot_fn = {
-                    "poisson": poisson_equation.plot_solution,
-                    "heat": heat_equation.plot_solution,
-                    "fokker-planck-isotropic": fokker_planck_equation.plot_solution,
-                    "log-fokker-planck-isotropic": log_fokker_planck_equation.plot_solution,
-                }[equation]
+                plot_fn = PLOT_FNS[equation]
                 plot_fn(
                     condition,
                     dim_Omega,
