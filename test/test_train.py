@@ -26,6 +26,7 @@ ARGS = [
                 ("poisson", "sin_product"),
                 ("heat", "sin_product"),
                 ("fokker-planck-isotropic", "gaussian"),
+                ("log-fokker-planck-isotropic", "gaussian"),
             ],
             ["full", "per_layer", "diagonal"],
         )
