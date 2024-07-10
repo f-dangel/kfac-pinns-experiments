@@ -65,7 +65,7 @@ def evaluate_interior_loss(
 
         # compute first derivatives of q
         jac_q = autograd_input_jacobian(model, X).reshape(batch_size, dim)
-        dq_dt = jac_q[:, 0]
+        dq_dt = jac_q[:, [0]]
         nabla_q = jac_q[:, 1:]
 
         # compute Tr(σ σᵀ ∂²p/∂x²)

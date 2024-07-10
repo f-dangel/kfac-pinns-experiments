@@ -67,6 +67,7 @@ ARGS = [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
             ("fokker-planck-isotropic", "gaussian"),
+            ("log-fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with Adam
@@ -84,6 +85,7 @@ ARGS = [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
             ("fokker-planck-isotropic", "gaussian"),
+            ("log-fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with LBFGS
@@ -98,6 +100,7 @@ ARGS = [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
             ("fokker-planck-isotropic", "gaussian"),
+            ("log-fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with HessianFree
@@ -112,6 +115,7 @@ ARGS = [
             ("poisson", "sin_product"),
             ("heat", "sin_product"),
             ("fokker-planck-isotropic", "gaussian"),
+            ("log-fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with HessianFreeCached
@@ -174,6 +178,7 @@ ARGS = [
             (1, "heat", "sin_product"),
             (1, "heat", "sin_sum"),
             (1, "fokker-planck-isotropic", "gaussian"),
+            (1, "log-fokker-planck-isotropic", "gaussian"),
         ]
     ],
     # train with KFAC+momentum
