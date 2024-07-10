@@ -58,7 +58,6 @@ def evaluate_interior_loss(
     sigma_outer = einsum(sigma_X, sigma_X, "batch i j, batch k j -> batch i k")
 
     if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        # TODO Make sure that sigma_X is identical along batch dimension
         if not sigma_outer.allclose(
             sigma_outer[0].unsqueeze(0).expand(batch_size, -1, -1)
         ):
