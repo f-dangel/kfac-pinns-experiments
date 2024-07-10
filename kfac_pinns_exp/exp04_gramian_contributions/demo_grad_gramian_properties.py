@@ -6,13 +6,13 @@ from typing import List
 from torch import Tensor, allclose, manual_seed, rand, zeros
 from torch.nn import Linear, Module, Parameter, ReLU, Sequential, Sigmoid
 
-from kfac_pinns_exp.autodiff_utils import autograd_gram_grads
 from kfac_pinns_exp.exp04_gramian_contributions.demo_gramian_contributions import (
     CHILDREN,
     get_block_idx,
     get_layer_idx_and_name,
     gram_grads_term,
 )
+from kfac_pinns_exp.gramian_utils import autograd_gram_grads
 
 
 def gram_grad_is_zero(

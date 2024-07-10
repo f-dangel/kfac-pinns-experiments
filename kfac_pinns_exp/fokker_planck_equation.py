@@ -13,7 +13,6 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
 )
-from kfac_pinns_exp.fokker_planck_isotropic_equation import p_isotropic_gaussian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import compute_kronecker_factors
 from kfac_pinns_exp.manual_differentiation import manual_forward
@@ -28,6 +27,7 @@ def evaluate_interior_loss(
     y: Tensor,
     mu: Callable[[Tensor], Tensor],
     sigma: Callable[[Tensor], Tensor],
+    div_mu: Optional[Callable[[Tensor], Tensor]] = None,
 ) -> Tuple[Tensor, Tensor, Union[List[Dict[str, Tensor]], None]]:
     """Evaluate the interior loss.
 
@@ -43,6 +43,10 @@ def evaluate_interior_loss(
             `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
+        div_mu: Function to manually compute the vector field's divergence, i.e.
+             (t, x) ↦ divₓ( μ(t, x) ). Maps a tensor of shape
+            `(batch_size, 1 + dim_Omega)` to a tensor of shape `(batch_size, 1)`. If
+            `None`, the divergence is computed with `autograd`.
 
     Returns:
         The differentiable interior loss, differentiable residual, and intermediates
@@ -73,12 +77,17 @@ def evaluate_interior_loss(
 
         # compute div(p μ) = div[ p(t, x) μ(t, x) ] (fixed t) using the product rule
         dp_dx = intermediates[-1]["directional_gradients"][:, 1:].squeeze(-1)
-        div_mu = autograd_input_divergence(mu, X, coordinates=list(range(1, dim)))
+        div_mu_X = (
+            autograd_input_divergence(mu, X, coordinates=list(range(1, dim)))
+            if div_mu is None
+            else div_mu(X)
+        )
         mu_X = mu(X)
         p = intermediates[-1]["forward"]
 
         div_p_times_mu = (
-            einsum(dp_dx, mu_X, "batch i, batch i -> batch").unsqueeze(-1) + p * div_mu
+            einsum(dp_dx, mu_X, "batch i, batch i -> batch").unsqueeze(-1)
+            + p * div_mu_X
         )
 
         # compute ∂p/∂t + div(p μ)
@@ -166,6 +175,7 @@ def evaluate_interior_loss_and_kfac(
     y: Tensor,
     mu: Callable[[Tensor], Tensor],
     sigma: Callable[[Tensor], Tensor],
+    div_mu: Optional[Callable[[Tensor], Tensor]] = None,
     ggn_type: str = "type-2",
     kfac_approx: str = "expand",
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
@@ -180,6 +190,10 @@ def evaluate_interior_loss_and_kfac(
             `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
+        div_mu: Function to manually compute the vector field's divergence, i.e.
+             (t, x) ↦ divₓ( μ(t, x) ). Maps a tensor of shape
+            `(batch_size, 1 + dim_Omega)` to a tensor of shape `(batch_size, 1)`. If
+            `None`, the divergence is computed with `autograd`. Default: `None`.
         ggn_type: The type of GGN to compute. Can be `'empirical'`, `'type-2'`,
             or `'forward-only'`. Default: `'type-2'`.
         kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
@@ -191,7 +205,7 @@ def evaluate_interior_loss_and_kfac(
     """
     loss, layer_inputs, layer_grad_outputs = (
         evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
-            layers, X, y, ggn_type, mu, sigma
+            layers, X, y, ggn_type, mu, sigma, div_mu
         )
     )
     kfacs = compute_kronecker_factors(
@@ -242,6 +256,7 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
     ggn_type: str,
     mu: Callable[[Tensor], Tensor],
     sigma: Callable[[Tensor], Tensor],
+    div_mu: Optional[Callable[[Tensor], Tensor]],
 ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
     """Compute the interior loss, and inputs+output gradients of Linear layers.
 
@@ -256,6 +271,10 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
+        div_mu: Function to manually compute the vector field's divergence, i.e.
+             (t, x) ↦ divₓ( μ(t, x) ). Maps a tensor of shape
+            `(batch_size, 1 + dim_Omega)` to a tensor of shape `(batch_size, 1)`. If
+            `None`, the divergence is computed with `autograd`.
 
     Returns:
         A tuple containing the loss, the inputs of the Linear layers, and the output
@@ -273,7 +292,9 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             and layer.weight.requires_grad
         )
     ]
-    loss, residual, intermediates = evaluate_interior_loss(layers, X, y, mu, sigma)
+    loss, residual, intermediates = evaluate_interior_loss(
+        layers, X, y, mu, sigma, div_mu=div_mu
+    )
 
     layer_inputs = {}
     # layer inputs
@@ -395,6 +416,7 @@ def plot_solution(
     dim_Omega: int,
     model: Module,
     savepath: str,
+    solutions: Dict[str, Callable[[Tensor], Tensor]],
     title: Optional[str] = None,
     usetex: bool = False,
 ):
@@ -406,13 +428,15 @@ def plot_solution(
         dim_Omega: The dimension of the domain Omega. Can be `1` or `2`.
         model: The neural network model representing the learned solution.
         savepath: The path to save the plot.
+        solutions: A dictionary mapping the name of the solution to the function that
+            computes it.
         title: The title of the plot. Default: None.
         usetex: Whether to use LaTeX for rendering text. Default: `True`.
 
     Raises:
         ValueError: If `dim_Omega` is not `1` or `2`.
     """
-    u = {"gaussian": p_isotropic_gaussian}[condition]
+    u = solutions[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
     imshow_kwargs = {

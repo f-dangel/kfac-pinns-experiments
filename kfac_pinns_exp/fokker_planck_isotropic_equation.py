@@ -1,9 +1,12 @@
 """Diffusivity, vector fields, and solutions of an isotropic Fokker-Planck equation."""
 
+from functools import partial
 from math import sqrt
 
-from torch import Tensor, eye, zeros, zeros_like
+from torch import Tensor, eye, ones, zeros, zeros_like
 from torch.distributions import MultivariateNormal
+
+from kfac_pinns_exp import fokker_planck_equation
 
 
 def mu_isotropic(x: Tensor) -> Tensor:
@@ -17,9 +20,24 @@ def mu_isotropic(x: Tensor) -> Tensor:
         The vector field as tensor of shape `(dim_Omega)`, or `(batch_size, dim_Omega)`
         if `x` is batched.
     """
-    dim = x.shape[-1]
-    _, spatial = x.split([1, dim - 1], dim=-1)
+    dim_Omega = x.shape[-1] - 1
+    _, spatial = x.split([1, dim_Omega], dim=-1)
     return -0.5 * spatial
+
+
+def div_mu_isotropic(x: Tensor) -> Tensor:
+    """Divergence of the isotropic vector field.
+
+    Args:
+        x: Un-batched input of shape `(1 + dim_Omega)` containing time and spatial
+            coordinates, or batched input of shape `(batch_size, 1 + dim_Omega)`.
+
+    Returns:
+        The vector field's divergence as tensor of shape `(1,)`, or `(batch_size, 1)`
+        if `x` is batched.
+    """
+    dim_Omega = x.shape[-1] - 1
+    return -0.5 * dim_Omega * ones(x.shape[:-1] + (1,), dtype=x.dtype, device=x.device)
 
 
 def sigma_isotropic(X: Tensor) -> Tensor:
@@ -67,3 +85,22 @@ def p_isotropic_gaussian(X: Tensor) -> Tensor:
         output[n] = dist.log_prob(spatial_n).exp()
 
     return output.unsqueeze(-1)
+
+
+evaluate_interior_loss = partial(
+    fokker_planck_equation.evaluate_interior_loss,
+    mu=mu_isotropic,
+    sigma=sigma_isotropic,
+    div_mu=div_mu_isotropic,
+)
+
+evaluate_interior_loss_and_kfac = partial(
+    fokker_planck_equation.evaluate_interior_loss_and_kfac,
+    mu=mu_isotropic,
+    sigma=sigma_isotropic,
+    div_mu=div_mu_isotropic,
+)
+
+plot_solution = partial(
+    fokker_planck_equation.plot_solution, solutions={"gaussian": p_isotropic_gaussian}
+)

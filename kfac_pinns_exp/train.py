@@ -94,7 +94,7 @@ SOLUTIONS = {
         "sin_sum": heat_equation.u_sin_sum,
     },
     "fokker-planck-isotropic": {
-        "gaussian": fokker_planck_equation.p_isotropic_gaussian,
+        "gaussian": fokker_planck_isotropic_equation.p_isotropic_gaussian,
     },
     "log-fokker-planck-isotropic": {
         "gaussian": log_fokker_planck_isotropic_equation.q_isotropic_gaussian,
@@ -103,16 +103,8 @@ SOLUTIONS = {
 INTERIOR_LOSS_EVALUATORS = {
     "poisson": poisson_equation.evaluate_interior_loss,
     "heat": heat_equation.evaluate_interior_loss,
-    "fokker-planck-isotropic": partial(
-        fokker_planck_equation.evaluate_interior_loss,
-        sigma=fokker_planck_isotropic_equation.sigma_isotropic,
-        mu=fokker_planck_isotropic_equation.mu_isotropic,
-    ),
-    "log-fokker-planck-isotropic": partial(
-        log_fokker_planck_equation.evaluate_interior_loss,
-        sigma=log_fokker_planck_isotropic_equation.sigma_isotropic,
-        mu=log_fokker_planck_isotropic_equation.mu_isotropic,
-    ),
+    "fokker-planck-isotropic": fokker_planck_isotropic_equation.evaluate_interior_loss,
+    "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
 }
 BOUNDARY_LOSS_EVALUATORS = {
     "poisson": poisson_equation.evaluate_boundary_loss,
@@ -123,8 +115,8 @@ BOUNDARY_LOSS_EVALUATORS = {
 PLOT_FNS = {
     "poisson": poisson_equation.plot_solution,
     "heat": heat_equation.plot_solution,
-    "fokker-planck-isotropic": fokker_planck_equation.plot_solution,
-    "log-fokker-planck-isotropic": log_fokker_planck_equation.plot_solution,
+    "fokker-planck-isotropic": fokker_planck_isotropic_equation.plot_solution,
+    "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.plot_solution,
 }
 
 

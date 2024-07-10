@@ -9,7 +9,7 @@ from torch import Tensor, allclose, autograd, manual_seed, rand, zeros, zeros_li
 from torch.nn import Linear, Module, Parameter, Sequential, Sigmoid
 from torch.utils.hooks import RemovableHandle
 
-from kfac_pinns_exp.autodiff_utils import autograd_gramian
+from kfac_pinns_exp.gramian_utils import autograd_gramian
 from kfac_pinns_exp.hooks_gram_grads_linear import (
     from_grad_input,
     from_hess_input,
