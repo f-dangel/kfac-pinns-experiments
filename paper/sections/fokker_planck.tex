@@ -47,7 +47,7 @@ Note that for every time-point $p(t,\cdot)$ is a probability density on $\mathbb
     p_{\vtheta}(\vx_n^0) - p_0(\vx_n^0)
     \big]^2.
 \end{align*}
-To make sampling tractable, we replace $\mathbb R^d$ by a compactum\footnote{If this is really the smartest way to handle infinite domains is not clear to me, I think it seems rather naive, but I am not familiar enough with the literature.}, say $[-L, L]^d$ for suitable $L>0$. Then we draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$.
+To make sampling tractable, we replace $\mathbb R^d$ by a compactum\footnote{If this is really the smartest way to handle infinite domains is not clear to me, I think it seems rather naive, but I am not familiar enough with the literature.}, say $[-L, L]^d$ for suitable $L>0$. Then we draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$ (in our code, we use $L=5$ for now).
 
 \paragraph{Exact Initial Conditions*}
 We can (and probably should) use a trick to automatically satisfy the initial conditions. To achieve this, we replace the neural network ansatz by 
@@ -56,7 +56,7 @@ We can (and probably should) use a trick to automatically satisfy the initial co
     \mapsto
     t p_\vtheta(t,\vx) + p_0(\vx).
 \end{equation}
-By abuse of notation we again denote this function by $p_\vtheta$. This trick can also be used for the heat equation, of course. It is known in the literature and often facilitates training.
+By abuse of notation we again denote this function by $p_\vtheta$. This trick can also be used for the heat equation, of course. It is known in the literature and often facilitates training. \todo{This is currently difficult for our implementation, because we assume that the ansatz is a single neural network, not a sum. Is the $t$ above intended?}
 
 \paragraph{The Fokker-Planck Equation in Log-Space}
 For numerical stability, transferring this PDE into $\log$-space is commonly employed. The ansatz $q = \log p$ lets us solve \eqref{eq:fokker_planck_abstract} via the \emph{nonlinear} PDE (which is a special case of a Hamilton-Jacobi-Bellman equation) given by
