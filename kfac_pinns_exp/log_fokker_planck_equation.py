@@ -47,8 +47,6 @@ def evaluate_interior_loss(
 
     Raises:
         ValueError: If the model is not a PyTorch `Module` or a list of layers.
-        NotImplementedError: If the sigma matrix is not identical for each datum in the
-            batch.
     """
     batch_size, dim = X.shape
     sigma_X = sigma(X)
@@ -93,6 +91,7 @@ def evaluate_interior_loss(
         + nabla_q_mu
         - 0.5 * norm_sigma_T_nabla_q
         - 0.5 * tr_sigma_outer_hessian
+        - y
     )
     loss = 0.5 * (residual**2).mean()
     return loss, residual, intermediates

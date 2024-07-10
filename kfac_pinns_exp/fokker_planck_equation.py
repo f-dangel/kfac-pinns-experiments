@@ -122,7 +122,7 @@ def evaluate_interior_loss(
         )
 
     # compute residual and loss
-    residual = (dp_dt_plus_div_p_times_mu - 0.5 * tr_sigma_outer_hessian) - y
+    residual = dp_dt_plus_div_p_times_mu - 0.5 * tr_sigma_outer_hessian - y
     loss = 0.5 * (residual**2).mean()
 
     return loss, residual, intermediates
