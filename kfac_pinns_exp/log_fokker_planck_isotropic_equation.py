@@ -3,8 +3,8 @@
 from functools import partial
 from math import sqrt
 
-from torch import Tensor, eye, ones, zeros, zeros_like
-from torch.distributions import MultivariateNormal
+from torch import Tensor, allclose, eye, ones, zeros, zeros_like
+from torch.distributions import Independent, MultivariateNormal, Normal
 
 from kfac_pinns_exp import fokker_planck_equation, log_fokker_planck_equation
 
@@ -66,23 +66,19 @@ def q_isotropic_gaussian(X: Tensor) -> Tensor:
     Returns:
         The function values as tensor of shape `(N, 1)`.
     """
-    exp_t = (-X[:, 0]).exp()
-    covariance = exp_t + 2 * (1 - exp_t)  # [batch_size]
-
-    output = zeros_like(covariance)  # [batch_size]
-
     batch_size, d = X.shape
     d -= 1
 
-    # TODO Implement more efficiently
-    # (using torch.distributions.independent.Independent)
-    mean = zeros(d, device=X.device, dtype=X.dtype)
-    identity = eye(d, device=X.device, dtype=X.dtype)
+    exp_t = (-X[:, 0]).exp()
+    covariance = exp_t + 2 * (1 - exp_t)  # [batch_size]
+    # [batch_size, d]
+    mean = zeros(batch_size, d, device=X.device, dtype=X.dtype)
+    std = covariance.unsqueeze(1).expand(-1, d).sqrt()
 
-    for n in range(batch_size):
-        dist = MultivariateNormal(mean, covariance[n] * identity)
-        spatial_n = X[n, 1:]
-        output[n] = dist.log_prob(spatial_n)
+    # NOTE Normal wants the standard deviation, not the covariance
+    base_dist = Normal(mean, std)
+    dist = Independent(base_dist, 1)
+    output = dist.log_prob(X[:, 1:])
 
     return output.unsqueeze(-1)
 
