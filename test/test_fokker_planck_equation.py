@@ -78,7 +78,6 @@ def test_evaluate_boundary_loss(dim_Omega: int):
         dim_Omega: The spatial dimension of the domain.
     """
     manual_seed(0)
-    dim_Omega = 20
     layers = [
         Linear(dim_Omega + 1, 4),
         Tanh(),
