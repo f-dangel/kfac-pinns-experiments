@@ -7,8 +7,8 @@ from torch.nn import Linear, Sequential, Tanh
 
 from kfac_pinns_exp.gramian_utils import autograd_gramian
 from kfac_pinns_exp.kfac_utils import gramian_basis_to_kfac_basis
+from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss_and_kfac
 from kfac_pinns_exp.poisson_equation import (
-    evaluate_boundary_loss_and_kfac,
     evaluate_interior_loss_and_kfac,
     f_sin_product,
     square_boundary,

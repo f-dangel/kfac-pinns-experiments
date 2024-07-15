@@ -33,10 +33,8 @@ from torch.nn import Linear, Module, Sequential, Tanh
 from torch.optim import LBFGS
 
 from kfac_pinns_exp import (
-    fokker_planck_equation,
     fokker_planck_isotropic_equation,
     heat_equation,
-    log_fokker_planck_equation,
     log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
@@ -48,7 +46,8 @@ from kfac_pinns_exp.parse_utils import (
     check_all_args_parsed,
     parse_known_args_and_remove_from_argv,
 )
-from kfac_pinns_exp.poisson_equation import l2_error, square_boundary
+from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss, l2_error
+from kfac_pinns_exp.poisson_equation import square_boundary
 from kfac_pinns_exp.train_utils import DataLoader, KillTrigger, LoggingTrigger
 from kfac_pinns_exp.utils import latex_float
 
@@ -105,12 +104,6 @@ INTERIOR_LOSS_EVALUATORS = {
     "heat": heat_equation.evaluate_interior_loss,
     "fokker-planck-isotropic": fokker_planck_isotropic_equation.evaluate_interior_loss,
     "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
-}
-BOUNDARY_LOSS_EVALUATORS = {
-    "poisson": poisson_equation.evaluate_boundary_loss,
-    "heat": heat_equation.evaluate_boundary_loss,
-    "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
-    "log-fokker-planck-isotropic": log_fokker_planck_equation.evaluate_boundary_loss,
 }
 PLOT_FNS = {
     "poisson": poisson_equation.plot_solution,
@@ -586,7 +579,7 @@ def main():  # noqa: C901
 
     # functions used to evaluate the interior and boundary/condition losses
     eval_interior_loss = INTERIOR_LOSS_EVALUATORS[equation]
-    eval_boundary_loss = BOUNDARY_LOSS_EVALUATORS[equation]
+    eval_boundary_loss = evaluate_boundary_loss
 
     # TRAINING
     logging_trigger = LoggingTrigger(args.num_steps, args.max_logs, args.num_seconds)

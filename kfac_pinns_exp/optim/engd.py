@@ -9,10 +9,8 @@ from torch.nn import Module
 from torch.optim import Optimizer
 
 from kfac_pinns_exp import (
-    fokker_planck_equation,
     fokker_planck_isotropic_equation,
     heat_equation,
-    log_fokker_planck_equation,
     log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
@@ -22,6 +20,7 @@ from kfac_pinns_exp.optim.line_search import (
     parse_grid_line_search_args,
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
+from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
@@ -129,10 +128,10 @@ class ENGD(Optimizer):
             "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
         },
         "boundary": {
-            "poisson": poisson_equation.evaluate_boundary_loss,
-            "heat": heat_equation.evaluate_boundary_loss,
-            "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
-            "log-fokker-planck-isotropic": log_fokker_planck_equation.evaluate_boundary_loss,  # noqa: B950
+            "poisson": evaluate_boundary_loss,
+            "heat": evaluate_boundary_loss,
+            "fokker-planck-isotropic": evaluate_boundary_loss,
+            "log-fokker-planck-isotropic": evaluate_boundary_loss,
         },
     }
 

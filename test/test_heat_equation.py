@@ -13,14 +13,16 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_jacobian,
 )
 from kfac_pinns_exp.heat_equation import (
-    evaluate_boundary_loss,
-    evaluate_boundary_loss_and_kfac,
     evaluate_interior_loss,
     evaluate_interior_loss_and_kfac,
     square_boundary_random_time,
     u_sin_product,
     u_sin_sum,
     unit_square_at_start,
+)
+from kfac_pinns_exp.pinn_utils import (
+    evaluate_boundary_loss,
+    evaluate_boundary_loss_and_kfac,
 )
 
 DIM_OMEGAS = [1, 3]

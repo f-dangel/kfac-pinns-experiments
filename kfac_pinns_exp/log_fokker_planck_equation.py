@@ -7,7 +7,6 @@ from torch import Tensor, cat
 from torch.autograd import grad
 from torch.nn import Linear, Module
 
-from kfac_pinns_exp import fokker_planck_equation
 from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
@@ -15,7 +14,7 @@ from kfac_pinns_exp.autodiff_utils import (
 )
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import compute_kronecker_factors
-from kfac_pinns_exp.poisson_equation import get_backpropagated_error
+from kfac_pinns_exp.pinn_utils import get_backpropagated_error
 from kfac_pinns_exp.utils import bias_augmentation
 
 
@@ -121,10 +120,6 @@ def evaluate_interior_loss(
     )
     loss = 0.5 * (residual**2).mean()
     return loss, residual, intermediates
-
-
-evaluate_boundary_loss = fokker_planck_equation.evaluate_boundary_loss
-evaluate_boundary_loss_and_kfac = fokker_planck_equation.evaluate_boundary_loss_and_kfac
 
 
 def evaluate_interior_loss_and_kfac(

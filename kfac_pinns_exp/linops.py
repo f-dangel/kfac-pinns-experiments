@@ -9,6 +9,9 @@ from torch.autograd import grad
 from torch.nn import Linear, Module
 
 from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp.pinn_utils import (
+    evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+)
 
 
 class GramianLinearOperator:
@@ -33,11 +36,11 @@ class GramianLinearOperator:
     EVAL_FNS = {
         "poisson": {
             "interior": poisson_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
-            "boundary": poisson_equation.evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
         },
         "heat": {
             "interior": heat_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
-            "boundary": heat_equation.evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
         },
     }
 

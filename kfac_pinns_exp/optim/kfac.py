@@ -10,10 +10,8 @@ from torch.nn import Module
 from torch.optim import Optimizer
 
 from kfac_pinns_exp import (
-    fokker_planck_equation,
     fokker_planck_isotropic_equation,
     heat_equation,
-    log_fokker_planck_equation,
     log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
@@ -25,6 +23,10 @@ from kfac_pinns_exp.optim.line_search import (
     parse_grid_line_search_args,
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
+from kfac_pinns_exp.pinn_utils import (
+    evaluate_boundary_loss,
+    evaluate_boundary_loss_and_kfac,
+)
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
@@ -175,37 +177,37 @@ class KFAC(Optimizer):
     LOSS_AND_KFAC_EVALUATORS = {
         "poisson": {
             "interior": poisson_equation.evaluate_interior_loss_and_kfac,
-            "boundary": poisson_equation.evaluate_boundary_loss_and_kfac,
+            "boundary": evaluate_boundary_loss_and_kfac,
         },
         "heat": {
             "interior": heat_equation.evaluate_interior_loss_and_kfac,
-            "boundary": heat_equation.evaluate_boundary_loss_and_kfac,
+            "boundary": evaluate_boundary_loss_and_kfac,
         },
         "fokker-planck-isotropic": {
             "interior": fokker_planck_isotropic_equation.evaluate_interior_loss_and_kfac,  # noqa: B950
-            "boundary": fokker_planck_equation.evaluate_boundary_loss_and_kfac,
+            "boundary": evaluate_boundary_loss_and_kfac,
         },
         "log-fokker-planck-isotropic": {
             "interior": log_fokker_planck_isotropic_equation.evaluate_interior_loss_and_kfac,  # noqa: B950
-            "boundary": log_fokker_planck_equation.evaluate_boundary_loss_and_kfac,
+            "boundary": evaluate_boundary_loss_and_kfac,
         },
     }
     LOSS_EVALUATORS = {
         "poisson": {
             "interior": poisson_equation.evaluate_interior_loss,
-            "boundary": poisson_equation.evaluate_boundary_loss,
+            "boundary": evaluate_boundary_loss,
         },
         "heat": {
             "interior": heat_equation.evaluate_interior_loss,
-            "boundary": heat_equation.evaluate_boundary_loss,
+            "boundary": evaluate_boundary_loss,
         },
         "fokker-planck-isotropic": {
             "interior": fokker_planck_isotropic_equation.evaluate_interior_loss,
-            "boundary": fokker_planck_equation.evaluate_boundary_loss,
+            "boundary": evaluate_boundary_loss,
         },
         "log-fokker-planck-isotropic": {
             "interior": log_fokker_planck_isotropic_equation.evaluate_interior_loss,
-            "boundary": log_fokker_planck_equation.evaluate_boundary_loss,
+            "boundary": evaluate_boundary_loss,
         },
     }
     SUPPORTED_KFAC_APPROXIMATIONS = {"expand", "reduce"}

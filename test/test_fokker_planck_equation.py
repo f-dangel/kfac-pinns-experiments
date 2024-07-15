@@ -8,16 +8,14 @@ from torch.autograd import grad
 from torch.nn import Linear, Sequential, Tanh
 
 from kfac_pinns_exp.autodiff_utils import autograd_input_divergence
-from kfac_pinns_exp.fokker_planck_equation import (
-    evaluate_boundary_loss,
-    evaluate_interior_loss,
-)
+from kfac_pinns_exp.fokker_planck_equation import evaluate_interior_loss
 from kfac_pinns_exp.fokker_planck_isotropic_equation import (
     div_mu_isotropic,
     mu_isotropic,
     p_isotropic_gaussian,
     sigma_isotropic,
 )
+from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss
 
 DIM_OMEGAS = [1, 3]
 DIM_OMEGA_IDS = [f"dim_Omega={dim}" for dim in DIM_OMEGAS]

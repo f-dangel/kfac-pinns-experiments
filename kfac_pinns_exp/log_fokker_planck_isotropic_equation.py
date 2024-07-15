@@ -3,8 +3,8 @@
 from functools import partial
 from math import sqrt
 
-from torch import Tensor, allclose, eye, ones, zeros, zeros_like
-from torch.distributions import Independent, MultivariateNormal, Normal
+from torch import Tensor, eye, ones, zeros
+from torch.distributions import Independent, Normal
 
 from kfac_pinns_exp import fokker_planck_equation, log_fokker_planck_equation
 
