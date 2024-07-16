@@ -31,7 +31,7 @@ parameters:
         max: 10_000
     N_dOmega:
         min: 50
-        max: 5_000
+        max: 2_500
     batch_frequency:
         min: 0
         max: 10_000
