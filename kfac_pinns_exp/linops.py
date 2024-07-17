@@ -168,7 +168,9 @@ class GramianLinearOperator:
             g = self.layer_grad_outputs[layer_idx]
             # combine weight and bias
             v_idx = cat([v_list[2 * i], v_list[2 * i + 1].unsqueeze(-1)], dim=1)
-            JT_v.add_(einsum(z, g, v_idx, "n ... d_in, n ... d_out, d_out d_in -> n"))
+            # NOTE Doing this in one einsum is a lot slower
+            temp = einsum(g, v_idx, "n ... d_out, d_out d_in -> n ... d_in")
+            JT_v.add_(einsum(z, temp, "n ... d_in, n ... d_in -> n"))
 
         result = []
 
@@ -176,7 +178,9 @@ class GramianLinearOperator:
         for layer_idx in self.layer_idxs:
             z = self.layer_inputs[layer_idx]
             g = self.layer_grad_outputs[layer_idx]
-            v_idx = einsum(z, g, JT_v, "n ... d_in, n ... d_out, n -> d_out d_in")
+            # NOTE Doing this in one einsum is a lot slower
+            temp = einsum(g, JT_v, "n ... d_out, n -> n ... d_out")
+            v_idx = einsum(z, temp, "n ... d_in, n ... d_out -> d_out d_in")
             # un-combine weight and bias
             result.extend([v_idx[:, :-1], v_idx[:, -1]])
 
