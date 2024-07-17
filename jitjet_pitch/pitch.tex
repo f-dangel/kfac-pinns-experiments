@@ -1,0 +1,61 @@
+\documentclass[12pt,usepdftitle=false,aspectratio=169]{beamer}
+
+\makeatletter
+\def\input@path{
+  % {../..} % repository root
+  % {../../latex-utilities} % LaTeX utilities
+  % {../../repos/einconv-paper/tex/paper} % TN drawing commands
+  % {../2023_12_01_Perimeter_Institute_45min} % PI talk slides
+}
+\makeatother
+\graphicspath{
+  % {../../} % Logo
+}
+
+
+% ===================================================================
+% BEAMERTHEME
+% ===================================================================
+% requires repository root in LaTeX path (look-up in beamertheme/ dir)
+\usetheme{/vector_institute/vector_institute}
+% disable logo
+% \noLogo
+
+% ===================================================================
+% REFERENCES
+% ===================================================================
+\usepackage{natbib}
+
+% ===================================================================
+% META-DATA
+% ===================================================================
+\title{%
+  \texttt{jitjet}: Efficient Laplacians in JAX by Compiling Taylor-mode AD
+}
+\author{Felix Dangel, Johannes M\"uller, Marius Zeinhofer}
+\date{July 17, 2024}
+
+\begin{document}
+
+\makeTitleSlide
+
+\begin{frame}{Some slide}
+  Some citation \cite{li2023forward}
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+  \frametitle{References}
+
+  {\footnotesize
+    \bibliographystyle{plainnat}
+    \bibliography{../paper/references}
+  }
+\end{frame}
+
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

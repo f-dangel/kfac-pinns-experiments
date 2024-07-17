@@ -1,0 +1,8 @@
+% CHECKS IF REQUIRED PACKAGES ARE LOADED
+
+% Raise error if passed package is not loaded
+\makeatletter
+\def\assertPackageLoaded#1{
+  \@ifpackageloaded{#1}{}{\PackageError{fdtexutils}{Please load the #1 package}{}}
+}
+\makeatother
