@@ -28,7 +28,7 @@ parameters:
         value: 30_000
     N_Omega:
         min: 100
-        max: 10_000
+        max: 5_000
     N_dOmega:
         min: 50
         max: 2_500
