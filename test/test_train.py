@@ -129,12 +129,13 @@ ARGS = [
         ]
         for equation in ["poisson", "heat"]
     ],
-    # train with HessianFreeCached
+    # train with HessianFreeCached and KFAC pre-conditioning
     *[
         [
             "--num_steps=3",
             "--optimizer=HessianFreeCached",
             f"--equation={equation}",
+            "--HessianFreeCached_kfac_preconditioner",
         ]
         for equation in ["poisson", "heat"]
     ],

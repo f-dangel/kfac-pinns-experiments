@@ -601,8 +601,9 @@ class KFAC(Optimizer):
 
         return loss
 
+    @staticmethod
     def add_damping(
-        self, A: Tensor, B: Tensor, damping: float, heuristic: str
+        A: Tensor, B: Tensor, damping: float, heuristic: str
     ) -> Tuple[Tensor, Tensor]:
         """Add damping to the KFAC factors.
 
