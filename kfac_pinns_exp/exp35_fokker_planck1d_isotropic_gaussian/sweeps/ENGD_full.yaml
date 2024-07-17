@@ -1,0 +1,50 @@
+entity: kfac-pinns
+project: fokker_planck1d_isotropic_gaussian_bayes
+name: ENGD_full
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=ENGD"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: l2_error
+method: bayes
+parameters:
+    equation:
+        value: fokker-planck-isotropic
+    boundary_condition:
+        value: gaussian
+    model:
+        value: mlp-tanh-64
+    num_seconds:
+        value: 1_000
+    dim_Omega:
+        value: 1
+    N_eval:
+        value: 30_000
+    N_Omega:
+        min: 100
+        max: 10_000
+    N_dOmega:
+        min: 50
+        max: 5_000
+    batch_frequency:
+        min: 0
+        max: 10_000
+    ENGD_approximation:
+        value: full
+    ENGD_damping:
+        distribution: log_uniform_values
+        min: 1e-15
+        max: 1e-0
+    ENGD_ema_factor:
+        distribution: uniform
+        min: 0
+        max: 0.99
+    ENGD_initialize_to_identity:
+        distribution: categorical
+        values: [false, true]
