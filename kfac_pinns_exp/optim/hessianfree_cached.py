@@ -7,7 +7,7 @@ from argparse import ArgumentParser, Namespace
 from typing import Callable, List, Tuple
 
 from hessianfree.optimizer import HessianFree
-from torch import Tensor, cat
+from torch import Tensor, cat, no_grad
 from torch.nn import Linear, Module
 
 from kfac_pinns_exp.linops import GramianLinearOperator
@@ -229,6 +229,7 @@ class HessianFreeCached(HessianFree):
         )
         del linop_interior.grad, linop_boundary.grad  # remove to save memory
 
+        @no_grad()
         def mvp(v: Tensor) -> Tensor:
             """Multiply the Gramian onto a vector.
 
