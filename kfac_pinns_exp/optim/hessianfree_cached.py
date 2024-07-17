@@ -86,6 +86,12 @@ def parse_HessianFreeCached_args(
         action="store_true",
         help="Whether to print internals to the command line.",
     )
+    parser.add_argument(
+        f"--{prefix}approximation",
+        choices=HessianFreeCached.SUPPORTED_APPROXIMATIONS,
+        default="full",
+        help="The Gramian approximation to use.",
+    )
     args = parse_known_args_and_remove_from_argv(parser)
 
     if verbose:
