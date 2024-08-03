@@ -121,7 +121,10 @@ def run_verbose(cmd: List[str]) -> CompletedProcess:
         CalledProcessError: If the command fails.
     """
     try:
-        return run(cmd, capture_output=True, text=True, check=True)
+        job = run(cmd, capture_output=True, text=True, check=True)
+        print("STDOUT:", job.stdout)
+        print("STDERR:", job.stderr)
+        return job
     except CalledProcessError as e:
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
