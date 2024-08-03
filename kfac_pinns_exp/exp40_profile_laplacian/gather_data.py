@@ -51,32 +51,33 @@ def get_gathered_savepath(
     )
 
 
-for implementation, model, batch_size, device, metric in product(
-    IMPLEMENTATIONS, MODELS, BATCH_SIZES, DEVICES, METRICS
-):
-    best_metrics = []
-    for input_dimension in INPUT_DIMENSIONS:
-        # collect metric for all seeds, then use the best
-        metrics = []
-        for seed in range(NUM_SEEDS):
-            savepath = get_raw_savepath(
-                input_dimension,
-                implementation,
-                model,
-                batch_size,
-                device,
-                seed,
-                metric,
-                RAWDEFAULTDIR,
-            )
-            with open(savepath, "r") as f:
-                metrics.append(float(f.read().strip()))
-        best_metrics.append(min(metrics))
+if __name__ == "__main__":
+    for implementation, model, batch_size, device, metric in product(
+        IMPLEMENTATIONS, MODELS, BATCH_SIZES, DEVICES, METRICS
+    ):
+        best_metrics = []
+        for input_dimension in INPUT_DIMENSIONS:
+            # collect metric for all seeds, then use the best
+            metrics = []
+            for seed in range(NUM_SEEDS):
+                savepath = get_raw_savepath(
+                    input_dimension,
+                    implementation,
+                    model,
+                    batch_size,
+                    device,
+                    seed,
+                    metric,
+                    RAWDEFAULTDIR,
+                )
+                with open(savepath, "r") as f:
+                    metrics.append(float(f.read().strip()))
+            best_metrics.append(min(metrics))
 
-    df = DataFrame.from_dict(
-        {"input_dimension": INPUT_DIMENSIONS, metric: best_metrics}
-    )
-    savepath = get_gathered_savepath(
-        implementation, model, batch_size, device, metric, DEFAULTDIR
-    )
-    df.to_csv(savepath, index=False)
+        df = DataFrame.from_dict(
+            {"input_dimension": INPUT_DIMENSIONS, metric: best_metrics}
+        )
+        savepath = get_gathered_savepath(
+            implementation, model, batch_size, device, metric, DEFAULTDIR
+        )
+        df.to_csv(savepath, index=False)
