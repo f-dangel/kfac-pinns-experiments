@@ -15,9 +15,8 @@ from kfac_pinns_exp.utils import run_verbose
 
 NUM_SEEDS = 5  # run multiple times
 MODELS = ["mlp-tanh-768-768-512-512"]
-DEVICES = ["cuda"]  # add 'cuda' here if you have a GPU
+DEVICES = ["cuda"]  # add 'cuda' here if you have a GPU, otherwise use 'cpu'
 INPUT_DIMENSIONS = linspace(1, 100, 21).int().unique().tolist()
-INPUT_DIMENSIONS = [1, 10, 100]
 BATCH_SIZES = [1024]
 
 if __name__ == "__main__":
