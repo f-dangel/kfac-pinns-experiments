@@ -1,4 +1,4 @@
-"""Re-run best hyperparameters for different seeds."""
+"""Create launch script to re-run best hyperparameters for different seeds."""
 
 from argparse import ArgumentParser
 from os import makedirs, path
@@ -29,7 +29,7 @@ for sweep_id, label in sweep_ids.items():
         entity,
         project,
         sweep_id,
-        save=True,
+        save=False,
         update=args.update,
         savedir=DATADIR,
     )
