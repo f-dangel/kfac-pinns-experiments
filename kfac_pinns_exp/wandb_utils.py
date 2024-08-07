@@ -112,7 +112,7 @@ def download_run(
     # extract logged quantities
     config = {k: v for k, v in run.config.items() if not k.startswith("_")}
     df_meta = DataFrame({"config": [config], "name": [run.name]})
-    df_history = run.history(samples=10_000)
+    df_history = run.history()
 
     print(f"Saving downloaded files locally:\n\t{history_path}\n\t{meta_path}")
     df_history.to_csv(history_path, index=False)

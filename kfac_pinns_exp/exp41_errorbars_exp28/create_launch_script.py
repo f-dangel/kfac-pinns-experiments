@@ -14,7 +14,8 @@ makedirs(REPEATDIR, exist_ok=True)
 # If something goes wrong, increase this counter to create unique ids
 ATTEMPT = 0
 
-COMMANDS = {sweep_id: {} for sweep_id in sweep_ids.keys()}
+VARY_MODEL_COMMANDS = {sweep_id: {} for sweep_id in sweep_ids.keys()}
+VARY_DATA_COMMANDS = {sweep_id: {} for sweep_id in sweep_ids.keys()}
 
 for sweep_id, label in sweep_ids.items():
     # load meta-data of the run
@@ -30,16 +31,32 @@ for sweep_id, label in sweep_ids.items():
     run_name = df_meta["name"][0]
     run_cmd = df_meta["config"][0]["cmd"].split(" ")
 
-    # drop random seed from run_cmd
-    run_cmd = [arg for arg in run_cmd if "--model_seed" not in arg]
+    # drop model and data seeds from run_cmd
+    run_cmd = [
+        arg for arg in run_cmd if "--model_seed" not in arg and "--data_seed" not in arg
+    ]
 
-    # fill dictionary with commands to run
+    # fill dictionaries with commands to run
     for s in range(1, 11):
         run_id = f"{run_name}_model_seed_{s}_attempt_{ATTEMPT}"
-        COMMANDS[sweep_id][run_id] = " ".join(
+        VARY_MODEL_COMMANDS[sweep_id][run_id] = " ".join(
             run_cmd
             + [
                 f"--model_seed={s}",
+                "--data_seed=0",
+                f"--wandb_entity={entity}",
+                f"--wandb_project={project}",
+                f"--wandb_id={run_id}",
+            ]
+        )
+
+    for s in range(10):
+        run_id = f"{run_name}_data_seed_{s}_attempt_{ATTEMPT}"
+        VARY_DATA_COMMANDS[sweep_id][run_id] = " ".join(
+            run_cmd
+            + [
+                "--model_seed=1",
+                f"--data_seed={s}",
                 f"--wandb_entity={entity}",
                 f"--wandb_project={project}",
                 f"--wandb_id={run_id}",
@@ -70,21 +87,34 @@ $CMD
 
 if __name__ == "__main__":
     # write the launch script
-    cmds_flat = []
-    for sweep_commands in COMMANDS.values():
-        cmds_flat.extend(iter(sweep_commands.values()))
-
-    jobs = [f"{cmd!r}" for cmd in cmds_flat]
-    script = TEMPLATE.replace("JOBS_PLACEHOLDER", "\t" + "\n\t".join(jobs))
-    script = script.replace("ARRAY_PLACEHOLDER", str(len(jobs) - 1))
-
     partition = "rtx6000"
-    script = script.replace("PARTITION_PLACEHOLDER", partition)
+    script = TEMPLATE.replace("PARTITION_PLACEHOLDER", partition)
 
     qos = "m5"
     time = QUEUE_TO_TIME[qos]
     script = script.replace("QOS_PLACEHOLDER", qos)
     script = script.replace("TIME_PLACEHOLDER", time)
 
-    with open(path.join(REPEATDIR, "launch.sh"), "w") as f:
-        f.write(script)
+    # 1) write the launch script varying model initialization
+    model_cmds_flat = []
+    for sweep_commands in VARY_MODEL_COMMANDS.values():
+        model_cmds_flat.extend(iter(sweep_commands.values()))
+
+    model_jobs = [f"{cmd!r}" for cmd in model_cmds_flat]
+    model_script = script.replace("JOBS_PLACEHOLDER", "\t" + "\n\t".join(model_jobs))
+    model_script = script.replace("ARRAY_PLACEHOLDER", str(len(model_jobs) - 1))
+
+    with open(path.join(REPEATDIR, "launch_vary_model.sh"), "w") as f:
+        f.write(model_script)
+
+    # 2) write the launch script varying data initialization
+    data_cmds_flat = []
+    for sweep_commands in VARY_DATA_COMMANDS.values():
+        data_cmds_flat.extend(iter(sweep_commands.values()))
+
+    data_jobs = [f"{cmd!r}" for cmd in data_cmds_flat]
+    data_script = script.replace("JOBS_PLACEHOLDER", "\t" + "\n\t".join(data_jobs))
+    data_script = script.replace("ARRAY_PLACEHOLDER", str(len(data_jobs) - 1))
+
+    with open(path.join(REPEATDIR, "launch_vary_data.sh"), "w") as f:
+        f.write(data_script)
