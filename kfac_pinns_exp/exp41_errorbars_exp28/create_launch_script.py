@@ -10,6 +10,10 @@ HEREDIR = path.dirname(path.abspath(__file__))
 REPEATDIR = path.join(HEREDIR, "repeated_runs")
 makedirs(REPEATDIR, exist_ok=True)
 
+# wandb runs must be unique.
+# If something goes wrong, increase this counter to create unique ids
+ATTEMPT = 0
+
 COMMANDS = {sweep_id: {} for sweep_id in sweep_ids.keys()}
 
 for sweep_id, label in sweep_ids.items():
@@ -31,7 +35,7 @@ for sweep_id, label in sweep_ids.items():
 
     # fill dictionary with commands to run
     for s in range(1, 11):
-        run_id = f"{run_name}_model_seed_{s}"
+        run_id = f"{run_name}_model_seed_{s}_attempt_{ATTEMPT}"
         COMMANDS[sweep_id][run_id] = " ".join(
             run_cmd
             + [
