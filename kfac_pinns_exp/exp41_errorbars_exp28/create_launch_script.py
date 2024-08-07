@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     model_jobs = [f"{cmd!r}" for cmd in model_cmds_flat]
     model_script = script.replace("JOBS_PLACEHOLDER", "\t" + "\n\t".join(model_jobs))
-    model_script = script.replace("ARRAY_PLACEHOLDER", str(len(model_jobs) - 1))
+    model_script = model_script.replace("ARRAY_PLACEHOLDER", str(len(model_jobs) - 1))
 
     with open(path.join(REPEATDIR, "launch_vary_model.sh"), "w") as f:
         f.write(model_script)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     data_jobs = [f"{cmd!r}" for cmd in data_cmds_flat]
     data_script = script.replace("JOBS_PLACEHOLDER", "\t" + "\n\t".join(data_jobs))
-    data_script = script.replace("ARRAY_PLACEHOLDER", str(len(data_jobs) - 1))
+    data_script = data_script.replace("ARRAY_PLACEHOLDER", str(len(data_jobs) - 1))
 
     with open(path.join(REPEATDIR, "launch_vary_data.sh"), "w") as f:
         f.write(data_script)
