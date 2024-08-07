@@ -123,7 +123,9 @@ def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
     loss, residual, intermediates = evaluate_boundary_loss(layers, X, y)
 
     # collect all layer inputs
-    layer_inputs = {idx: bias_augmentation(intermediates[idx], 1) for idx in layer_idxs}
+    layer_inputs = {
+        idx: bias_augmentation(intermediates[idx].detach(), 1) for idx in layer_idxs
+    }
 
     if ggn_type == "forward-only":
         return loss, layer_inputs, {}
