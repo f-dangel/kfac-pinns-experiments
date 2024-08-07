@@ -182,7 +182,17 @@ if __name__ == "__main__":
     maybe_synchronize(DEV)
 
     def laplacian(implementation: str) -> Tensor:
-        """Compute the Laplacian."""
+        """Compute the Laplacian.
+
+        Args:
+            implementation: The implementation to use.
+
+        Returns:
+            The Laplacian of shape `(batch_size, 1)`.
+
+        Raises:
+            NotImplementedError: If the implementation is not supported.
+        """
         if implementation == "backward":
             lap = autograd_input_laplacian(model, X)
         elif implementation == "forward":

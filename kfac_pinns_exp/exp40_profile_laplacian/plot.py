@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
         with plt.rc_context(bundles.neurips2023(rel_width=0.5)):
             fig, ax = plt.subplots(1, 1)
-            ax.set_xlabel("$D_\Omega$")
+            ax.set_xlabel(r"$D_\Omega$")
             ax.set_ylabel(YLABELS[metric])
 
             for implementation in IMPLEMENTATIONS:
