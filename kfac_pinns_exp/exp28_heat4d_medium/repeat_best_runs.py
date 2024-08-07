@@ -70,7 +70,7 @@ JOBS_PLACEHOLDER
 
 CMD=${JOBS[$SLURM_ARRAY_TASK_ID]}
 
-echo 'Running $CMD'
+echo Running $CMD
 $CMD
 """
 
