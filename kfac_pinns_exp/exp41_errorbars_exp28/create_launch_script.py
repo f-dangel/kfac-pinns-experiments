@@ -1,6 +1,5 @@
 """Create launch script to re-run best hyperparameters for different seeds."""
 
-from argparse import ArgumentParser
 from os import makedirs, path
 
 from kfac_pinns_exp.exp09_reproduce_poisson2d.yaml_to_sh import QUEUE_TO_TIME
@@ -11,17 +10,7 @@ HEREDIR = path.dirname(path.abspath(__file__))
 REPEATDIR = path.join(HEREDIR, "repeated_runs")
 makedirs(REPEATDIR, exist_ok=True)
 
-parser = ArgumentParser(description="Plot the best runs from each tuned optimizer.")
-parser.add_argument(
-    "--local_files",
-    action="store_false",
-    dest="update",
-    help="Use local files if possible.",
-    default=True,
-)
-args = parser.parse_args()
-
-commands = {sweep_id: {} for sweep_id in sweep_ids.keys()}
+COMMANDS = {sweep_id: {} for sweep_id in sweep_ids.keys()}
 
 for sweep_id, label in sweep_ids.items():
     # load meta-data of the run
@@ -29,8 +18,8 @@ for sweep_id, label in sweep_ids.items():
         entity,
         project,
         sweep_id,
-        save=False,
-        update=args.update,
+        save=True,
+        update=True,
         savedir=DATADIR,
     )
     df_meta = df_meta.to_dict()
@@ -43,7 +32,7 @@ for sweep_id, label in sweep_ids.items():
     # fill dictionary with commands to run
     for s in range(1, 11):
         run_id = f"{run_name}_model_seed_{s}"
-        commands[sweep_id][run_id] = " ".join(
+        COMMANDS[sweep_id][run_id] = " ".join(
             run_cmd
             + [
                 f"--model_seed={s}",
@@ -78,7 +67,7 @@ $CMD
 if __name__ == "__main__":
     # write the launch script
     cmds_flat = []
-    for sweep_commands in commands.values():
+    for sweep_commands in COMMANDS.values():
         cmds_flat.extend(iter(sweep_commands.values()))
 
     jobs = [f"{cmd!r}" for cmd in cmds_flat]
