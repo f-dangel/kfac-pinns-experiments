@@ -216,6 +216,24 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Whether to use Weights & Biases for logging.",
     )
     parser.add_argument(
+        "--wandb_entity",
+        type=str,
+        default=None,
+        help="Entity name for Weights & Biases logging.",
+    )
+    parser.add_argument(
+        "--wandb_project",
+        type=str,
+        default=None,
+        help="Project name for Weights & Biases logging.",
+    )
+    parser.add_argument(
+        "--wandb_id",
+        type=str,
+        default=None,
+        help="Weights & Biases run name.",
+    )
+    parser.add_argument(
         "--max_logs",
         type=int,
         default=150,
@@ -575,7 +593,12 @@ def main():  # noqa: C901
 
     if args.wandb:
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
-        wandb.init(config=config)
+        wandb.init(
+            config=config,
+            entity=args.wandb_entity,
+            project=args.wandb_project,
+            id=args.wandb_id,
+        )
 
     # functions used to evaluate the interior and boundary/condition losses
     eval_interior_loss = INTERIOR_LOSS_EVALUATORS[equation]
