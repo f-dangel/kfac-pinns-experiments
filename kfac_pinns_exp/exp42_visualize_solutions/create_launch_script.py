@@ -56,7 +56,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
         # sure we reach all steps that are visualized)
         (time_arg,) = [arg for arg in run_cmd if "--num_seconds" in arg]
         time_arg = int(time_arg.split("=")[1])
-        longer_time = int(1.5 * time_arg)
+        longer_time = int(1.25 * time_arg)
 
         # drop time and wandb arguments
         run_cmd = [
@@ -72,6 +72,9 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
         # find the closes point
         logged_times = df_history["time"].to_numpy()
         logged_steps = df_history["step"].to_numpy()
+        # drop the last step because it was created due to run time criterion, not due
+        # to the logarithmic logging schedule
+        logged_times, logged_steps = logged_times[:-1], logged_steps[:-1]
         max_time = max(logged_times)
 
         # select closest point
