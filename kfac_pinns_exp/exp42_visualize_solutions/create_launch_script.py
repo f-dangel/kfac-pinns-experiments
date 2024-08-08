@@ -52,11 +52,10 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
             dict_config = literal_eval(dict_config)
         run_cmd = dict_config["cmd"].split(" ")
 
-        # find out time and increase it (we need to run slightly longer to make
-        # sure we reach all steps that are visualized)
+        # find out time and decrease it
         (time_arg,) = [arg for arg in run_cmd if "--num_seconds" in arg]
         time_arg = int(time_arg.split("=")[1])
-        longer_time = int(1.25 * time_arg)
+        shorter_time = int(0.1 * time_arg)
 
         # drop time and wandb arguments
         run_cmd = [
@@ -67,19 +66,15 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
 
         # we want to visualize at initialization, around 10% of training, 50% of
         # training, and at the end of training
-        visualize_ratios = [0, 0.01, 0.1, 1.0]
+        visualize_ratios = [0, 0.001, 0.002, 0.003, 0.004]
         visualize_steps = []
-        # find the closes point
-        logged_times = df_history["time"].to_numpy()
+        # find the closest point
         logged_steps = df_history["step"].to_numpy()
-        # drop the last step because it was created due to run time criterion, not due
-        # to the logarithmic logging schedule
-        logged_times, logged_steps = logged_times[:-1], logged_steps[:-1]
-        max_time = max(logged_times)
+        max_step = max(logged_steps)
 
         # select closest point
         for ratio in visualize_ratios:
-            idx = absolute(logged_times - ratio * max_time).argmin()
+            idx = absolute(logged_steps - ratio * max_step).argmin()
             visualize_steps.append(str(logged_steps[idx]))
 
         # plotting directory
@@ -93,7 +88,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
         commands[sweep_id] = " ".join(
             run_cmd
             + [
-                f"--num_seconds={longer_time}",
+                f"--num_seconds={shorter_time}",
                 "--plot_solution",
                 f"--plot_dir={plot_dir}",
                 f"--plot_steps {' '.join(visualize_steps)}",
@@ -129,7 +124,7 @@ $CMD
     partition = "rtx6000"
     script = TEMPLATE.replace("PARTITION_PLACEHOLDER", partition)
 
-    qos = "m3"
+    qos = "m5"
     time = QUEUE_TO_TIME[qos]
     script = script.replace("QOS_PLACEHOLDER", qos)
     script = script.replace("TIME_PLACEHOLDER", time)
