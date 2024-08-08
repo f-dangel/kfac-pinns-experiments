@@ -56,7 +56,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
         # sure we reach all steps that are visualized)
         (time_arg,) = [arg for arg in run_cmd if "--num_seconds" in arg]
         time_arg = int(time_arg.split("=")[1])
-        longer_time = int(1.2 * time_arg)
+        longer_time = int(1.5 * time_arg)
 
         # drop time and wandb arguments
         run_cmd = [
@@ -67,7 +67,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
 
         # we want to visualize at initialization, around 10% of training, 50% of
         # training, and at the end of training
-        visualize_ratios = [0, 0.1, 0.5, 1.0]
+        visualize_ratios = [0, 0.01, 0.1, 1.0]
         visualize_steps = []
         # find the closes point
         logged_times = df_history["time"].to_numpy()
