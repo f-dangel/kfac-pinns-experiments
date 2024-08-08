@@ -1,5 +1,6 @@
 """Create an error bar plot."""
 
+from argparse import ArgumentParser
 from itertools import product
 from os import path
 
@@ -14,29 +15,42 @@ from kfac_pinns_exp.exp28_heat4d_medium.plot import (
 )
 from kfac_pinns_exp.exp41_errorbars_exp28.create_launch_script import (
     REPEATDIR,
-    VARY_DATA_COMMANDS,
-    VARY_MODEL_COMMANDS,
     entity,
+    get_commands,
     project,
     sweep_ids,
 )
 from kfac_pinns_exp.wandb_utils import download_run
 
-HEREDIR = path.dirname(path.abspath(__file__))
+if __name__ == "__main__":
+    parser = ArgumentParser(description="Create errorbar plots.")
+    parser.add_argument(
+        "--local_files",
+        action="store_true",
+        dest="local_files",
+        help="Use local files if possible.",
+        default=False,
+    )
+    parser.add_argument(
+        "--disable_tex",
+        action="store_true",
+        default=False,
+        help="Disable TeX rendering in matplotlib.",
+    )
+    args = parser.parse_args()
 
-y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
+    COMMANDS = get_commands(local_files=args.local_files)
+    HEREDIR = path.dirname(path.abspath(__file__))
 
-VARIATIONS = {
-    "model": VARY_MODEL_COMMANDS,
-    "data": VARY_DATA_COMMANDS,
-}
+    y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
 
-for variation, commands in VARIATIONS.items():
     for plot_idx, ((x, xlabel), (y, ylabel)) in enumerate(
         product(x_to_xlabel.items(), y_to_ylabel.items())
     ):
-        with plt.rc_context(bundles.neurips2023(rel_width=1.0)):
+        with plt.rc_context(
+            bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+        ):
             fig, ax = plt.subplots(1, 1)
             ax.set_xlabel(xlabel)
             ax.set_xscale("log")
@@ -45,7 +59,7 @@ for variation, commands in VARIATIONS.items():
             ax.set_title(f"4d Heat ({architecture}, $D={num_params}$)")
             ax.grid(True, alpha=0.5)
 
-            for sweep_id, best_runs in commands.items():
+            for sweep_id, best_runs in COMMANDS.items():
                 for idx, run_id in enumerate(best_runs.keys()):
                     df_history, _ = download_run(
                         entity,
@@ -53,7 +67,7 @@ for variation, commands in VARIATIONS.items():
                         run_id,
                         savedir=REPEATDIR,
                         # only download data again for first sub-plot, then re-use
-                        update=plot_idx == 0,
+                        update=plot_idx == 0 and not args.local_files,
                     )
                     label = sweep_ids[sweep_id]
 
@@ -65,19 +79,17 @@ for variation, commands in VARIATIONS.items():
                     ax.plot(
                         x_data,
                         df_history[y],
-                        label=None if "*" in label or idx != 0 else label,
+                        label=label if idx == 0 else None,
                         color=colors[label],
                         linestyle=linestyles[label],
                     )
 
-            ax.legend()
+            if x == "time" and y == "l2_error":
+                ax.legend()
 
             # set y max to 10 because LBFGS sometimes diverges
             # also need to set the bottom value because otherwise it is way too small
             bottom = {"loss": 1e-11, "l2_error": 5e-6}[y]
             plt.gca().set_ylim(bottom=bottom, top=1e1)
 
-            plt.savefig(
-                path.join(HEREDIR, f"{y}_over_{x}_vary_{variation}.pdf"),
-                bbox_inches="tight",
-            )
+            plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
