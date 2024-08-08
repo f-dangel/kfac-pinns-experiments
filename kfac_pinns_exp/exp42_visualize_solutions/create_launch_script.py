@@ -35,7 +35,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
     """
     commands = {}
 
-    for sweep_id in sweep_ids.keys():
+    for sweep_id, optim in sweep_ids.items():
         # load meta-data of the run
         df_history, df_meta = load_best_run(
             entity,
@@ -79,12 +79,20 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
             idx = absolute(logged_times - ratio * max_time).argmin()
             visualize_steps.append(str(logged_steps[idx]))
 
+        # plotting directory
+        plot_dir = (
+            optim.replace("(", "")
+            .replace(")", "")
+            .replace(" ", "_")
+            .replace("*", "_auto")
+        )
+
         commands[sweep_id] = " ".join(
             run_cmd
             + [
                 f"--num_seconds={longer_time}",
                 "--plot_solution",
-                "--plot_dir=.",
+                f"--plot_dir={plot_dir}",
                 f"--plot_steps {' '.join(visualize_steps)}",
             ]
         )
