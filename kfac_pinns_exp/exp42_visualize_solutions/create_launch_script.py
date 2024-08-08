@@ -66,7 +66,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
 
         # we want to visualize at initialization, around 10% of training, 50% of
         # training, and at the end of training
-        visualize_ratios = [0.0005, 0.001, 0.0015, 0.002]
+        visualize_ratios = [0, 0.001, 0.01, 0.1]
         visualize_steps = []
         # find the closest point
         logged_steps = df_history["step"].to_numpy()
