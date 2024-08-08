@@ -55,7 +55,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
         # find out time and decrease it
         (time_arg,) = [arg for arg in run_cmd if "--num_seconds" in arg]
         time_arg = int(time_arg.split("=")[1])
-        shorter_time = int(0.1 * time_arg)
+        shorter_time = int(0.2 * time_arg)
 
         # drop time and wandb arguments
         run_cmd = [
