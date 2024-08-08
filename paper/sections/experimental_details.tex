@@ -651,6 +651,23 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
   \end{itemize}
 \end{itemize}
 
+\subsection{Robustness Under Model Initialization for 4+1d Heat Equation}\label{sec:4d-heat-robustness-app}
+
+Here we study the robustness of our results from \Cref{sec:4d-heat-app} for the 4+1d heat equation when initializing the neural network differently.
+We choose the MLP with $D=\num{10065}$ parameters from \Cref{fig:4D-heat}'s middle panel which is bigger than the two-layer toy model, while still allowing to run ENGD.
+Using the same hyper-parameters, we re-run all optimizers with 10 different model initializations.
+The results are shown in \Cref{fig:heat4d-robustness-appendix}.
+We observe that all optimizers perform similar to \Cref{fig:4D-heat}, except for LBFGS which diverges for some runs.
+
+\begin{figure}[!h]
+  \centering
+  \def\pathToFigs{kfac_pinns_exp/exp41_errorbars_exp28}
+  % [trim={left bottom right top},clip]
+  \includegraphics[trim={0 0 0 0.35cm},clip]{\pathToFigs/l2_error_over_time.pdf}
+  \caption{Best runs from the MLP with $\num{10065}$ parameters on the 4+1d heat equation from \Cref{fig:4D-heat} middle repeated over 10 different model initializations. All optimizers perform similarly, except for LBFGS which diverges for some runs.}
+  \label{fig:heat4d-robustness-appendix}
+\end{figure}
+
 \subsection{4+1d Heat Equation with Bayesian Search}\label{sec:4d-heat-bayes-app}
 
 \paragraph{Setup} We consider the same heat equation as in \Cref{sec:4d-heat-app} and use the $5 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116865}$.
