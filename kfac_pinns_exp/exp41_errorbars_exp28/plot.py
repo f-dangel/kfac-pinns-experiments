@@ -5,6 +5,7 @@ from itertools import product
 from os import path
 
 from matplotlib import pyplot as plt
+from numpy import mean, std
 from tueplots import bundles
 
 from kfac_pinns_exp.exp28_heat4d_medium.plot import (
@@ -45,6 +46,11 @@ if __name__ == "__main__":
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
     x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
 
+    final_performance = {
+        "loss": {sweep_ids[sweep_id]: [] for sweep_id in COMMANDS.keys()},
+        "l2_error": {sweep_ids[sweep_id]: [] for sweep_id in COMMANDS.keys()},
+    }
+
     for plot_idx, ((x, xlabel), (y, ylabel)) in enumerate(
         product(x_to_xlabel.items(), y_to_ylabel.items())
     ):
@@ -83,6 +89,7 @@ if __name__ == "__main__":
                         color=colors[label],
                         linestyle=linestyles[label],
                     )
+                    final_performance[y][label].append(df_history[y].tolist()[-1])
 
             if x == "time" and y == "l2_error":
                 ax.legend()
@@ -93,3 +100,10 @@ if __name__ == "__main__":
             plt.gca().set_ylim(bottom=bottom, top=1e1)
 
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
+
+    # print(final_performance)
+    # print final performance
+    for metric, optim_performance in final_performance.items():
+        print(f"{metric}:")
+        for name, performance in optim_performance.items():
+            print(f"\t{name:<20}: {mean(performance):.2e} ± {std(performance):.2e}")

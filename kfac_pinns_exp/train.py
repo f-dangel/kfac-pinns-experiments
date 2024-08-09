@@ -253,6 +253,14 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default=False,
     )
     parser.add_argument(
+        "--plot_steps",
+        nargs="+",
+        type=int,
+        help="Only relevant with --plot_solution. Training steps that should be"
+        + " visualized. MUST be logged events.",
+        default=[],
+    )
+    parser.add_argument(
         "--plot_dir",
         type=str,
         default="visualize_solution",
@@ -528,6 +536,10 @@ def main():  # noqa: C901
     print(f"Running on device {str(dev)} in dtype {dt}.")
     if args.plot_solution:
         print(f"Saving visualizations of the solution in {args.plot_dir}.")
+        if args.plot_steps:
+            print(f"Restricting visualization to logged steps {args.plot_steps}.")
+        else:
+            print("Visualizing all logged steps.")
 
     # DATA LOADERS
     manual_seed(args.data_seed)
@@ -763,7 +775,7 @@ def main():  # noqa: C901
                         "time": elapsed,
                     }
                 )
-            if args.plot_solution:
+            if args.plot_solution and (not args.plot_steps or step in args.plot_steps):
                 fig_path = path.join(
                     args.plot_dir,
                     f"{equation}_{dim_Omega}d_{condition}_{args.model}"

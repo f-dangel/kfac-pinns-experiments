@@ -296,8 +296,8 @@ def plot_solution(
             if title is not None:
                 ax.set_title(title)
 
-            ax.plot(x, u_learned, label="Normalized learned solution")
-            ax.plot(x, u_true, label="Normalized true solution", linestyle="--")
+            ax.plot(x, u_learned.cpu(), label="Normalized learned solution")
+            ax.plot(x, u_true.cpu(), label="Normalized true solution", linestyle="--")
             ax.legend()
             plt.savefig(savepath, bbox_inches="tight")
 
@@ -331,8 +331,8 @@ def plot_solution(
                 "extent": [0, 1, 0, 1],
                 "origin": "lower",
             }
-            ax[0].imshow(u_learned, **kwargs)
-            ax[1].imshow(u_true, **kwargs)
+            ax[0].imshow(u_learned.cpu(), **kwargs)
+            ax[1].imshow(u_true.cpu(), **kwargs)
             plt.savefig(savepath, bbox_inches="tight")
     else:
         raise ValueError(f"dim_Omega must be 1 or 2. Got {dim_Omega}.")
