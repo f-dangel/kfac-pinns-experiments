@@ -14,9 +14,9 @@ from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import entity
 from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import project as exp09_project
 from kfac_pinns_exp.exp09_reproduce_poisson2d.plot import sweep_ids as exp09_sweep_ids
 from kfac_pinns_exp.exp09_reproduce_poisson2d.yaml_to_sh import QUEUE_TO_TIME
-from kfac_pinns_exp.exp27_heat4d_small.plot import DATADIR as exp27_DATADIR
-from kfac_pinns_exp.exp27_heat4d_small.plot import project as exp27_project
-from kfac_pinns_exp.exp27_heat4d_small.plot import sweep_ids as exp27_sweep_ids
+from kfac_pinns_exp.exp13_reproduce_heat1d.plot import DATADIR as exp13_DATADIR
+from kfac_pinns_exp.exp13_reproduce_heat1d.plot import project as exp13_project
+from kfac_pinns_exp.exp13_reproduce_heat1d.plot import sweep_ids as exp13_sweep_ids
 from kfac_pinns_exp.wandb_utils import load_best_run
 
 HEREDIR = path.dirname(path.abspath(__file__))
@@ -38,7 +38,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
 
     experiments = [
         (exp09_DATADIR, exp09_project, exp09_sweep_ids),
-        (exp27_DATADIR, exp27_project, exp27_sweep_ids),
+        (exp13_DATADIR, exp13_project, exp13_sweep_ids),
     ]
 
     for DATADIR, project, sweep_ids in experiments:
