@@ -1,6 +1,4 @@
-"""Create launch script to create the solutions."""
-
-"""Create launch script to re-run best hyperparameters for different seeds."""
+"""Create launch script to visualize the solutions."""
 
 from argparse import ArgumentParser
 from ast import literal_eval
