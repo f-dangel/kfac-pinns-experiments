@@ -78,6 +78,49 @@ def load_best_run(
     return df_history, df_meta
 
 
+def download_run(
+    entity: str,
+    project: str,
+    run_id: str,
+    savedir: str = ".",
+    update: bool = True,
+) -> Tuple[DataFrame, DataFrame]:
+    """Load history and meta-data of a wandb run.
+
+    Args:
+        entity: The team name on wandb.
+        project: The name from the 'Projects' tab on wandb.
+        run_id: The id of the run.
+        savedir: The directory to save the csv files. Default is the current directory.
+        update: Whether to request the best run from wandb. If `False`, tries loading
+            from an existing local file. Default is `True`.
+
+    Returns:
+        The history and meta-data data frames of the specified run.
+    """
+    prefix = path.abspath(path.join(savedir, f"{entity}_{project}_{run_id}"))
+    history_path = f"{prefix}_history.csv"
+    meta_path = f"{prefix}_meta.csv"
+
+    # try loading from local files
+    if path.exists(history_path) and path.exists(meta_path) and not update:
+        print(f"Loading from previous download:\n\t{history_path}\n\t{meta_path}")
+        return read_csv(history_path), read_csv(meta_path)
+
+    run = Api().run(f"{entity}/{project}/{run_id}")
+
+    # extract logged quantities
+    config = {k: v for k, v in run.config.items() if not k.startswith("_")}
+    df_meta = DataFrame({"config": [config], "name": [run.name]})
+    df_history = run.history()
+
+    print(f"Saving downloaded files locally:\n\t{history_path}\n\t{meta_path}")
+    df_history.to_csv(history_path, index=False)
+    df_meta.to_csv(meta_path, index=False)
+
+    return df_history, df_meta
+
+
 def remove_unused_runs(keep: List[str], best_run_dir: str = ".", verbose: bool = True):
     """Remove all saved best runs in a directory.
 

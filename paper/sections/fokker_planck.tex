@@ -167,3 +167,9 @@ with solution $q^* = \log(p^*)$.
     \item \cite{hu2024score} PINNs for Fokker-Planck in dimensions 100 and 250. The paper discusses the original Fokker-Planck equation, the log space version and another reformulation based on the score -- which we haven't looked into yet. Our sanity check example is motivated from Section 4.1.1 in this paper. 
     \item \cite{wang20222} claimes that the log space Fokker-Planck equation should not be trained with an $L^2$ loss because the $L^2$ loss does not control the error. I am unsure if this is relevant for numerical experiments, though. We can have it in mind if we manage to drive the loss down but don't observe the same for the error. 
 \end{itemize}
+
+ tuning protocol: Bayesian (copy search spaces from Poisson+Bayes)
+% exp35: 1+1 FP, single-layer net
+% exp36: 9+1 log-FP, D~100k
+% exp37: 99+1 log-FP, D~1M
+% exp38: group plot for FPs

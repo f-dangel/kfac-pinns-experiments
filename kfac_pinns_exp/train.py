@@ -216,6 +216,24 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         help="Whether to use Weights & Biases for logging.",
     )
     parser.add_argument(
+        "--wandb_entity",
+        type=str,
+        default=None,
+        help="Entity name for Weights & Biases logging.",
+    )
+    parser.add_argument(
+        "--wandb_project",
+        type=str,
+        default=None,
+        help="Project name for Weights & Biases logging.",
+    )
+    parser.add_argument(
+        "--wandb_id",
+        type=str,
+        default=None,
+        help="Weights & Biases run name.",
+    )
+    parser.add_argument(
         "--max_logs",
         type=int,
         default=150,
@@ -233,6 +251,14 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         action="store_true",
         help="Whether to plot the learned function and solution during training.",
         default=False,
+    )
+    parser.add_argument(
+        "--plot_steps",
+        nargs="+",
+        type=int,
+        help="Only relevant with --plot_solution. Training steps that should be"
+        + " visualized. MUST be logged events.",
+        default=[],
     )
     parser.add_argument(
         "--plot_dir",
@@ -510,6 +536,10 @@ def main():  # noqa: C901
     print(f"Running on device {str(dev)} in dtype {dt}.")
     if args.plot_solution:
         print(f"Saving visualizations of the solution in {args.plot_dir}.")
+        if args.plot_steps:
+            print(f"Restricting visualization to logged steps {args.plot_steps}.")
+        else:
+            print("Visualizing all logged steps.")
 
     # DATA LOADERS
     manual_seed(args.data_seed)
@@ -575,7 +605,12 @@ def main():  # noqa: C901
 
     if args.wandb:
         config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
-        wandb.init(config=config)
+        wandb.init(
+            config=config,
+            entity=args.wandb_entity,
+            project=args.wandb_project,
+            id=args.wandb_id,
+        )
 
     # functions used to evaluate the interior and boundary/condition losses
     eval_interior_loss = INTERIOR_LOSS_EVALUATORS[equation]
@@ -740,7 +775,7 @@ def main():  # noqa: C901
                         "time": elapsed,
                     }
                 )
-            if args.plot_solution:
+            if args.plot_solution and (not args.plot_steps or step in args.plot_steps):
                 fig_path = path.join(
                     args.plot_dir,
                     f"{equation}_{dim_Omega}d_{condition}_{args.model}"

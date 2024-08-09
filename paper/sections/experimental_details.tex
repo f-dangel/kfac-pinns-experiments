@@ -25,7 +25,7 @@ The $L_2$ error is evaluated on a separate set of $\num{9000}$ data points using
 Each run is limited to a compute time of $\num{1000}\,\text{s}$.
 We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$ trainable parameters, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$ trainable parameters, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$ trainable parameters.
 For the biggest architecture, full and per-layer ENGD lead to out-of-memory errors and are thus not tested in the experiments.
-\Cref{fig:poisson2d-appendix} visualizes the results.
+\Cref{fig:poisson2d-appendix} visualizes the results, and \Cref{fig:2d-poisson-visualization} illustrates the learned solutions over training for all optimizers on the shallow MLP.
 
 \begin{figure}[!h]
   \centering
@@ -37,7 +37,7 @@ For the biggest architecture, full and per-layer ENGD lead to out-of-memory erro
     \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+    \includegraphics[trim={0 0.8cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:poisson2d-step}
@@ -50,6 +50,84 @@ For the biggest architecture, full and per-layer ENGD lead to out-of-memory erro
   \caption{ Training loss and evaluation $L_2$ error for learning the solution to a 2d Poisson equation over (\subref{subfig:poisson2d-time}) time and (\subref{subfig:poisson2d-step}) steps.
     Columns are different neural networks.}\label{fig:poisson2d-appendix}
 \end{figure}
+
+\begin{table}[!h]
+  \centering
+  \def\pathToRuns{kfac_pinns_exp/exp42_visualize_solutions/visualize_solution}
+  \renewcommand\tabularxcolumn[1]{>{\Centering}m{#1}}
+  \begin{small}
+    \begin{tabularx}{\textwidth}{XXXXXX}
+      \textbf{Optimizer} & \textbf{First step} & \textbf{0.1\% trained} & \textbf{1\% trained} & \textbf{10\% trained} & \textbf{True solution}
+      \\
+      SGD
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000335.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0003299.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0032494.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+      \\
+      Adam
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/poisson_2d_sin_product_mlp-tanh-64_Adam_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/poisson_2d_sin_product_mlp-tanh-64_Adam_step0000335.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/poisson_2d_sin_product_mlp-tanh-64_Adam_step0003299.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/poisson_2d_sin_product_mlp-tanh-64_Adam_step0032494.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/poisson_2d_sin_product_mlp-tanh-64_Adam_step0000000.pdf}
+      \\
+      % [trim={left bottom right top},clip]
+      LBFGS
+      & \includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/poisson_2d_sin_product_mlp-tanh-64_LBFGS_step0000000.pdf}
+      & \includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/poisson_2d_sin_product_mlp-tanh-64_LBFGS_step0000050.pdf}
+      & \includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/poisson_2d_sin_product_mlp-tanh-64_LBFGS_step0000491.pdf}
+      & \includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/poisson_2d_sin_product_mlp-tanh-64_LBFGS_step0004831.pdf}
+      & \includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/poisson_2d_sin_product_mlp-tanh-64_LBFGS_step0000000.pdf}
+      \\
+      Hessian-free
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/poisson_2d_sin_product_mlp-tanh-64_Hessianfree_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/poisson_2d_sin_product_mlp-tanh-64_Hessianfree_step0000004.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/poisson_2d_sin_product_mlp-tanh-64_Hessianfree_step0000035.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/poisson_2d_sin_product_mlp-tanh-64_Hessianfree_step0000335.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/poisson_2d_sin_product_mlp-tanh-64_Hessianfree_step0000000.pdf}
+      \\
+      % [trim={left bottom right top},clip]
+      ENGD (full)
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000006.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000055.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000594.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      \\
+      ENGD (layer-wise)
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000006.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000061.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000594.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/poisson_2d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      \\
+      KFAC
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000020.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000208.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0002049.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+      \\
+      KFAC*
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000035.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000335.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0003629.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/poisson_2d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+    \end{tabularx}
+  \end{small}
+  \captionof{figure}{Visual comparison learned and true solutions while training with different optimizers for the 2d Poisson equation using a two-layer MLP (corresponding to the curves in \Cref{fig:2D-Poisson} left).
+    All functions are shown on the unit square $(x, y) \in \Omega = [0; 1]^2$ and normalized to the unit interval.}
+  \label{fig:2d-poisson-visualization}
+\end{table}
 
 \paragraph{Best run details}
 The runs shown in \Cref{fig:poisson2d-appendix} correspond to the following hyper-parameters:
@@ -155,7 +233,7 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
     \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+    \includegraphics[trim={0 0.8cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:poisson5d-step}
@@ -327,7 +405,7 @@ These architectures are too large to be optimized by ENGD.
     \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+    \includegraphics[trim={0 0.8cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:poisson-bayes-step}
@@ -425,7 +503,7 @@ The equation has zero spatial boundary conditions and the initial values are giv
 We sample a single training batch of size $N_{\Omega} = \num{900}, N_{\partial\Omega} = 120$ ($\nicefrac{N_{\partial\Omega}}{2}$ points for the initial value and spatial boundary conditions each) and evaluate the $L_2$ error on a separate set of $\num{9000}$ data points using the known solution $u_{\star}(t, x) = \exp(-\nicefrac{\pi^2t}{4}) \sin(\pi x)$.
 Each run is limited to $\num{1000}\,\text{s}$. We compare three MLP architectures of increasing size, each of whose linear layers are Tanh-activated except for the final one: a shallow $2\to 64\to 1$ MLP with $D=257$ trainable parameters, a five layer $2 \to 64 \to 64 \to 48 \to 48 \to 1$ MLP with $D=\num{9873}$ trainable parameters, and a five layer $2 \to 256 \to 256\to 128 \to 128 \to 1$ MLP with $D=\num{116097}$ trainable parameters.
 For the biggest architecture, full and layer-wise ENGD lead to out-of-memory errors and are thus not part of the experiments.
-Figure \Cref{fig:heat1d-appendix} summarizes the results.
+Figure \Cref{fig:heat1d-appendix} summarizes the results, and \Cref{fig:1d-heat-visualization} illustrates the learned solutions over training for all optimizers on the shallow MLP
 
 \begin{figure}[!h]
   \centering
@@ -437,7 +515,7 @@ Figure \Cref{fig:heat1d-appendix} summarizes the results.
     \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+    \includegraphics[trim={0 0.8cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:heat1d-step}
@@ -449,6 +527,84 @@ Figure \Cref{fig:heat1d-appendix} summarizes the results.
   \end{subfigure}
   \caption{training loss and evaluation $L_2$ error for learning the solution to a 1+1-dimensional heat equation over (\subref{subfig:heat1d-time}) time and (\subref{subfig:heat1d-step}). each column corresponds to a different neural network.}\label{fig:heat1d-appendix}
 \end{figure}
+
+\begin{table}[!h]
+  \begin{small}
+    \centering
+    \def\pathToRuns{kfac_pinns_exp/exp42_visualize_solutions/visualize_solution}
+    \renewcommand\tabularxcolumn[1]{>{\Centering}m{#1}}
+    \begin{tabularx}{\textwidth}{XXXXXX}
+      \textbf{Optimizer} & \textbf{First step} & \textbf{0.1\% trained} & \textbf{1\% trained} & \textbf{10\% trained} & \textbf{True solution}
+      \\
+      SGD
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/heat_1d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/heat_1d_sin_product_mlp-tanh-64_SGD_step0000277.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/heat_1d_sin_product_mlp-tanh-64_SGD_step0003000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/heat_1d_sin_product_mlp-tanh-64_SGD_step0029540.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/SGD/heat_1d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+      \\
+      Adam
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/heat_1d_sin_product_mlp-tanh-64_Adam_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/heat_1d_sin_product_mlp-tanh-64_Adam_step0000277.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/heat_1d_sin_product_mlp-tanh-64_Adam_step0002727.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/heat_1d_sin_product_mlp-tanh-64_Adam_step0026855.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/Adam/heat_1d_sin_product_mlp-tanh-64_Adam_step0000000.pdf}
+      \\
+      LBFGS
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/heat_1d_sin_product_mlp-tanh-64_LBFGS_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/heat_1d_sin_product_mlp-tanh-64_LBFGS_step0000055.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/heat_1d_sin_product_mlp-tanh-64_LBFGS_step0000594.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/heat_1d_sin_product_mlp-tanh-64_LBFGS_step0005845.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/LBFGS/heat_1d_sin_product_mlp-tanh-64_LBFGS_step0000000.pdf}
+      \\
+      % [trim={left bottom right top},clip]
+      Hessian-free
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/heat_1d_sin_product_mlp-tanh-64_Hessianfree_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/heat_1d_sin_product_mlp-tanh-64_Hessianfree_step0000001.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/heat_1d_sin_product_mlp-tanh-64_Hessianfree_step0000011.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/heat_1d_sin_product_mlp-tanh-64_Hessianfree_step0000107.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/Hessian-free/heat_1d_sin_product_mlp-tanh-64_Hessianfree_step0000000.pdf}
+      \\
+      ENGD (full)
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000004.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000042.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000446.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_full/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      \\
+      % [trim={left bottom right top},clip]
+      ENGD (layer-wise)
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000004.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000042.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000446.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/ENGD_layer-wise/heat_1d_sin_product_mlp-tanh-64_ENGD_step0000000.pdf}
+      \\
+      KFAC
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000014.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000143.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/heat_1d_sin_product_mlp-tanh-64_KFAC_step0001400.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+      \\
+      KFAC*
+      % [trim={left bottom right top},clip]
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000034.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000335.pdf}
+      &\includegraphics[trim={0.9cm 0.8cm 6.5cm 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/heat_1d_sin_product_mlp-tanh-64_KFAC_step0003299.pdf}
+      &\includegraphics[trim={7.25cm 0.8cm 0 1.0cm},clip,scale=0.31]{\pathToRuns/KFAC_auto/heat_1d_sin_product_mlp-tanh-64_KFAC_step0000000.pdf}
+    \end{tabularx}
+  \end{small}
+  \vspace{1ex}
+  \captionof{figure}{Visual comparison learned and true solutions while training with different optimizers for the 1+1d heat equation using a two-layer MLP (corresponding to the curves in \Cref{fig:heat1d-appendix} left).
+    All functions are shown on the unit square $(x, t) \in \Omega = [0; 1]^2$ and normalized to the unit interval.}
+  \label{fig:1d-heat-visualization}
+\end{table}
 
 \paragraph{Best run details}
 The runs shown in \Cref{fig:heat1d-appendix} correspond to the following hyper-parameters:
@@ -556,7 +712,7 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
     \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
     % trim the legend and titles
     % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+    \includegraphics[trim={0 0.8cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
     \caption{}\label{subfig:heat4d-step}
@@ -650,6 +806,23 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
   \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
   \end{itemize}
 \end{itemize}
+
+\subsection{Robustness Under Model Initialization for 4+1d Heat Equation}\label{sec:4d-heat-robustness-app}
+
+Here we study the robustness of our results from \Cref{sec:4d-heat-app} for the 4+1d heat equation when initializing the neural network differently.
+We choose the MLP with $D=\num{10065}$ parameters from \Cref{fig:4D-heat}'s middle panel which is bigger than the two-layer toy model, while still allowing to run ENGD.
+Using the same hyper-parameters, we re-run all optimizers with 10 different model initializations.
+The results are shown in \Cref{fig:heat4d-robustness-appendix}.
+We observe that all optimizers perform similar to \Cref{fig:4D-heat}, except for LBFGS which diverges for some runs.
+
+\begin{figure}[!h]
+  \centering
+  \def\pathToFigs{kfac_pinns_exp/exp41_errorbars_exp28}
+  % [trim={left bottom right top},clip]
+  \includegraphics[trim={0 0 0 0.35cm},clip]{\pathToFigs/l2_error_over_time.pdf}
+  \caption{Best runs from the MLP with $\num{10065}$ parameters on the 4+1d heat equation from \Cref{fig:4D-heat} middle repeated over 10 different model initializations. All optimizers perform similarly, except for LBFGS which diverges for some runs.}
+  \label{fig:heat4d-robustness-appendix}
+\end{figure}
 
 \subsection{4+1d Heat Equation with Bayesian Search}\label{sec:4d-heat-bayes-app}
 
