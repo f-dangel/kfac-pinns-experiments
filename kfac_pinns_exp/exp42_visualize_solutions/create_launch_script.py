@@ -91,7 +91,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
                 .replace("*", "_auto")
             )
 
-            commands[sweep_id] = " ".join(
+            commands[sweep_id] = " ".join(  # noqa: B909
                 run_cmd
                 + [
                     f"--num_seconds={shorter_time}",
