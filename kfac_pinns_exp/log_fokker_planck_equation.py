@@ -91,7 +91,7 @@ def evaluate_interior_loss(
         dq_dt = jac_q[:, [0]]
         nabla_q = jac_q[:, 1:]
 
-        # compute Tr(σ σᵀ ∂²p/∂x²)
+        # compute Tr(σ σᵀ ∂²q/∂x²)
         hessian_X = autograd_input_hessian(model, X)  # [batch_size, d + 1, d + 1]
         hessian_spatial = hessian_X[:, 1:, 1:]  # [batch_size, d, d]
         sigma_outer_hessian = einsum(

@@ -8,7 +8,12 @@ from torch import Tensor, cat, zeros
 from torch.autograd import grad
 from torch.nn import Linear, Module
 
-from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp import (
+    fokker_planck_isotropic_equation,
+    heat_equation,
+    log_fokker_planck_isotropic_equation,
+    poisson_equation,
+)
 from kfac_pinns_exp.pinn_utils import (
     evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
 )
@@ -40,6 +45,14 @@ class GramianLinearOperator:
         },
         "heat": {
             "interior": heat_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+        },
+        "fokker-planck-isotropic": {
+            "interior": fokker_planck_isotropic_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+        },
+        "log-fokker-planck-isotropic": {
+            "interior": log_fokker_planck_isotropic_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
             "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
         },
     }
