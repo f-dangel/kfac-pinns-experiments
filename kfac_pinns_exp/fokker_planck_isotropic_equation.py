@@ -38,6 +38,13 @@ evaluate_interior_loss_and_kfac = partial(
     div_mu=div_mu_isotropic,
 )
 
+evaluate_interior_loss_with_layer_inputs_and_grad_outputs = partial(
+    fokker_planck_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,
+    mu=mu_isotropic,
+    sigma=sigma_isotropic,
+    div_mu=div_mu_isotropic,
+)
+
 plot_solution = partial(
     fokker_planck_equation.plot_solution, solutions={"gaussian": p_isotropic_gaussian}
 )
