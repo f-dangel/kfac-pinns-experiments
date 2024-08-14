@@ -20,7 +20,7 @@ parameters:
     boundary_condition:
         value: gaussian
     batch_frequency:
-        value: 1
+        value: 10
     model:
         value: mlp-tanh-256-256-128-128
     num_seconds:
