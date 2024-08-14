@@ -33,12 +33,12 @@ parameters:
         value: 1_000
     KFAC_ema_factor:
         distribution: uniform
-        min: 0.98
+        min: 0.999
         max: 0.9999
     KFAC_damping:
         distribution: log_uniform_values
-        min: 1e-10
-        max: 1e-4
+        min: 1e-11
+        max: 1e-5
     KFAC_initialize_to_identity:
         value: true
     KFAC_lr:
