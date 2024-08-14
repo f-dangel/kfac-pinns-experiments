@@ -20,7 +20,7 @@ parameters:
     boundary_condition:
         value: gaussian
     batch_frequency:
-        value: 100
+        value: 1
     model:
         value: mlp-tanh-256-256-128-128
     num_seconds:
@@ -33,8 +33,8 @@ parameters:
         value: 1_000
     KFAC_ema_factor:
         distribution: uniform
-        min: 0
-        max: 0.99
+        min: 0.95
+        max: 0.999
     KFAC_damping:
         distribution: log_uniform_values
         min: 1e-12
