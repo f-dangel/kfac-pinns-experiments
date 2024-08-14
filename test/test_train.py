@@ -126,8 +126,14 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=HessianFreeCached",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
         ]
-        for equation in ["poisson", "heat"]
+        for (equation, condition) in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck-isotropic", "gaussian"),
+            ("log-fokker-planck-isotropic", "gaussian"),
+        ]
     ],
     # train with HessianFreeCached and KFAC pre-conditioning
     *[
@@ -135,9 +141,15 @@ ARGS = [
             "--num_steps=3",
             "--optimizer=HessianFreeCached",
             f"--equation={equation}",
+            f"--boundary_condition={condition}",
             "--HessianFreeCached_kfac_preconditioner",
         ]
-        for equation in ["poisson", "heat"]
+        for (equation, condition) in [
+            ("poisson", "sin_product"),
+            ("heat", "sin_product"),
+            ("fokker-planck-isotropic", "gaussian"),
+            ("log-fokker-planck-isotropic", "gaussian"),
+        ]
     ],
     # train with a deeper net
     *[

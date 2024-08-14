@@ -72,7 +72,7 @@ def evaluate_interior_loss(
                 "Sigma must be identical for each datum in the batch."
             )
 
-        # compute Tr(σ σᵀ ∂²p/∂x²)
+        # compute Tr(σ σᵀ ∂²q/∂x²)
         sigma_outer = sigma_outer[0]
         intermediates = manual_forward_laplacian(
             model, X, coordinates=list(range(1, dim)), coefficients=sigma_outer

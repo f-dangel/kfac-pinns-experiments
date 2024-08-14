@@ -169,7 +169,12 @@ class HessianFreeCached(HessianFree):
     """
 
     SUPPORTED_APPROXIMATIONS = {"full", "per_layer"}
-    SUPPORTED_EQUATIONS = {"poisson", "heat"}
+    SUPPORTED_EQUATIONS = {
+        "poisson",
+        "heat",
+        "fokker-planck-isotropic",
+        "log-fokker-planck-isotropic",
+    }
 
     def __init__(
         self,
