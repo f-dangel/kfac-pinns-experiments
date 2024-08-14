@@ -33,7 +33,7 @@ parameters:
         value: 1_000
     KFAC_ema_factor:
         distribution: uniform
-        min: 0.95
+        min: 0.98
         max: 0.999
     KFAC_momentum:
         distribution: uniform
@@ -41,7 +41,7 @@ parameters:
         max: 0.99
     KFAC_damping:
         distribution: log_uniform_values
-        min: 1e-12
-        max: 1e-6
+        min: 1e-10
+        max: 1e-4
     KFAC_initialize_to_identity:
         value: true
