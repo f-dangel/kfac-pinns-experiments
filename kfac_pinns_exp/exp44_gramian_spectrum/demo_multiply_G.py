@@ -113,7 +113,5 @@ for d in range(D):
     e_d[d] = 1.0
     Ge_d = G_linop @ e_d
     G2[:, d] = Ge_d
-evals2 = eigvalsh(G2)
-
 print(f"Gramian computation with linop took {time() - start:.3f} s.")
 assert allclose(G, G2)
