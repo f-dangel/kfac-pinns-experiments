@@ -104,6 +104,7 @@ print(f"Eigenvalues > {threshold}: {(evals > threshold).int().sum()}")
 
 # Fast Gramian-vector products
 start = time()
+# TODO Implement multiplication with multiple vectors at once to avoid for loop
 G_linop = GramianLinearOperator(equation, layers, X, y, loss_type)
 
 G2 = zeros(D, D, dtype=dt, device=dev)
