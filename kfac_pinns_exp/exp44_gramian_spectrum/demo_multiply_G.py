@@ -7,6 +7,7 @@ from torch import allclose, cat, device, float64, manual_seed, rand_like, zeros
 from torch.linalg import eigvalsh
 from torch.nn import Sequential
 
+from kfac_pinns_exp.linops import GramianLinearOperator
 from kfac_pinns_exp.train import (
     INTERIOR_LOSS_EVALUATORS,
     create_condition_data,
@@ -21,7 +22,7 @@ equation = "poisson"
 condition = "sin_product"
 dim_Omega = 2
 num_data = 128
-loss_type = "interior"
+loss_type = "interior"  # alternative value: "boundary"
 dt, dev = float64, device("cpu")
 
 # make deterministic
@@ -70,6 +71,8 @@ Gv = ggn_vector_product_from_plist(loss2, residual2, params, v)
 # Now that we now how to multiply with G, we can compute G's matrix representation
 Ds = [p.numel() for p in params]
 D = sum(Ds)
+
+start = time()
 G = zeros(D, D, dtype=dt, device=dev)
 
 for d in range(D):
@@ -89,11 +92,28 @@ for d in range(D):
 
     G[:, d] = Ge_d
 
+print(f"Gramian computation took {time() - start:.3f} s.")
 print(f"Gramian:\n{G}")
 
 # Let's compute the eigenvalues of G
 evals = eigvalsh(G)
 print(f"dim(G) = {D}")
 print(f"Naive rank bound: rank(G) <= {num_data}.")
-threshold = 1e-7
+threshold = 1e-10
 print(f"Eigenvalues > {threshold}: {(evals > threshold).int().sum()}")
+
+# Fast Gramian-vector products
+start = time()
+G_linop = GramianLinearOperator(equation, layers, X, y, loss_type)
+
+G2 = zeros(D, D, dtype=dt, device=dev)
+for d in range(D):
+    # create the standard vector along direction d
+    e_d = zeros(D, dtype=dt, device=dev)
+    e_d[d] = 1.0
+    Ge_d = G_linop @ e_d
+    G2[:, d] = Ge_d
+evals2 = eigvalsh(G2)
+
+print(f"Gramian computation with linop took {time() - start:.3f} s.")
+assert allclose(G, G2)
