@@ -34,7 +34,7 @@ parameters:
         max: 5_000
     batch_frequency:
         min: 0
-        max: 10_000
+        max: 200
     ENGD_approximation:
         value: full
     ENGD_damping:

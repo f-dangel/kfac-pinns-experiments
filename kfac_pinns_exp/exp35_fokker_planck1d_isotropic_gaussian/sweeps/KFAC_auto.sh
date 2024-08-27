@@ -13,4 +13,4 @@ echo "[DEBUG] Host name: " `hostname`
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-wandb agent --count 1 kfac-pinns/fokker_planck1d_isotropic_gaussian_bayes/l43skq02
+wandb agent --count 1 kfac-pinns/fokker_planck1d_isotropic_gaussian_bayes/1uyov1ym

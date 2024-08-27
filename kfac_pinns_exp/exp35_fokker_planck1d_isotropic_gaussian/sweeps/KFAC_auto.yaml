@@ -34,10 +34,10 @@ parameters:
         max: 5_000
     batch_frequency:
         min: 0
-        max: 10_000
+        max: 200
     KFAC_ema_factor:
         distribution: uniform
-        min: 0
+        min: 0.9
         max: 0.99
     KFAC_damping:
         distribution: log_uniform_values
