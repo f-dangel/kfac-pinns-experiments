@@ -3,7 +3,7 @@
 from time import time
 
 from backpack.hessianfree.ggnvp import ggn_vector_product_from_plist
-from torch import allclose, cat, device, float64, manual_seed, rand_like, zeros
+from torch import allclose, cat, device, eye, float64, manual_seed, rand_like, zeros
 from torch.linalg import eigvalsh
 from torch.nn import Sequential
 
@@ -104,15 +104,8 @@ print(f"Eigenvalues > {threshold}: {(evals > threshold).int().sum()}")
 
 # Fast Gramian-vector products
 start = time()
-# TODO Implement multiplication with multiple vectors at once to avoid for loop
 G_linop = GramianLinearOperator(equation, layers, X, y, loss_type)
 
-G2 = zeros(D, D, dtype=dt, device=dev)
-for d in range(D):
-    # create the standard vector along direction d
-    e_d = zeros(D, dtype=dt, device=dev)
-    e_d[d] = 1.0
-    Ge_d = G_linop @ e_d
-    G2[:, d] = Ge_d
+G2 = G_linop @ eye(D, device=dev, dtype=dt)
 print(f"Gramian computation with linop took {time() - start:.3f} s.")
 assert allclose(G, G2)
