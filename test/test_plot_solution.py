@@ -44,7 +44,6 @@ def test_plot_solution(arg: List[str]):
     run_verbose(["python", train.__file__] + arg)
 
     plot_args = [
-        "--checkpoint_dir=checkpoints",
         "--disable_tex",  # for Github actions (no LaTeX available)
     ]
     run_verbose(["python", plot_solution.__file__] + plot_args)
