@@ -27,6 +27,7 @@ from torch import (
     float64,
     manual_seed,
     rand,
+    save,
     zeros,
 )
 from torch.nn import Linear, Module, Sequential, Tanh
@@ -49,7 +50,6 @@ from kfac_pinns_exp.parse_utils import (
 from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss, l2_error
 from kfac_pinns_exp.poisson_equation import square_boundary
 from kfac_pinns_exp.train_utils import DataLoader, KillTrigger, LoggingTrigger
-from kfac_pinns_exp.utils import latex_float
 
 SUPPORTED_OPTIMIZERS = {
     "KFAC",
@@ -104,12 +104,6 @@ INTERIOR_LOSS_EVALUATORS = {
     "heat": heat_equation.evaluate_interior_loss,
     "fokker-planck-isotropic": fokker_planck_isotropic_equation.evaluate_interior_loss,
     "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
-}
-PLOT_FNS = {
-    "poisson": poisson_equation.plot_solution,
-    "heat": heat_equation.plot_solution,
-    "fokker-planck-isotropic": fokker_planck_isotropic_equation.plot_solution,
-    "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.plot_solution,
 }
 
 
@@ -245,32 +239,26 @@ def parse_general_args(verbose: bool = False) -> Namespace:
         default=None,
         help="Number of evaluation points (default: 10 * N_Omega).",
     )
-    # plotting-specific arguments
+    # checkpoint-specific arguments
     parser.add_argument(
-        "--plot_solution",
+        "--save_checkpoints",
         action="store_true",
-        help="Whether to plot the learned function and solution during training.",
+        help="Whether to save checkpoints.",
         default=False,
     )
     parser.add_argument(
-        "--plot_steps",
+        "--checkpoint_steps",
         nargs="+",
         type=int,
-        help="Only relevant with --plot_solution. Training steps that should be"
-        + " visualized. MUST be logged events.",
+        help="Only relevant with --checkpoint. Steps that should be checkpointed. "
+        + "Default uses the same steps as the logger.",
         default=[],
     )
     parser.add_argument(
-        "--plot_dir",
+        "--checkpoint_dir",
         type=str,
-        default="visualize_solution",
-        help="Directory to save the plots (only relevant with `--plot_solution`).",
-    )
-    parser.add_argument(
-        "--disable_tex",
-        action="store_true",
-        default=False,
-        help="Disable TeX rendering in plots (only relevant with `--plot_solution`).",
+        default="checkpoints",
+        help="Only relevant with --checkpoint. Directory to save the checkpoints to.",
     )
     args = parse_known_args_and_remove_from_argv(parser)
 
@@ -534,12 +522,13 @@ def main():  # noqa: C901
     args = parse_general_args(verbose=True)
     dev, dt = device("cuda" if cuda.is_available() else "cpu"), args.dtype
     print(f"Running on device {str(dev)} in dtype {dt}.")
-    if args.plot_solution:
-        print(f"Saving visualizations of the solution in {args.plot_dir}.")
-        if args.plot_steps:
-            print(f"Restricting visualization to logged steps {args.plot_steps}.")
+    if args.save_checkpoints:
+        print(f"Saving checkpoints in {args.checkpoint_dir}.")
+        makedirs(args.checkpoint_dir, exist_ok=True)
+        if args.checkpoint_steps:
+            print(f"Iterations that will be checkpointed: {args.checkpoint_steps}.")
         else:
-            print("Visualizing all logged steps.")
+            print("Checkpointing all logged steps.")
 
     # DATA LOADERS
     manual_seed(args.data_seed)
@@ -603,8 +592,9 @@ def main():  # noqa: C901
     if isinstance(optimizer, (KFAC, ENGD)):
         assert optimizer.equation == equation
 
+    config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
+
     if args.wandb:
-        config = vars(args) | vars(optimizer_args) | {"cmd": cmd}
         wandb.init(
             config=config,
             entity=args.wandb_entity,
@@ -775,26 +765,35 @@ def main():  # noqa: C901
                         "time": elapsed,
                     }
                 )
-            if args.plot_solution and (not args.plot_steps or step in args.plot_steps):
-                fig_path = path.join(
-                    args.plot_dir,
+
+        if args.save_checkpoints:
+            should_checkpoint = (
+                step in args.checkpoint_steps
+                if args.checkpoint_steps
+                else logging_trigger.should_log(step)
+            )
+            if should_checkpoint:
+                checkpoint_path = path.join(
+                    args.checkpoint_dir,
                     f"{equation}_{dim_Omega}d_{condition}_{args.model}"
-                    + f"_{args.optimizer}_step{step:07g}.pdf",
+                    + f"_{args.optimizer}_step{step:07g}.pt",
                 )
-                fig_title = (
-                    f"Step: ${step}$, Loss: ${latex_float(loss)}$,"
-                    + f" $L_2$ loss: ${latex_float(l2.item())}$"
-                )
-                makedirs(args.plot_dir, exist_ok=True)
-                plot_fn = PLOT_FNS[equation]
-                plot_fn(
-                    condition,
-                    dim_Omega,
-                    model,
-                    fig_path,
-                    title=fig_title,
-                    usetex=not args.disable_tex,
-                )
+                print(f"Saving checkpoint to {checkpoint_path}.")
+                data = {
+                    "model": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "X_Omega_eval": next(interior_eval_data_loader)[0],
+                    "X_Omega": X_Omega,
+                    "y_Omega": y_Omega,
+                    "X_dOmega": X_dOmega,
+                    "y_dOmega": y_dOmega,
+                    "step": step,
+                    "loss": loss,
+                    "loss_interior": loss_interior,
+                    "loss_boundary": loss_boundary,
+                    "config": config,
+                }
+                save(data, checkpoint_path)
 
         if kill_trigger.should_kill(step, elapsed):
             return
