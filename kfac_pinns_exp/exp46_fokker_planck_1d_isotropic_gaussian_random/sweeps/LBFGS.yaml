@@ -1,0 +1,38 @@
+entity: kfac-pinns
+project: fokker_planck1d_isotropic_gaussian_random
+name: LBFGS
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=LBFGS"
+    - ${args}
+metric:
+    goal: minimize
+    name: l2_error
+method: grid
+parameters:
+    equation:
+        value: fokker-planck-isotropic
+    boundary_condition:
+        value: gaussian
+    batch_frequency:
+        value: 1
+    model:
+        value: mlp-tanh-64
+    num_seconds:
+        value: 1_000
+    dim_Omega:
+        value: 1
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 1_000
+    LBFGS_lr:
+        distribution: categorical
+        values: [0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
+    LBFGS_history_size:
+        distribution: categorical
+        values: [50, 75, 100, 125, 150, 175, 200, 225]
