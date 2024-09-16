@@ -41,7 +41,7 @@ sweep_ids = {  # ids from the wandb agent
     "m7m8c4ng": "Adam",
     "g0tshg12": "Hessian-free",
     "7ktbx4hp": "LBFGS",
-    # "k1ihf1z7": "KFAC",
+    "k1ihf1z7": "KFAC",
     "jo6psgqw": "KFAC*",
 }
 
