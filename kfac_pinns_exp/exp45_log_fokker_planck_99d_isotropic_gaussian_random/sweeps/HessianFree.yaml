@@ -27,9 +27,9 @@ parameters:
     dim_Omega:
         value: 99
     N_Omega:
-        value: 3_000
-    N_dOmega:
         value: 1_000
+    N_dOmega:
+        value: 500
     HessianFree_curvature_opt:
         distribution: categorical
         values: ["ggn", "hessian"]

@@ -28,9 +28,9 @@ parameters:
     dim_Omega:
         value: 99
     N_Omega:
-        value: 3_000
-    N_dOmega:
         value: 1_000
+    N_dOmega:
+        value: 500
     KFAC_ema_factor:
         distribution: uniform
         min: 0.999

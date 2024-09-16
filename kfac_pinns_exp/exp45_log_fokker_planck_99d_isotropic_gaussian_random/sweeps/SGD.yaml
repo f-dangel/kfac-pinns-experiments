@@ -28,9 +28,9 @@ parameters:
     dim_Omega:
         value: 99
     N_Omega:
-        value: 3_000
-    N_dOmega:
         value: 1_000
+    N_dOmega:
+        value: 500
     SGD_lr:
         distribution: log_uniform_values
         min: 1e-3
