@@ -91,15 +91,25 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
                 .replace("*", "_auto")
             )
 
-            commands[sweep_id] = " ".join(  # noqa: B909
+            checkpoint_command = " ".join(  # noqa: B909
                 run_cmd
                 + [
                     f"--num_seconds={shorter_time}",
-                    "--plot_solution",
-                    f"--plot_dir={plot_dir}",
-                    f"--plot_steps {' '.join(visualize_steps)}",
+                    "--save_checkpoints",
+                    f"--checkpoint_dir={plot_dir}",
+                    f"--checkpoint_steps {' '.join(visualize_steps)}",
                 ]
             )
+            plot_command = " ".join(  # noqa: B909
+                [
+                    "python",
+                    "../../plot_solution.py",
+                    f"--checkpoint_dir={plot_dir}",
+                    f"--plot_dir={plot_dir}",
+                    "--disable_tex",
+                ]
+            )
+            commands[sweep_id] = f"{checkpoint_command} && {plot_command}"
 
     return commands
 

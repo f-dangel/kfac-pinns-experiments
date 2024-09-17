@@ -88,6 +88,7 @@ evaluate_interior_loss = partial(
     mu=mu_isotropic,
     sigma=sigma_isotropic,
     div_mu=div_mu_isotropic,
+    sigma_isotropic=True,
 )
 
 evaluate_interior_loss_and_kfac = partial(
@@ -95,6 +96,7 @@ evaluate_interior_loss_and_kfac = partial(
     mu=mu_isotropic,
     sigma=sigma_isotropic,
     div_mu=div_mu_isotropic,
+    sigma_isotropic=True,
 )
 
 evaluate_interior_loss_with_layer_inputs_and_grad_outputs = partial(
@@ -102,6 +104,7 @@ evaluate_interior_loss_with_layer_inputs_and_grad_outputs = partial(
     mu=mu_isotropic,
     sigma=sigma_isotropic,
     div_mu=div_mu_isotropic,
+    sigma_isotropic=True,
 )
 
 plot_solution = partial(

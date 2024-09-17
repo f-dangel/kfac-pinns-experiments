@@ -20,11 +20,21 @@ DIM_OMEGA_IDS = [f"dim_Omega={dim}" for dim in DIM_OMEGAS]
 
 
 @mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
-def test_evaluate_interior_loss(dim_Omega: int):
+@mark.parametrize("sigma_isotropic_taylor", [True, False])
+@mark.parametrize("sigma_isotropic_auto", [True, False])
+def test_evaluate_interior_loss(
+    dim_Omega: int, sigma_isotropic_taylor: bool, sigma_isotropic_auto: bool
+):
     """Check that autograd and manual implementation of interior loss match.
 
     Args:
         dim_Omega: The spatial dimension of the domain.
+        sigma_isotropic_taylor: Whether to use the fact that the
+            diffusivity matrix is a scaled identity matrix in the Taylor
+            mode implementation.
+        sigma_isotropic_auto: Whether to use the fact that the
+            diffusivity matrix is a scaled identity matrix in the automatic
+            differentiation mode implementation.
     """
     manual_seed(0)
     layers = [
@@ -49,13 +59,18 @@ def test_evaluate_interior_loss(dim_Omega: int):
 
     # compute via Sequential (using autograd)
     loss_auto, residual_auto, _ = evaluate_interior_loss(
-        model, X, y, mu_isotropic, sigma_isotropic
+        model, X, y, mu_isotropic, sigma_isotropic, sigma_isotropic=sigma_isotropic_auto
     )
     grad_auto = grad(loss_auto, params)
 
     # compute via layers (using manual forward)
     loss_manual, residual_manual, _ = evaluate_interior_loss(
-        layers, X, y, mu_isotropic, sigma_isotropic
+        layers,
+        X,
+        y,
+        mu_isotropic,
+        sigma_isotropic,
+        sigma_isotropic=sigma_isotropic_taylor,
     )
     grad_manual = grad(loss_manual, params)
 
