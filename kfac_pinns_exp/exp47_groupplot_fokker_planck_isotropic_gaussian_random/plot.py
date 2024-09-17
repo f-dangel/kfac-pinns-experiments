@@ -10,13 +10,11 @@ from tueplots import bundles
 from kfac_pinns_exp.exp43_log_fokker_planck9d_isotropic_gaussian_random import (
     plot as MEDIUM,
 )
-from kfac_pinns_exp.exp45_log_fokker_planck_99d_isotropic_gaussian_random import (
+from kfac_pinns_exp.exp45_log_fokker_planck99d_isotropic_gaussian_random import (
     plot as BIG,
 )
-from kfac_pinns_exp.exp46_fokker_planck_1d_isotropic_gaussian_random import (
-    plot as SMALL,
-)
-from kfac_pinns_exp.exp46_fokker_planck_1d_isotropic_gaussian_random.plot import (
+from kfac_pinns_exp.exp46_fokker_planck1d_isotropic_gaussian_random import plot as SMALL
+from kfac_pinns_exp.exp46_fokker_planck1d_isotropic_gaussian_random.plot import (
     colors,
     linestyles,
 )

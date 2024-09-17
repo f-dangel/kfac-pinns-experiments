@@ -47,16 +47,8 @@ Note that for every time-point $p(t,\cdot)$ is a probability density on $\mathbb
     p_{\vtheta}(\vx_n^0) - p_0(\vx_n^0)
     \big]^2.
 \end{align*}
-To make sampling tractable, we replace $\mathbb R^d$ by a compactum\footnote{If this is really the smartest way to handle infinite domains is not clear to me, I think it seems rather naive, but I am not familiar enough with the literature.}, say $[-L, L]^d$ for suitable $L>0$. Then we draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$ (in our code, we use $L=5$ for now).
+To make sampling tractable, we replace $\mathbb R^d$ by a compactum\footnote{If this is really the smartest way to handle infinite domains is not clear to me, I think it seems rather naive, but I am not familiar enough with the literature.}, say $[-L, L]^d$ for suitable $L>0$. Then we draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$. Our experiments use $L=5$.
 
-\paragraph{Exact Initial Conditions*}
-We can (and probably should) use a trick to automatically satisfy the initial conditions. To achieve this, we replace the neural network ansatz by
-\begin{equation}
-  (t,\vx)
-  \mapsto
-  t p_\vtheta(t,\vx) + p_0(\vx).
-\end{equation}
-By abuse of notation we again denote this function by $p_\vtheta$. This trick can also be used for the heat equation, of course. It is known in the literature and often facilitates training. \todo{This is currently difficult for our implementation, because we assume that the ansatz is a single neural network, not a sum. Is the $t$ above intended?}
 
 \paragraph{The Fokker-Planck Equation in Log-Space}
 For numerical stability, transferring this PDE into $\log$-space is commonly employed. The ansatz $q = \log p$ lets us solve \eqref{eq:fokker_planck_abstract} via the \emph{nonlinear} PDE (which is a special case of a Hamilton-Jacobi-Bellman equation) given by
@@ -102,12 +94,6 @@ Again, parametrizing $q$ by a neural network $q_\vtheta$ yields for the PINN los
     \big]^2.
 \end{align*}
 We draw $\vx_n \sim [0, 1] \times [-L, L]^d$ and $\vx_n^0 \sim \{0\} \times [-L, L]^d$ as before.
-
-\paragraph{Exact Initial Conditions*}
-We can enforce initial conditions in the ansatz via
-\begin{equation*}
-  (t,\vx) \mapsto t q_\vtheta(t, \vx) + \log p_0(\vx)
-\end{equation*}
 
 \subsection{Concrete Examples}
 \paragraph{A Sanity Check Example (\texttt{isotropic\_gaussian})}
@@ -170,61 +156,145 @@ with solution $q^* = \log(p^*)$.
 \item \cite{wang20222} claimes that the log space Fokker-Planck equation should not be trained with an $L^2$ loss because the $L^2$ loss does not control the error. I am unsure if this is relevant for numerical experiments, though. We can have it in mind if we manage to drive the loss down but don't observe the same for the error.
 \end{itemize}
 
-tuning protocol: Bayesian (copy search spaces from Poisson+Bayes)
+% tuning protocol: Bayesian (copy search spaces from Poisson+Bayes)
 % exp35: 1+1 FP, single-layer net
 % exp36: 9+1 log-FP, D~100k
 % exp37: 99+1 log-FP, D~1M
 % exp38: group plot for FPs
 
-\subsection{9+1d Logarithmic Fokker-Planck Equation with Random Search}
+\subsection{(1/9/99)+1-d (Logarithmic) Fokker-Planck Equations with Random Search}
 
-We consider the logarithmic Fokker-Planck equation from \Cref{eq:log-fokker-planck-isotropic-gaussian}.
-The network is a $10 \to 256 \to 256 \to 128 \to 128 \to 1$ tanh-activated MLP with $D=\num{118145}$.
-We use batch sizes of $N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and assign each run a budget of $\num{6000}\,\text{s}$.
-Hyper-parameters are tuned with random search.
+Here, we consider three different Fokker-Planck equations and use random search as tuning protocol:
+\begin{enumerate}
+\item The $1+1$-d Fokker-Planck equation from \Cref{eq:fokker-planck-isotropic-gaussian} whose solution we model with a small $2 \to 64 \to 1$ tanh-activated MLP with $D=\num{257}$. We use batch sizes of $N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and assign each run a budget of $\num{1000}\,\text{s}$.
+
+\item The $9+1$-d logarithmic Fokker-Planck equation from \Cref{eq:log-fokker-planck-isotropic-gaussian} whose solution we model with a medium sized $10 \to 256 \to 256 \to 128 \to 128 \to 1$ tanh-activated MLP with $D=\num{118145}$.
+  We use batch sizes of $N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and assign each run a budget of $\num{6000}\,\text{s}$.
+
+\item The $99+1$-d logarithmic Fokker-Planck equation from \Cref{eq:log-fokker-planck-isotropic-gaussian} whose solution we model with a large $100 \to 768 \to 768 \to 512 \to 512 \to 1$ tanh-activated MLP with $D=\num{1325057}$. We use batch sizes of $N_{\Omega} = \num{1000}$, $N_{\partial\Omega} = \num{1000}$, and assign each run a budget of $\num{10000}\,\text{s}$.
+\end{enumerate}
+
 Batches are re-sampled every iteration for all optimizers except for KFAC and KFAC*, which use the same batch for ten iterations.
-We noticed that KFAC* requires exponential moving averages close to one to work well.
-\Cref{fig:log_fokker_planck_10d-appendix} visualizes the results:
-From the bottom row, we see that while KFAC reduces the loss roughly as well as KFAC* per iteration (bottom right), its internal line search has detrimental effects on generalzation (bottom left) and run time (top right).
+\Cref{fig:fokker-planck-random-appendix} summarizes our results.
 
 \begin{figure}[!h]
   \centering
-  \def\pathToFigs{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random}
+  \def\pathToFigs{kfac_pinns_exp/exp47_groupplot_fokker_planck_isotropic_gaussian_random}
   \begin{subfigure}[t]{1.0\linewidth}
-    \caption{}\label{subfig:log_fokker_planck_10d-time}
-    \includegraphics{\pathToFigs/l2_error_over_time.pdf}
-    \includegraphics{\pathToFigs/loss_over_time.pdf}
+    \caption{}\label{subfig:fokker-planck-random-time}
+    % trim legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
+    % trim the legend and titles
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
   \end{subfigure}
   \begin{subfigure}[t]{1.0\linewidth}
-    \caption{}\label{subfig:log_fokker_planck_10d-step}
-    \includegraphics{\pathToFigs/l2_error_over_step.pdf}
-    \includegraphics{\pathToFigs/loss_over_step.pdf}
+    \caption{}\label{subfig:fokker-planck-random-step}
+    % trim the legend, xlabel and xticklabels
+    % [trim={left bottom right top},clip]
+    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
+    % trim the titles
+    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
   \end{subfigure}
-  \caption{Training loss and evaluation $L_2$ error for learning the solution to a 9+1d logarithmic Fokker-Planck equation over (\subref{subfig:log_fokker_planck_10d-time}) time and (\subref{subfig:log_fokker_planck_10d-step}) steps.}\label{fig:log_fokker_planck_10d-appendix}
+  \caption{Training loss and evaluation $L_2$ error for learning the solution to Fokker Planck (left) and logarithmic Fokker-Planck equations (center, right) over (\subref{subfig:fokker-planck-random-time}) time and (\subref{subfig:fokker-planck-random-step}) steps using random search.}\label{fig:fokker-planck-random-appendix}
 \end{figure}
 
-\paragraph{Best run details} The runs shown in \Cref{fig:log_fokker_planck_10d-appendix} correspond to the following hyper-parameters:
-
+\paragraph{Best run details} The runs shown in \Cref{fig:fokker-planck-random-appendix} correspond to the following hyper-parameters:
 \begin{itemize}
-  \def\pathToRuns{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/tex}
-\item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
-\item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
-\item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
-\item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
-\item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
-\item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+\item $1+1$-d Fokker-Planck equation with $2 \to 64 \to 1$ tanh-activated MLP ($D=\num{257}$):
+  \begin{itemize}
+    \def\pathToRuns{kfac_pinns_exp/exp46_fokker_planck1d_isotropic_gaussian_random/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/best_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/best_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+
+\item $9+1$-d logarithmic Fokker-Planck equation with $10 \to 256 \to 256 \to 128 \to 128 \to 1$ tanh-activated MLP ($D=\num{118145}$):
+  \begin{itemize}
+    \def\pathToRuns{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
+  We noticed that KFAC* requires exponential moving averages close to one to work well.
+  We see that while KFAC reduces the loss roughly as well as KFAC* per iteration (\Cref{subfig:fokker-planck-random-step} center), its internal line search has detrimental effects on generalization (\Cref{subfig:fokker-planck-random-step} center) and run time (\Cref{subfig:fokker-planck-random-time} center).
+
+\item $99+1$-d logarithmic Fokker-Planck equation with $10 \to 768 \to 768 \to 512 \to 512 \to 1$ tanh-activated MLP ($D=\num{1325057}$):
+  \begin{itemize}
+    \def\pathToRuns{kfac_pinns_exp/exp45_log_fokker_planck99d_isotropic_gaussian_random/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/best_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/best_Adam.tex}
+    % \item \textbf{Hessian-free:} \input{\pathToRuns/best_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/best_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/best_KFAC.tex}
+    % \item \textbf{KFAC*:} \input{\pathToRuns/best_KFAC_auto.tex}
+  \end{itemize}
 \end{itemize}
 
-\paragraph{Search space details} The runs shown in \Cref{fig:log_fokker_planck_10d-appendix} were determined to be the best via a random search on the following search spaces which each optimizer given approximately the same total computational time ($\mathcal{U}$ denotes a uniform, and $\mathcal{LU}$ a log-uniform distribution):
+\paragraph{Search space details} The runs shown in \Cref{fig:fokker-planck-random-appendix} were determined to be the best via a random search on the following search spaces which each optimizer given approximately the same total computational time ($\mathcal{U}$ denotes a uniform, and $\mathcal{LU}$ a log-uniform distribution):
 \begin{itemize}
-  \def\pathToRuns{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/tex}
-\item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
-\item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
-\item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
-\item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
-\item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
-\item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+
+\item $1+1$-d Fokker-Planck equation with $2 \to 64 \to 1$ tanh-activated MLP ($D=\num{257}$):
+  \begin{itemize}
+    \def\pathToRuns{kfac_pinns_exp/exp46_fokker_planck1d_isotropic_gaussian_random/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{ENGD (full):} \input{\pathToRuns/sweep_ENGD_full.tex}
+  \item \textbf{ENGD (layer-wise):} \input{\pathToRuns/sweep_ENGD_per_layer.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+\item $9+1$-d logarithmic Fokker-Planck equation with $10 \to 256 \to 256 \to 128 \to 128 \to 1$ tanh-activated MLP ($D=\num{118145}$):
+  \begin{itemize}
+    \def\pathToRuns{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+  \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+  \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
+
+\item $99+1$-d logarithmic Fokker-Planck equation with $10 \to 768 \to 768 \to 512 \to 512 \to 1$ tanh-activated MLP ($D=\num{1325057}$):
+  \begin{itemize}
+    \def\pathToRuns{kfac_pinns_exp/exp45_log_fokker_planck99d_isotropic_gaussian_random/tex}
+  \item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+  \item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+    % \item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+  \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+  \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+    % \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+  \end{itemize}
 \end{itemize}
+
+\subsection{Limitations of Our Current Approach}
+
+\paragraph{Exact Initial Conditions*}
+We can (and probably should) use a trick to automatically satisfy the initial conditions. To achieve this, we replace the neural network ansatz by
+\begin{equation}
+  (t,\vx)
+  \mapsto
+  t p_\vtheta(t,\vx) + p_0(\vx).
+\end{equation}
+By abuse of notation we again denote this function by $p_\vtheta$. This trick can also be used for the heat equation, of course. It is known in the literature and often facilitates training. \todo{This is currently difficult for our implementation, because we assume that the ansatz is a single neural network, not a sum. Is the $t$ above intended?}
+
+\paragraph{Exact Initial Conditions*}
+We can enforce initial conditions in the ansatz via
+\begin{equation*}
+  (t,\vx) \mapsto t q_\vtheta(t, \vx) + \log p_0(\vx)
+\end{equation*}
+
 
 %%% Local Variables:
 %%% mode: latex
