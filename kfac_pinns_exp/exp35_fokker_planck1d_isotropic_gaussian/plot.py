@@ -44,7 +44,6 @@ sweep_ids = {  # ids from the wandb agent
     "cbksesvv": "LBFGS",
     "inyas2jx": "ENGD (full)",
     "jall1kg4": "ENGD (layer-wise)",
-    "yay7ydte": "ENGD (diagonal)",
     "v5chqph2": "KFAC",
     "1uyov1ym": "KFAC*",
 }
