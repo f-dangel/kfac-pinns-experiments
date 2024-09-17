@@ -78,6 +78,7 @@ def evaluate_interior_loss(
                 "Sigma must be identical for each datum in the batch."
             )
 
+        # compute Tr(σ σᵀ ∂²p/∂x²)
         coefficients = None if sigma_isotropic else sigma_outer[0]
         intermediates = manual_forward_laplacian(
             model, X, coordinates=list(range(1, dim)), coefficients=coefficients
