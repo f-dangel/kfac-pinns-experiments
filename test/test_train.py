@@ -160,28 +160,21 @@ ARGS = [
         "--SGD_lr=0.1",
         "--boundary_condition=cos_sum",
     ],
-    # train and visualize the solutions for each logged step
-    *[
-        [
-            "--num_steps=3",
-            f"--dim_Omega={dim_Omega}",
-            f"--equation={equation}",
-            f"--boundary_condition={condition}",
-            "--optimizer=SGD",
-            "--SGD_lr=0.1",
-            "--plot_solution",
-            "--disable_tex",  # for Github actions (no LaTeX available)
-        ]
-        for dim_Omega, equation, condition in [
-            (1, "poisson", "sin_product"),
-            (2, "poisson", "sin_product"),
-            (1, "poisson", "cos_sum"),
-            (2, "poisson", "cos_sum"),
-            (1, "heat", "sin_product"),
-            (1, "heat", "sin_sum"),
-            (1, "fokker-planck-isotropic", "gaussian"),
-            (1, "log-fokker-planck-isotropic", "gaussian"),
-        ]
+    # train and store checkpoints
+    [
+        "--num_steps=3",
+        "--optimizer=SGD",
+        "--SGD_lr=0.1",
+        "--save_checkpoints",
+    ],
+    [
+        "--num_steps=3",
+        "--optimizer=Adam",
+        "--Adam_lr=0.1",
+        "--save_checkpoints",
+        "--checkpoint_steps",
+        "0",
+        "1",
     ],
     # train with KFAC+momentum
     [
