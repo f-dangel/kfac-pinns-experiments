@@ -1,11 +1,13 @@
 """Implements the SPRING optimizer (https://arxiv.org/pdf/2401.10190v1) for PINNs."""
 
+from argparse import ArgumentParser, Namespace
 from math import sqrt
 from typing import Dict, List, Tuple
 
 from einops import einsum
 from torch import Tensor, cat, zeros
 from torch.nn import Module
+from torch.optim import Optimizer
 
 from kfac_pinns_exp import (
     fokker_planck_isotropic_equation,
@@ -13,6 +15,7 @@ from kfac_pinns_exp import (
     log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
+from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.pinn_utils import (
     evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
 )
@@ -35,6 +38,135 @@ EVAL_FNS = {
         "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
     },
 }
+
+
+def parse_SPRING_args(verbose: bool = False, prefix="SPRING_") -> Namespace:
+    """Parse command-line arguments for `SPRING`.
+
+    Args:
+        verbose: Whether to print the parsed arguments. Default: `False`.
+        prefix: The prefix for the arguments. Default: `'SPRING_'`.
+
+    Returns:
+        A namespace with the parsed arguments.
+    """
+    parser = ArgumentParser(description="Parse arguments for setting up SPRING.")
+
+    parser.add_argument(f"--{prefix}lr", help="Learning rate for SPRING.")
+    parser.add_argument(
+        f"--{prefix}damping",
+        type=float,
+        help="Damping factor for the optimizer.",
+        default=1e-3,
+    )
+    parser.add_argument(
+        f"--{prefix}decay_factor",
+        type=float,
+        help="Decay factor of the previous step.",
+        default=0.99,
+    )
+    parser.add_argument(
+        f"--{prefix}norm_constraint",
+        type=float,
+        help="Norm constraint on the natural gradient.",
+        default=1e-3,
+    )
+    parser.add_argument(
+        f"--{prefix}equation",
+        type=str,
+        choices=SPRING.SUPPORTED_EQUATIONS,
+        help="The equation to solve.",
+        default="poisson",
+    )
+
+    args = parse_known_args_and_remove_from_argv(parser)
+
+    if verbose:
+        print("Parsed arguments for SPRING: ", args)
+
+    return args
+
+
+class SPRING(Optimizer):
+    """SPRING optimizer for PINN problems.
+
+    See https://arxiv.org/pdf/2401.10190v1 for details.
+    """
+
+    SUPPORTED_EQUATIONS = EVAL_FNS.keys()
+
+    def __init__(
+        self,
+        layers: List[Module],
+        lr: float,
+        damping: float = 1e-3,
+        decay_factor: float = 0.99,
+        norm_constraint: float = 1e-3,
+        equation: str = "poisson",
+    ):
+        """Set up the SPRING optimizer.
+
+        Args:
+            layers: The layers that form the neural network.
+            lr: The learning rate.
+            damping: The non-negative damping factor (λ in the paper).
+                Default: `1e-3` (taken from Section 4 of the paper).
+            decay_factor: The decay factor (μ in the paper). Must be in `[0; 1)`.
+                Default: `0.99` (taken from Section 4 of the paper).
+            norm_constraint: The positive norm constraint (C in the paper).
+                Default: `1e-3` (taken from Section 4 of the paper).
+            equation: Equation to solve. Currently supports `'poisson'`, `'heat'`, and
+                `'fokker-planck-isotropic'`. Default: `'poisson'`.
+
+        Raises:
+            ValueError: If the optimizer is used with per-parameter options.
+            ValueError: If the equation is not supported.
+        """
+        defaults = dict(
+            lr=lr,
+            damping=damping,
+            decay_factor=decay_factor,
+            norm_constraint=norm_constraint,
+        )
+        params = sum((list(layer.parameters()) for layer in layers), [])
+        super().__init__(params, defaults)
+
+        if len(self.param_groups) != 1:
+            raise ValueError("SPRING does not support per-parameter options.")
+
+        if equation not in self.SUPPORTED_EQUATIONS:
+            raise ValueError(
+                f"Equation {equation} not supported."
+                f" Supported are: {self.SUPPORTED_EQUATIONS}."
+            )
+        self.equation = equation
+        self.steps = 0
+        self.layers = layers
+
+    def step(
+        self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        """Take a step.
+
+        Args:
+            X_Omega: Input for the interior loss.
+            y_Omega: Target for the interior loss.
+            X_dOmega: Input for the boundary loss.
+            y_dOmega: Target for the boundary loss.
+
+        Returns: # noqa: DAR202
+            Tuple of the interior and boundary loss before taking the step.
+
+        Raises:
+            NotImplementedError: TODO.
+        """
+        # (group,) = self.param_groups
+        # lr = group["lr"]
+        # damping = group["damping"]
+        # decay_factor = group["decay_factor"]
+        # norm_constraint = group["norm_constraint"]
+        self.steps += 1
+        raise NotImplementedError("TODO")
 
 
 def evaluate_losses_with_layer_inputs_and_grad_outputs(

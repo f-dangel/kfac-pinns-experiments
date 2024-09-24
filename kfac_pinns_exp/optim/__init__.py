@@ -20,6 +20,7 @@ from kfac_pinns_exp.optim.hessianfree_cached import (
 from kfac_pinns_exp.optim.kfac import KFAC, parse_KFAC_args
 from kfac_pinns_exp.optim.lbfgs import parse_LBFGS_args
 from kfac_pinns_exp.optim.sgd import parse_SGD_args
+from kfac_pinns_exp.optim.spring import SPRING, parse_SPRING_args
 
 
 def set_up_optimizer(
@@ -44,6 +45,7 @@ def set_up_optimizer(
         "LBFGS": (LBFGS, parse_LBFGS_args),
         "HessianFree": (HessianFree, parse_HessianFree_args),
         "HessianFreeCached": (HessianFreeCached, parse_HessianFreeCached_args),
+        "SPRING": (SPRING, parse_SPRING_args),
     }[optimizer]
 
     prefix = f"{optimizer}_"
@@ -53,7 +55,7 @@ def set_up_optimizer(
 
     # Some optimizers require passing the equation as argument. We parse this as general
     # argument and overwrite the entry from the optimizer's parser.
-    if optimizer in {"KFAC", "ENGD", "HessianFreeCached"}:
+    if optimizer in {"KFAC", "ENGD", "HessianFreeCached", "SPRING"}:
         if verbose:
             print(
                 f"Overwriting {optimizer}_equation={args_dict['equation']!r}"
@@ -61,7 +63,7 @@ def set_up_optimizer(
             )
         args_dict["equation"] = equation
 
-    if optimizer == "KFAC":
+    if optimizer in {"KFAC", "SPRING"}:
         param_representation = layers
     elif optimizer == "ENGD":
         param_representation = Sequential(*layers)
