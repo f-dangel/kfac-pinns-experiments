@@ -90,7 +90,7 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
     )
 
 
-def compute_jacobian_outer_product(
+def compute_JJT(
     interior_inputs: Dict[int, Tensor],
     interior_grad_outputs: Dict[int, Tensor],
     boundary_inputs: Dict[int, Tensor],
@@ -143,3 +143,155 @@ def compute_jacobian_outer_product(
         JJT.add_(J @ J.T)
 
     return JJT
+
+
+def apply_joint_J(
+    interior_inputs: Dict[int, Tensor],
+    interior_grad_outputs: Dict[int, Tensor],
+    boundary_inputs: Dict[int, Tensor],
+    boundary_grad_outputs: Dict[int, Tensor],
+    v: List[Tensor],
+) -> Tensor:
+    """Multiply the Jacobian onto a vector in parameter space.
+
+    Considers both the interior and the boundary loss.
+
+    Args:
+        interior_inputs: The layer inputs for the interior loss.
+        interior_grad_outputs: The layer gradient outputs for the interior loss.
+        boundary_inputs: The layer inputs for the boundary loss.
+        boundary_grad_outputs: The layer gradient outputs for the boundary loss.
+        v: The vector to multiply the Jacobian with.
+
+    Returns:
+        The result of multiplying the Jacobian with the vector. Has shape `(N_Omega +
+        N_dOmega,)` where `N_Omega` and `N_dOmega` are the interior and boundary loss
+        batch sizes.
+    """
+    J_interior_v = apply_individual_J(interior_inputs, interior_grad_outputs, v)
+    J_boundary_v = apply_individual_J(boundary_inputs, boundary_grad_outputs, v)
+    return cat([J_interior_v, J_boundary_v])
+
+
+def apply_individual_J(
+    inputs: Dict[int, Tensor], grad_outputs: Dict[int, Tensor], v: List[Tensor]
+) -> Tensor:
+    """Multiply the Jacobian onto a vector in parameter space (tensor list format).
+
+    Considers only a single loss, i.e. either the interior or the boundary loss.
+
+    Args:
+        inputs: A dictionary containing the inputs to layers with parameters.
+        grad_outputs: A dictionary containing the gradient outputs of layers with
+            parameters.
+        v: The vector to multiply the Jacobian with.
+
+    Returns:
+        The result of multiplying the Jacobian with the vector. Has shape `(N,)` where
+        `N` is the batch size.
+    """
+    assert 2 * len(inputs) == 2 * len(grad_outputs) == len(v)
+
+    ((N, dev, dt),) = {
+        (t.shape[0], t.device, t.dtype)
+        for t in list(inputs.values()) + list(grad_outputs.values())
+    }
+    Jv = zeros(N, device=dev, dtype=dt)
+
+    for idx, layer_idx in enumerate(inputs):
+        v_weight, v_bias = v[2 * idx], v[2 * idx + 1]
+        v_joint = cat([v_weight, v_bias.unsqueeze(-1)], dim=1)
+        Jv.add_(
+            einsum(
+                grad_outputs[layer_idx],
+                v_joint,
+                inputs[layer_idx],
+                "n ... d_out, d_out d_in, n ... d_in -> n",
+            )
+        )
+
+    # grad_outputs are scaled by 1/N, but we need 1/√N for the Jacobian
+    return Jv.mul_(sqrt(N))
+
+
+def apply_joint_JT(
+    interior_inputs: Dict[int, Tensor],
+    interior_grad_outputs: Dict[int, Tensor],
+    boundary_inputs: Dict[int, Tensor],
+    boundary_grad_outputs: Dict[int, Tensor],
+    v: Tensor,
+) -> List[Tensor]:
+    """Multiply the transpose Jacobian onto a vector in data space.
+
+    Considers both the interior and the boundary loss.
+
+    Args:
+        interior_inputs: The layer inputs for the interior loss.
+        interior_grad_outputs: The layer gradient outputs for the interior loss.
+        boundary_inputs: The layer inputs for the boundary loss.
+        boundary_grad_outputs: The layer gradient outputs for the boundary loss.
+        v: The vector to multiply the transpose Jacobian with.
+
+    Returns:
+        The result of multiplying the transpose Jacobian with the vector. Has same
+        format as the parameter space, i.e. is a tensor list.
+    """
+    # split into interior and boundary terms
+    (N_Omega,) = {
+        t.shape[0]
+        for t in list(interior_inputs.values()) + list(interior_grad_outputs.values())
+    }
+    (N_dOmega,) = {
+        t.shape[0]
+        for t in list(boundary_inputs.values()) + list(boundary_grad_outputs.values())
+    }
+    v_interior, v_boundary = v.split([N_Omega, N_dOmega])
+
+    return [
+        JTv_interior.add_(JTv_boundary)
+        for JTv_interior, JTv_boundary in zip(
+            apply_individual_JT(interior_inputs, interior_grad_outputs, v_interior),
+            apply_individual_JT(boundary_inputs, boundary_grad_outputs, v_boundary),
+        )
+    ]
+
+
+def apply_individual_JT(
+    inputs: Dict[int, Tensor], grad_outputs: Dict[int, Tensor], v: Tensor
+) -> List[Tensor]:
+    """Multiply the transpose Jacobian onto a vector in data space.
+
+    Considers only a single loss, i.e. either the interior or the boundary loss.
+
+    Args:
+        inputs: A dictionary containing the inputs to layers with parameters.
+        grad_outputs: A dictionary containing the gradient outputs of layers with
+            parameters.
+        v: The vector to multiply the transpose Jacobian with.
+
+    Returns:
+        The result of multiplying the transpose Jacobian with the vector. Has same
+        format as the parameter space, i.e. is a tensor list.
+    """
+    assert len(inputs) == len(grad_outputs)
+
+    JTv = []
+
+    for layer_idx in inputs:
+        JTv_joint = einsum(
+            grad_outputs[layer_idx],
+            v,
+            inputs[layer_idx],
+            "n ... d_out, n, n ... d_in -> d_out d_in",
+        )
+        JTv_weight, JTv_bias = JTv_joint.split(
+            [inputs[layer_idx].shape[-1] - 1, 1], dim=1
+        )
+        JTv.extend([JTv_weight, JTv_bias])
+
+    # grad_outputs are scaled by 1/N, but we need 1/√N for the transposed Jacobian
+    (N,) = {t.shape[0] for t in list(inputs.values()) + list(grad_outputs.values())}
+    for v in JTv:
+        v.mul_(sqrt(N))
+
+    return JTv
