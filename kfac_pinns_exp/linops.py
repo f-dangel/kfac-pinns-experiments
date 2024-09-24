@@ -79,8 +79,6 @@ class GramianLinearOperator:
             approximation: The Gramian approximation. Can be `'full'` or `'per_layer'`.
 
         Raises:
-            NotImplementedError: If there are trainable parameters in unsupported
-                layers.
             ValueError: For unsupported values of `approximation`.
             ValueError: For unsupported values of `ggn_type`.
         """
