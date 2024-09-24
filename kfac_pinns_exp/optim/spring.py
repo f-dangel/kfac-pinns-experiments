@@ -62,7 +62,7 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
         X_dOmega: The input data for the boundary loss.
         y_dOmega: The target data for the boundary loss.
         ggn_type: The GGN type.
-        approximation: The Gramian approximation.
+        equation: The PDE to solve.
 
     Returns:
         The differentiable interior loss, differentiable boundary loss,
