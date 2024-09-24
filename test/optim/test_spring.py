@@ -304,7 +304,6 @@ def test_apply_joint_J(
         condition: String specifying the conditions.
         model: String specifying the model.
         device: The device to run the test on.
-        loss_type: String specifying the loss type.
         dtype: The data type to run the test in. Defaults to `float64`.
         N_Omega: The number of interior data points to use. Defaults to `64`.
         N_dOmega: The number of boundary data points to use. Defaults to `32`.
@@ -386,7 +385,6 @@ def test_apply_joint_JT(
         condition: String specifying the conditions.
         model: String specifying the model.
         device: The device to run the test on.
-        loss_type: String specifying the loss type.
         dtype: The data type to run the test in. Defaults to `float64`.
         N_Omega: The number of interior data points to use. Defaults to `64`.
         N_dOmega: The number of boundary data points to use. Defaults to `32`.
