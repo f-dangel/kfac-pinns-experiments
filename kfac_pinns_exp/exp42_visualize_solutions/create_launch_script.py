@@ -109,7 +109,7 @@ def get_commands(local_files: bool = False) -> Dict[str, str]:
                     "--disable_tex",
                 ]
             )
-            commands[sweep_id] = f"{checkpoint_command} && {plot_command}"
+            commands[sweep_id] = f"{checkpoint_command} && {plot_command}"  # noqa: B909
 
     return commands
 
