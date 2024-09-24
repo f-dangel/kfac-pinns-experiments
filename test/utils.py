@@ -1,6 +1,6 @@
 """Utility functions."""
 
-from torch import Tensor, allclose, isclose
+from torch import Tensor, allclose, cuda, device, isclose
 
 
 def report_nonclose(
@@ -42,3 +42,7 @@ def report_nonclose(
             print(f"Max: {tensor1.max():.5f}, {tensor2.max():.5f}")
             print(f"Min: {tensor1.min():.5f}, {tensor2.min():.5f}")
         raise ValueError("Compared arrays don't match.")
+
+
+DEVICES = [device("cuda"), device("cpu")] if cuda.is_available() else [device("cpu")]
+DEVICE_IDS = [f"device={dev}" for dev in DEVICES]
