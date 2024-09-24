@@ -103,23 +103,7 @@ class GramianLinearOperator:
             )
         self.approximation = approximation
 
-        self.layer_idxs = []
-        for idx, layer in enumerate(layers):
-            if isinstance(layer, Linear):
-                if (
-                    layer.weight.requires_grad
-                    and layer.bias is not None
-                    and layer.bias.requires_grad
-                ):
-                    self.layer_idxs.append(idx)
-                elif any(p.requires_grad for p in layer.parameters()):
-                    raise NotImplementedError(
-                        "Trainable linear layers must have differentiable weight+bias."
-                    )
-            elif any(p.requires_grad for p in layer.parameters()):
-                raise NotImplementedError(
-                    "Trainable parameters must be in linear layers."
-                )
+        self.layer_idxs = supported_layers(layers)
 
         self.params = sum(
             (list(layers[idx].parameters()) for idx in self.layer_idxs), []
@@ -219,3 +203,35 @@ class GramianLinearOperator:
             result.extend([v_idx[:, :-1], v_idx[:, -1]])
 
         return result
+
+
+def supported_layers(layers: List[Module]) -> List[int]:
+    """Get the indices of supported layers.
+
+    Args:
+        layers: The layers of the network.
+
+    Returns:
+        The indices of the supported layers.
+
+    Raises:
+        NotImplementedError: If the trainable parameters are not in linear layers.
+        NotImplementedError: If the trainable linear layers are not differentiable.
+    """
+    layer_idxs = []
+    for idx, layer in enumerate(layers):
+        if isinstance(layer, Linear):
+            if (
+                layer.weight.requires_grad
+                and layer.bias is not None
+                and layer.bias.requires_grad
+            ):
+                layer_idxs.append(idx)
+            elif any(p.requires_grad for p in layer.parameters()):
+                raise NotImplementedError(
+                    "Trainable linear layers must have differentiable weight+bias."
+                )
+        elif any(p.requires_grad for p in layer.parameters()):
+            raise NotImplementedError("Trainable parameters must be in linear layers.")
+
+    return layer_idxs
