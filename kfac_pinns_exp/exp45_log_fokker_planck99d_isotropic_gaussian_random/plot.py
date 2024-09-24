@@ -39,10 +39,10 @@ if print_sweeps:
 sweep_ids = {  # ids from the wandb agent
     "llzeqsf1": "SGD",
     "2b3pcnzj": "Adam",
-    # "r0nxoz6g": "Hessian-free",
+    "r0nxoz6g": "Hessian-free",
     "40fx9rox": "LBFGS",
     "ty3ewb2z": "KFAC",
-    # "6hum85zk": "KFAC*",
+    "6hum85zk": "KFAC*",
 }
 
 # color options: https://jiffyclub.github.io/palettable/colorbrewer/
@@ -127,6 +127,7 @@ if __name__ == "__main__":
 
             if x == "time" and y == "l2_error":
                 ax.legend()
+                ax.set_ylim(None, 1e4)
 
             plt.savefig(path.join(HEREDIR, f"{y}_over_{x}.pdf"), bbox_inches="tight")
 
