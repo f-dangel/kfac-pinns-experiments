@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 
 from einops import einsum
 from torch import Tensor, arange, cat, cholesky_solve, zeros, zeros_like
+from torch.linalg import cholesky
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -221,7 +222,7 @@ class SPRING(Optimizer):
         zeta: Tensor = epsilon - O_phi.mul_(decay_factor)
 
         # apply inverse of damped OOT to zeta
-        step = cholesky_solve(zeta.unsqueeze(-1), OOT.cholesky()).squeeze(-1)
+        step = cholesky_solve(zeta.unsqueeze(-1), cholesky(OOT)).squeeze(-1)
 
         # apply O
         step = apply_joint_JT(
