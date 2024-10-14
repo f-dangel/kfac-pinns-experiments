@@ -134,10 +134,10 @@ ARGS = [
         [
             "--num_steps=3",
             "--optimizer=SPRING",
-            f"--SPRING_lr=5e-1",
-            f"--SPRING_damping=1e-5",
-            f"--SPRING_decay_factor=0.9",
-            f"--SPRING_norm_constraint=1",
+            "--SPRING_lr=5e-1",
+            "--SPRING_damping=1e-5",
+            "--SPRING_decay_factor=0.9",
+            "--SPRING_norm_constraint=1",
             f"--equation={equation}",
             f"--boundary_condition={condition}",
         ]
