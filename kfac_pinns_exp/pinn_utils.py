@@ -128,7 +128,7 @@ def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
     }
 
     if ggn_type == "forward-only":
-        return loss, layer_inputs, {}
+        return loss, residual, layer_inputs, {}
 
     # collect all layer output gradients
     layer_outputs = [intermediates[idx + 1] for idx in layer_idxs]

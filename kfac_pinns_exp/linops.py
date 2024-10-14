@@ -108,7 +108,7 @@ class GramianLinearOperator:
         )
         # compute quantities required for Gramian-vector products
         eval_fn = self.EVAL_FNS[equation][loss_type]
-        loss, self.layer_inputs, self.layer_grad_outputs = eval_fn(
+        loss, _, self.layer_inputs, self.layer_grad_outputs = eval_fn(
             layers, X, y, ggn_type
         )
 

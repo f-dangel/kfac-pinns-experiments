@@ -182,7 +182,7 @@ class SPRING(Optimizer):
         (
             interior_loss,
             boundary_loss,
-            _,
+            interior_residual,
             boundary_residual,
             interior_inputs,
             interior_grad_outputs,
@@ -203,19 +203,13 @@ class SPRING(Optimizer):
 
         # update zeta
         # compute the residual
-        residual_boundary = boundary_residual.detach()
         N_dOmega = X_dOmega.shape[0]
+        boundary_residual = boundary_residual.detach() / sqrt(N_dOmega)
 
-        interior_loss_evaluator = INTERIOR_LOSS_EVALUATORS[self.equation]
-        _, residual_interior, _ = interior_loss_evaluator(self.layers, X_Omega, y_Omega)
         N_Omega = X_Omega.shape[0]
+        interior_residual = interior_residual.detach() / sqrt(N_Omega)
 
-        epsilon = (
-            cat([residual_interior / sqrt(N_Omega), residual_boundary / sqrt(N_dOmega)])
-            .flatten()
-            .detach()
-        )
-        epsilon = -epsilon
+        epsilon = -cat([interior_residual, boundary_residual]).flatten()
 
         O_phi = apply_joint_J(
             interior_inputs,
@@ -294,8 +288,8 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
     interior_evaluator = EVAL_FNS[equation]["interior"]
     boundary_evaluator = EVAL_FNS[equation]["boundary"]
 
-    interior_loss, interior_inputs, interior_grad_outputs = interior_evaluator(
-        layers, X_Omega, y_Omega, ggn_type
+    interior_loss, interior_res, interior_inputs, interior_grad_outputs = (
+        interior_evaluator(layers, X_Omega, y_Omega, ggn_type)
     )
     boundary_loss, boundary_res, boundary_inputs, boundary_grad_outputs = (
         boundary_evaluator(layers, X_dOmega, y_dOmega, ggn_type)
@@ -304,7 +298,7 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
     return (
         interior_loss,
         boundary_loss,
-        None,
+        interior_res,
         boundary_res,
         interior_inputs,
         interior_grad_outputs,
