@@ -87,6 +87,8 @@ def test_leading_eigenvalues_G_and_JJT(
     (
         _,
         _,
+        _,
+        _,
         interior_inputs,
         interior_grad_outputs,
         boundary_inputs,
@@ -171,6 +173,8 @@ def test_apply_individual_J(
 
     # compute the Jacobian through applications of J
     (
+        _,
+        _,
         _,
         _,
         interior_inputs,
@@ -260,6 +264,8 @@ def test_apply_individual_JT(
     (
         _,
         _,
+        _,
+        _,
         interior_inputs,
         interior_grad_outputs,
         boundary_inputs,
@@ -338,6 +344,8 @@ def test_apply_joint_J(
 
     # compute the Jacobian through applications of J
     (
+        _,
+        _,
         _,
         _,
         interior_inputs,
@@ -419,6 +427,8 @@ def test_apply_joint_JT(
 
     # compute the transpose Jacobian through applications of J^T
     (
+        _,
+        _,
         _,
         _,
         interior_inputs,

@@ -183,6 +183,8 @@ class SPRING(Optimizer):
         (
             interior_loss,
             boundary_loss,
+            _,
+            boundary_residual,
             interior_inputs,
             interior_grad_outputs,
             boundary_inputs,
@@ -202,9 +204,7 @@ class SPRING(Optimizer):
 
         # update zeta
         # compute the residual
-        _, residual_boundary, _ = evaluate_boundary_loss(
-            self.layers, X_dOmega, y_dOmega
-        )
+        residual_boundary = boundary_residual.detach()
         N_dOmega = X_dOmega.shape[0]
 
         interior_loss_evaluator = INTERIOR_LOSS_EVALUATORS[self.equation]
@@ -267,12 +267,14 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
 ) -> Tuple[
     Tensor,
     Tensor,
+    Tensor,
+    Tensor,
     Dict[int, Tensor],
     Dict[int, Tensor],
     Dict[int, Tensor],
     Dict[int, Tensor],
 ]:
-    """Evaluate the interior and boundary losses, and the layer inputs/grad outputs.
+    """Evaluate interior and boundary losses/residuals & layer inputs/grad outputs.
 
     Args:
         layers: The layers that form the neural network.
@@ -284,7 +286,8 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
         equation: The PDE to solve.
 
     Returns:
-        The differentiable interior loss, differentiable boundary loss,
+        The differentiable interior loss, differentiable boundary loss, differentiable
+        interior residual, differentiable boundary residual,
         layer inputs of the interior loss, layer gradient outputs of the interior loss,
         layer inputs of the boundary loss, layer gradient outputs of the boundary loss.
     """
@@ -295,13 +298,15 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
     interior_loss, interior_inputs, interior_grad_outputs = interior_evaluator(
         layers, X_Omega, y_Omega, ggn_type
     )
-    boundary_loss, boundary_inputs, boundary_grad_outputs = boundary_evaluator(
-        layers, X_dOmega, y_dOmega, ggn_type
+    boundary_loss, boundary_res, boundary_inputs, boundary_grad_outputs = (
+        boundary_evaluator(layers, X_dOmega, y_dOmega, ggn_type)
     )
 
     return (
         interior_loss,
         boundary_loss,
+        None,
+        boundary_res,
         interior_inputs,
         interior_grad_outputs,
         boundary_inputs,

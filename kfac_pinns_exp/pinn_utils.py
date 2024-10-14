@@ -82,7 +82,7 @@ def evaluate_boundary_loss_and_kfac(
         indices and whose values are the two Kronecker factors.
     """
     # Compute the NN prediction, boundary loss, and all intermediates
-    loss, layer_inputs, layer_grad_outputs = (
+    loss, _, layer_inputs, layer_grad_outputs = (
         evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
             layers, X, y, ggn_type
         )
@@ -95,8 +95,8 @@ def evaluate_boundary_loss_and_kfac(
 
 def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
     layers: List[Module], X: Tensor, y: Tensor, ggn_type: str
-) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
-    """Compute the boundary loss, and inputs+output gradients of Linear layers.
+) -> Tuple[Tensor, Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+    """Compute the boundary loss, residual & inputs+output gradients of Linear layers.
 
     Args:
         layers: The list of layers that form the neural network.
@@ -106,8 +106,8 @@ def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
             `'forward-only'`.
 
     Returns:
-        A tuple containing the loss, the inputs of the Linear layers, and the output
-        gradients of the Linear layers. The layer inputs are augmented with ones to
+        A tuple containing the loss, residual, inputs of the Linear layers, and the out-
+        put gradients of the Linear layers. The layer inputs are augmented with ones to
         account for the bias term.
     """
     layer_idxs = [
@@ -136,7 +136,7 @@ def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
     grad_outputs = grad(residual, layer_outputs, grad_outputs=error, retain_graph=True)
     layer_grad_outputs = {idx: g for g, idx in zip(grad_outputs, layer_idxs)}
 
-    return loss, layer_inputs, layer_grad_outputs
+    return loss, residual, layer_inputs, layer_grad_outputs
 
 
 def get_backpropagated_error(residual: Tensor, ggn_type: str) -> Tensor:
