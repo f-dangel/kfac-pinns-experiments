@@ -5,7 +5,7 @@ from math import sqrt
 from typing import Dict, List, Tuple
 
 from einops import einsum
-from torch import Tensor, cat, zeros
+from torch import Tensor, arange, cat, cholesky_solve, zeros, zeros_like
 from torch.nn import Module
 from torch.optim import Optimizer
 
@@ -17,8 +17,16 @@ from kfac_pinns_exp import (
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.pinn_utils import (
+    evaluate_boundary_loss,
     evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
 )
+
+INTERIOR_LOSS_EVALUATORS = {
+    "poisson": poisson_equation.evaluate_interior_loss,
+    "heat": heat_equation.evaluate_interior_loss,
+    "fokker-planck-isotropic": fokker_planck_isotropic_equation.evaluate_interior_loss,
+    "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
+}
 
 EVAL_FNS = {
     "poisson": {
@@ -52,7 +60,9 @@ def parse_SPRING_args(verbose: bool = False, prefix="SPRING_") -> Namespace:
     """
     parser = ArgumentParser(description="Parse arguments for setting up SPRING.")
 
-    parser.add_argument(f"--{prefix}lr", help="Learning rate for SPRING.")
+    parser.add_argument(
+        f"--{prefix}lr", type=float, help="Learning rate for SPRING.", required=True
+    )
     parser.add_argument(
         f"--{prefix}damping",
         type=float,
@@ -143,6 +153,11 @@ class SPRING(Optimizer):
         self.steps = 0
         self.layers = layers
 
+        # initialize phi
+        (group,) = self.param_groups
+        for p in group["params"]:
+            self.state[p]["phi"] = zeros_like(p)
+
     def step(
         self, X_Omega: Tensor, y_Omega: Tensor, X_dOmega: Tensor, y_dOmega: Tensor
     ) -> Tuple[Tensor, Tensor]:
@@ -154,19 +169,91 @@ class SPRING(Optimizer):
             X_dOmega: Input for the boundary loss.
             y_dOmega: Target for the boundary loss.
 
-        Returns: # noqa: DAR202
+        Returns:
             Tuple of the interior and boundary loss before taking the step.
-
-        Raises:
-            NotImplementedError: TODO.
         """
-        # (group,) = self.param_groups
-        # lr = group["lr"]
-        # damping = group["damping"]
-        # decay_factor = group["decay_factor"]
-        # norm_constraint = group["norm_constraint"]
+        (group,) = self.param_groups
+        params = group["params"]
+        lr = group["lr"]
+        damping = group["damping"]
+        decay_factor = group["decay_factor"]
+        norm_constraint = group["norm_constraint"]
+
+        # compute OOT
+        (
+            interior_loss,
+            boundary_loss,
+            interior_inputs,
+            interior_grad_outputs,
+            boundary_inputs,
+            boundary_grad_outputs,
+        ) = evaluate_losses_with_layer_inputs_and_grad_outputs(
+            self.layers, X_Omega, y_Omega, X_dOmega, y_dOmega, self.equation
+        )
+        OOT = compute_JJT(
+            interior_inputs,
+            interior_grad_outputs,
+            boundary_inputs,
+            boundary_grad_outputs,
+        ).detach()
+        # apply damping
+        idx = arange(OOT.shape[0], device=OOT.device)
+        OOT[idx, idx] = OOT.diag() + damping
+
+        # update zeta
+        # compute the residual
+        _, residual_boundary, _ = evaluate_boundary_loss(
+            self.layers, X_dOmega, y_dOmega
+        )
+        N_dOmega = X_dOmega.shape[0]
+
+        interior_loss_evaluator = INTERIOR_LOSS_EVALUATORS[self.equation]
+        _, residual_interior, _ = interior_loss_evaluator(self.layers, X_Omega, y_Omega)
+        N_Omega = X_Omega.shape[0]
+
+        epsilon = (
+            cat([residual_interior / sqrt(N_Omega), residual_boundary / sqrt(N_dOmega)])
+            .flatten()
+            .detach()
+        )
+        epsilon = -epsilon
+
+        O_phi = apply_joint_J(
+            interior_inputs,
+            interior_grad_outputs,
+            boundary_inputs,
+            boundary_grad_outputs,
+            [self.state[p]["phi"] for p in params],
+        )
+        zeta: Tensor = epsilon - O_phi.mul_(decay_factor)
+
+        # apply inverse of damped OOT to zeta
+        step = cholesky_solve(zeta.unsqueeze(-1), OOT.cholesky()).squeeze(-1)
+
+        # apply O
+        step = apply_joint_JT(
+            interior_inputs,
+            interior_grad_outputs,
+            boundary_inputs,
+            boundary_grad_outputs,
+            step,
+        )
+
+        # update phi
+        for p, s in zip(params, step):
+            self.state[p]["phi"].mul_(decay_factor).add_(s)
+
+        # compute effective learning rate
+        norm_phi = sum([(self.state[p]["phi"] ** 2).sum() for p in params]).sqrt()
+        scale = min(lr, (sqrt(norm_constraint) / norm_phi).item())
+
+        # update parameters
+        for p in params:
+            p.data.add_(self.state[p]["phi"], alpha=scale)
+
         self.steps += 1
-        raise NotImplementedError("TODO")
+
+        return interior_loss, boundary_loss
 
 
 def evaluate_losses_with_layer_inputs_and_grad_outputs(
@@ -419,11 +506,13 @@ def apply_individual_JT(
         JTv_weight, JTv_bias = JTv_joint.split(
             [inputs[layer_idx].shape[-1] - 1, 1], dim=1
         )
-        JTv.extend([JTv_weight, JTv_bias])
+        JTv.extend([JTv_weight, JTv_bias.squeeze(1)])
 
     # grad_outputs are scaled by 1/N, but we need 1/√N for the transposed Jacobian
     (N,) = {t.shape[0] for t in list(inputs.values()) + list(grad_outputs.values())}
+    sqrt_N = sqrt(N)
+
     for v in JTv:
-        v.mul_(sqrt(N))
+        v.mul_(sqrt_N)
 
     return JTv
