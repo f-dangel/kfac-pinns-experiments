@@ -17,7 +17,6 @@ from kfac_pinns_exp import (
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.pinn_utils import (
-    evaluate_boundary_loss,
     evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
 )
 
