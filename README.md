@@ -43,3 +43,13 @@ We use the [Google docstring
 convention](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
 and `mkdocs` which allows using markdown syntax in a docstring to achieve
 formatting.
+
+## Reproducibility
+To reproduce the experiments shown in the [paper](https://arxiv.org/abs/2405.15603) consult the following table.
+
+| Figure   | Group Plot Name                   | Uses Experiments                |
+|----------|-----------------------------------|---------------------------------|
+| Figure 1 | exp17_groupplot_poisson_2d        | exp09, exp15, exp20             |
+| Figure 2 | exp4d_groupplot                   | exp27, exp28, exp29             |
+| Figure 3 | exp33_poisson_bayes_groupplot     | exp14, exp26, exp32             |
+
