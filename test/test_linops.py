@@ -3,7 +3,7 @@
 from test.utils import report_nonclose
 
 from pytest import mark
-from torch import block_diag, manual_seed, rand
+from torch import block_diag, eye, manual_seed, rand
 from torch.nn import Linear, Sequential, Tanh
 
 from kfac_pinns_exp.gramian_utils import autograd_gramian
@@ -59,10 +59,6 @@ def test_GramianLinearOperator(equation: str, approximation: str, loss_type: str
     }[equation]
     X, y = data_fn(equation, boundary_condition, dim_Omega, N)
 
-    # generate random vector
-    num_params = sum(p.numel() for p in model.parameters())
-    v = rand(num_params)
-
     # autodiff
     param_names = [n for n, _ in model.named_parameters()]
     gramian = autograd_gramian(
@@ -75,12 +71,16 @@ def test_GramianLinearOperator(equation: str, approximation: str, loss_type: str
     if approximation == "per_layer":
         gramian = block_diag(*gramian)
     gramian.div_(N)
-    Gv = gramian @ v
 
-    # manual
+    # create a linear operator
     G_linop = GramianLinearOperator(
         equation, layers, X, y, loss_type, approximation=approximation
     )
-    G_linop_v = G_linop @ v
 
-    report_nonclose(Gv, G_linop_v)
+    # 1) Gramian-vector products
+    num_params = sum(p.numel() for p in model.parameters())
+    v = rand(num_params)
+    report_nonclose(gramian @ v, G_linop @ v)
+
+    # 2) Gramian-matrix products
+    report_nonclose(gramian, G_linop @ eye(num_params))
