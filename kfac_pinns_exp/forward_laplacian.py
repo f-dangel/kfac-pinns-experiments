@@ -186,13 +186,16 @@ def manual_forward_laplacian_layer(
                     hess, coordinate_gradients**2, "n ..., n d0 ... -> n ..."
                 )
             elif isinstance(coefficients, Tensor):
-                contribution = einsum(
-                    hess,
-                    coordinate_gradients,
-                    coordinate_gradients,
-                    coefficients,
-                    "n ..., n i ..., n j ..., i j -> n ...",
+                # NOTE Doing everything in one einsum uses a lot more memory
+                weighted_gradients = einsum(
+                    coordinate_gradients, coefficients, "n i ..., i j -> n j ..."
                 )
+                weighted_gradients = einsum(
+                    weighted_gradients,
+                    coordinate_gradients,
+                    "n j ..., n j ... -> n ...",
+                )
+                contribution = einsum(hess, weighted_gradients, "n ..., n ... -> n ...")
             else:
                 raise ValueError(f"Unsupported coefficients: {coefficients}")
 

@@ -16,7 +16,10 @@ for DIR in ./exp09_reproduce_poisson2d/ \
                                       ./exp23_heat1d_mlp_tanh_256/ \
                                       ./exp27_heat4d_small/ \
                                       ./exp28_heat4d_medium/ \
-                                      ./exp29_heat4d_big/; do
+                                      ./exp29_heat4d_big/ \
+                                      ./exp43_log_fokker_planck9d_isotropic_gaussian_random/ \
+                                      ./exp45_log_fokker_planck99d_isotropic_gaussian_random/ \
+                                      ./exp46_fokker_planck1d_isotropic_gaussian_random/; do
     echo "Updating plots in $DIR"
     cd $DIR
     python plot.py &
@@ -28,7 +31,8 @@ wait
 for DIR in ./exp17_groupplot_poisson2d/ \
                                       ./exp18_groupplot_poisson5d/ \
                                       ./exp24_heat1d_groupplot/ \
-                                      ./exp30_heat4d_groupplot/; do
+                                      ./exp30_heat4d_groupplot/ \
+                                      ./exp47_groupplot_fokker_planck_isotropic_gaussian_random/; do
     echo "Updating group plot in $DIR"
     cd $DIR
     python plot.py &
