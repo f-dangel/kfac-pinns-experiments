@@ -1,14 +1,14 @@
-\begin{figure}
+\begin{figure}[t]
   \centering
-  Full Gramian\\
+  Full interior Gramian\\
   \includegraphics[width=0.43\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_full.png}
 
   \begin{tabular}{ccc}
-    (forward, forward)
+    (\textcolor{blue}{forward}, \textcolor{red}{forward})
     &
-      (forward, gradient)
+      (\textcolor{blue}{forward}, \textcolor{red}{gradient})
     &
-      (forward, Hessian)
+      (\textcolor{blue}{forward}, \textcolor{red}{Hessian})
     \\
     \includegraphics[width=0.22\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_output_output.png}
     &
@@ -16,11 +16,11 @@
     &
       \includegraphics[width=0.22\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_output_hess_input.png}
     \\
-    (gradient, forward)
+    (\textcolor{blue}{gradient}, \textcolor{red}{forward})
     &
-      (gradient, gradient)
+      (\textcolor{blue}{gradient}, \textcolor{red}{gradient})
     &
-      (gradient, Hessian)
+      (\textcolor{blue}{gradient}, \textcolor{red}{Hessian})
     \\
     \includegraphics[width=0.22\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_grad_input_output.png}
     &
@@ -28,11 +28,11 @@
     &
       \includegraphics[width=0.22\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_grad_input_hess_input.png}
     \\
-    (Hessian, forward)
+    (\textcolor{blue}{Hessian}, \textcolor{red}{forward})
     &
-      (Hessian, gradient)
+      (\textcolor{blue}{Hessian}, \textcolor{red}{gradient})
     &
-      (Hessian, Hessian)
+      (\textcolor{blue}{Hessian}, \textcolor{red}{Hessian})
     \\
     \includegraphics[width=0.22\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_hess_input_output.png}
     &
@@ -40,8 +40,8 @@
     &
       \includegraphics[width=0.22\linewidth]{../kfac_pinns_exp/exp04_gramian_contributions/fig/gram_hess_input_hess_input.png}
   \end{tabular}
-  \caption{Contributions to the Gramian from different children in the
-    computation graph.}\label{fig:gramian-contribution-children}
+  \caption{Contributions $\mG_{\Omega,\textcolor{blue}{\bullet}, \textcolor{red}{\bullet}}$ to the Laplacian's Gramian $\mG_{\Omega}$ from different children in the computation graph on a synthetic toy problem.
+    We use a $4 \to 3 \to 2 \to 1$ sigmoid-activated MLP and 10 randomly generated inputs. The contributions are highlighted as in \Cref{eq:fisher}.}\label{fig:gramian-contribution-children}
 \end{figure}
 %%% Local Variables:
 %%% mode: latex

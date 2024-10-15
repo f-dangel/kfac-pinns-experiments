@@ -14,7 +14,7 @@ A common choice is to alternate fully-connected and activation layers.
 Linear layers map $\vz^{(l-1)} \mapsto \vz^{(l)} = \mW^{(l)} \vz^{(l-1)}$ using a weight matrix $\mW^{(l)} = \flatten^{-1}\vtheta^{(l)}  \in \sR^{h^{(l)} \times h^{(l-1)}}$ (bias terms can be added as an additional column and by appending a $1$ to the input).
 Activation layers map $\vz^{(l-1)}\mapsto \vz^{(l)} = \sigma(\vz^{(l-1)})$ element-wise for a (typically smooth) $\sigma\colon\mathbb R\to\mathbb R$.
 
-\subsection{Energy Natural Gradients for Physics-Informed Neural Networks}
+\subsection{Energy Natural Gradients for Physics-Informed Neural Networks}\label{subsec:engd}
 Let us consider a domain $\Omega\subseteq\mathbb R^d$ and the partial differential equation
 \begin{align*}
   \mathcal{L} u = f \quad \text{in }\Omega\,,
