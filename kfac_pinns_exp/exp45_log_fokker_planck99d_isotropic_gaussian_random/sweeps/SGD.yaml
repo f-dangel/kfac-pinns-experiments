@@ -1,0 +1,40 @@
+entity: kfac-pinns
+project: log_fokker_planck99d_isotropic_gaussian_random
+name: SGD
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=SGD"
+    - ${args}
+metric:
+    goal: minimize
+    name: l2_error
+method: random
+run_cap: 50
+parameters:
+    equation:
+        value: log-fokker-planck-isotropic
+    boundary_condition:
+        value: gaussian
+    batch_frequency:
+        value: 1
+    model:
+        value: mlp-tanh-768-768-512-512
+    num_seconds:
+        value: 10_000
+    dim_Omega:
+        value: 99
+    N_Omega:
+        value: 1_000
+    N_dOmega:
+        value: 500
+    SGD_lr:
+        distribution: log_uniform_values
+        min: 1e-3
+        max: 1e-2
+    SGD_momentum:
+        distribution: categorical
+        values: [0.0, 0.3, 0.6, 0.9]
