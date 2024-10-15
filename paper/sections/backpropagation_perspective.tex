@@ -119,8 +119,8 @@ With these two identities we can backpropogate the input Hessian through such la
     \\
     &\phantom{=}+
       \sum_{k=1}^{h^{(i)}}
-      \diag(\sigma''(\vz^{(i-1)_k})
-      e_k e_k^\top
+      \sigma''(\vz^{(i-1)}_k)
+      \ve_k \ve_k^\top
       [\grad{\vz^{(i)}} u]_k\,.
   \end{split}
 \end{align}
@@ -244,7 +244,8 @@ With the Laplacian's Jacobian from \Cref{eq:laplacian-gradient}, we can now writ
       \left(
       \jac_{\mW^{(i)}}\textcolor{red}{\bullet}
       \right)}_{
-      \eqqcolon \mG_{\Omega,\textcolor{blue}{\bullet}, \textcolor{red}{\bullet}}^{(i)}\,.
+      \eqqcolon \mG_{\Omega,\textcolor{blue}{\bullet}, \textcolor{red}{\bullet}}^{(i)}
+      }\,.
   \end{split}
 \end{align}
 The Gramian consists of nine different terms, see \Cref{fig:gramian-contribution-children} for a visualization which shows not only the diagonal blocks $\mG_{\Omega}^{(i)}$, but also the full Gramian$\mG_{\Omega}$ which decomposes in the same way.
