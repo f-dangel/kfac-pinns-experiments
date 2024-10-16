@@ -7,26 +7,36 @@ from torch import allclose, cat, manual_seed, rand, zeros, zeros_like
 from torch.autograd import grad
 from torch.nn import Linear, Sequential, Tanh
 
-from kfac_pinns_exp.fokker_planck_equation import (
-    evaluate_boundary_loss,
-    evaluate_interior_loss,
-)
+from kfac_pinns_exp.autodiff_utils import autograd_input_divergence
+from kfac_pinns_exp.fokker_planck_equation import evaluate_interior_loss
 from kfac_pinns_exp.fokker_planck_isotropic_equation import (
+    div_mu_isotropic,
     mu_isotropic,
     p_isotropic_gaussian,
     sigma_isotropic,
 )
+from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss
 
 DIM_OMEGAS = [1, 3]
 DIM_OMEGA_IDS = [f"dim_Omega={dim}" for dim in DIM_OMEGAS]
 
 
 @mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
-def test_evaluate_interior_loss(dim_Omega: int):
+@mark.parametrize("sigma_isotropic_taylor", [True, False])
+@mark.parametrize("sigma_isotropic_auto", [True, False])
+def test_evaluate_interior_loss(
+    dim_Omega: int, sigma_isotropic_taylor: bool, sigma_isotropic_auto: bool
+):
     """Check that autograd and manual implementation of interior loss match.
 
     Args:
         dim_Omega: The spatial dimension of the domain.
+        sigma_isotropic_taylor: Whether to use the fact that the
+            diffusivity matrix is a scaled identity matrix in the Taylor
+            mode implementation.
+        sigma_isotropic_auto: Whether to use the fact that the
+            diffusivity matrix is a scaled identity matrix in the automatic
+            differentiation mode implementation.
     """
     manual_seed(0)
     layers = [
@@ -49,13 +59,18 @@ def test_evaluate_interior_loss(dim_Omega: int):
 
     # compute via Sequential (using autograd)
     loss_auto, residual_auto, _ = evaluate_interior_loss(
-        model, X, y, mu_isotropic, sigma_isotropic
+        model, X, y, mu_isotropic, sigma_isotropic, sigma_isotropic=sigma_isotropic_auto
     )
     grad_auto = grad(loss_auto, params)
 
     # compute via layers (using manual forward)
     loss_manual, residual_manual, _ = evaluate_interior_loss(
-        layers, X, y, mu_isotropic, sigma_isotropic
+        layers,
+        X,
+        y,
+        mu_isotropic,
+        sigma_isotropic,
+        sigma_isotropic=sigma_isotropic_taylor,
     )
     grad_manual = grad(loss_manual, params)
 
@@ -76,7 +91,6 @@ def test_evaluate_boundary_loss(dim_Omega: int):
         dim_Omega: The spatial dimension of the domain.
     """
     manual_seed(0)
-    dim_Omega = 20
     layers = [
         Linear(dim_Omega + 1, 4),
         Tanh(),
@@ -110,3 +124,36 @@ def test_evaluate_boundary_loss(dim_Omega: int):
     for g_auto, g_manual in zip(grad_auto, grad_manual):
         report_nonclose(g_auto, g_manual)
         assert not allclose(g_auto, zeros_like(g_auto))
+
+
+@mark.parametrize("dim_Omega", DIM_OMEGAS, ids=DIM_OMEGA_IDS)
+def test_div_mu_isotropic(dim_Omega: int):
+    """Compare manual and automatic computation of the vector field divergence.
+
+    Args:
+        dim_Omega: The spatial dimension of the domain.
+    """
+    manual_seed(0)
+
+    # batched
+    batch_size = 20
+    X_no_t = 10 * rand(batch_size, dim_Omega) - 5
+    t = rand(batch_size, 1)
+    X = cat([t, X_no_t], dim=1)
+
+    div_mu_autograd = autograd_input_divergence(
+        mu_isotropic, X, coordinates=list(range(1, dim_Omega + 1))
+    )
+    div_mu_manual = div_mu_isotropic(X)
+    report_nonclose(div_mu_autograd, div_mu_manual)
+
+    # un-batched
+    X_no_t = 10 * rand(dim_Omega) - 5
+    t = rand(1)
+    X = cat([t, X_no_t], dim=0)
+
+    div_mu_autograd = autograd_input_divergence(
+        mu_isotropic, X.unsqueeze(0), coordinates=list(range(1, dim_Omega + 1))
+    ).squeeze(0)
+    div_mu_manual = div_mu_isotropic(X)
+    report_nonclose(div_mu_autograd, div_mu_manual)

@@ -20,3 +20,7 @@ main.pdf
 /paper/arxiv.tar.gz
 **.deps
 **.deps-t
+**.nav
+**.snm
+**.toc
+jitjet_pitch/*.pdf

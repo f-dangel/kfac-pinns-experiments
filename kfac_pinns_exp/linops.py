@@ -8,7 +8,15 @@ from torch import Tensor, cat, zeros
 from torch.autograd import grad
 from torch.nn import Linear, Module
 
-from kfac_pinns_exp import heat_equation, poisson_equation
+from kfac_pinns_exp import (
+    fokker_planck_isotropic_equation,
+    heat_equation,
+    log_fokker_planck_isotropic_equation,
+    poisson_equation,
+)
+from kfac_pinns_exp.pinn_utils import (
+    evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+)
 
 
 class GramianLinearOperator:
@@ -33,11 +41,19 @@ class GramianLinearOperator:
     EVAL_FNS = {
         "poisson": {
             "interior": poisson_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
-            "boundary": poisson_equation.evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
         },
         "heat": {
             "interior": heat_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
-            "boundary": heat_equation.evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+        },
+        "fokker-planck-isotropic": {
+            "interior": fokker_planck_isotropic_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
+        },
+        "log-fokker-planck-isotropic": {
+            "interior": log_fokker_planck_isotropic_equation.evaluate_interior_loss_with_layer_inputs_and_grad_outputs,  # noqa: B950
+            "boundary": evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
         },
     }
 
@@ -122,18 +138,22 @@ class GramianLinearOperator:
         self.grad = grad(loss, self.params, allow_unused=True, materialize_grads=True)
 
     def __matmul__(self, v: Tensor) -> Tensor:
-        """Multiply the Gramian onto a vector.
+        """Multiply the Gramian onto a vector or matrix.
 
         Args:
-            v: The vector to multiply with the Gramian. Has shape `[D]` where `D` is
-                the total number of parameters in the network.
+            v: The vector or matrix to multiply with the Gramian. Has shape `[D]` or
+                `[D, N]` where `D` is the total number of parameters in the network
+                and `N` is the number of vectors to multiply.
 
         Returns:
-            The result of the Gramian-vector product. Has shape `[D]`.
+            The result of the Gramian-vector product. Has shape `[D]` or `[D, N]`.
         """
+        is_vector = v.ndim == 1
+        num_vectors = 1 if is_vector else v.shape[1]
+
         # split into parameters
-        v_list = [
-            v_p.reshape_as(p)
+        v = [
+            v_p.reshape(*p.shape, num_vectors)
             for v_p, p in zip(v.split([p.numel() for p in self.params]), self.params)
         ]
 
@@ -141,31 +161,38 @@ class GramianLinearOperator:
         matmul_func = {"full": self._matmul_full, "per_layer": self._matmul_per_layer}[
             self.approximation
         ]
-        Gv_list = matmul_func(v_list)
+        Gv = matmul_func(v)
 
         # flatten and concatenate
-        return cat([Gv.flatten() for Gv in Gv_list])
+        Gv = cat([Gv_p.flatten(end_dim=-2) for Gv_p in Gv])
+        return Gv.squeeze(-1) if is_vector else Gv
 
     def _matmul_full(self, v_list: List[Tensor]) -> List[Tensor]:
-        """Multiply the full Gramian onto a vector.
+        """Multiply the full Gramian onto a matrix.
 
         Args:
-            v_list: The vector to multiply with the Gramian in list format.
+            v_list: The matrix to multiply with the Gramian in list format.
+                Each entry has shape `[*p.shape, N]` where `p` is a parameter tensor
+                and `N` is the number of vectors to multiply.
 
         Returns:
-            The result of the Gramian-vector product in list format.
+            The result of the Gramian-matrix product in list format. Has same shape
+            as `v_list`.
         """
         (dev,) = {v.device for v in v_list}
         (dt,) = {v.dtype for v in v_list}
-        JT_v = zeros(self.batch_size, device=dev, dtype=dt)
+        (num_vectors,) = {v.shape[-1] for v in v_list}
+        JT_v = zeros(self.batch_size, num_vectors, device=dev, dtype=dt)
 
         # multiply with the transpose Jacobian
         for i, layer_idx in enumerate(self.layer_idxs):
             z = self.layer_inputs[layer_idx]
             g = self.layer_grad_outputs[layer_idx]
             # combine weight and bias
-            v_idx = cat([v_list[2 * i], v_list[2 * i + 1].unsqueeze(-1)], dim=1)
-            JT_v.add_(einsum(z, g, v_idx, "n ... d_in, n ... d_out, d_out d_in -> n"))
+            v_idx = cat([v_list[2 * i], v_list[2 * i + 1].unsqueeze(1)], dim=1)
+            # NOTE Doing this in one einsum is a lot slower
+            temp = einsum(g, v_idx, "n ... d_out, d_out d_in v -> n ... d_in v")
+            JT_v.add_(einsum(z, temp, "n ... d_in, n ... d_in v -> n v"))
 
         result = []
 
@@ -173,20 +200,25 @@ class GramianLinearOperator:
         for layer_idx in self.layer_idxs:
             z = self.layer_inputs[layer_idx]
             g = self.layer_grad_outputs[layer_idx]
-            v_idx = einsum(z, g, JT_v, "n ... d_in, n ... d_out, n -> d_out d_in")
+            # NOTE Doing this in one einsum is a lot slower
+            temp = einsum(g, JT_v, "n ... d_out, n v -> n ... d_out v")
+            v_idx = einsum(z, temp, "n ... d_in, n ... d_out v -> d_out d_in v")
             # un-combine weight and bias
             result.extend([v_idx[:, :-1], v_idx[:, -1]])
 
         return result
 
     def _matmul_per_layer(self, v_list: List[Tensor]) -> List[Tensor]:
-        """Multiply the per-layer Gramian onto a vector.
+        """Multiply the per-layer Gramian onto a matrix.
 
         Args:
-            v_list: The vector to multiply with the Gramian in list format.
+            v_list: The matrix to multiply with the Gramian in list format.
+                Each entry has shape `[*p.shape, N]` where `p` is a parameter tensor
+                and `N` is the number of vectors to multiply.
 
         Returns:
-            The result of the per-layer Gramian-vector product in list format.
+            The result of the Gramian-matrix product in list format. Has same shape
+            as `v_list`.
         """
         result = []
 
@@ -195,10 +227,10 @@ class GramianLinearOperator:
             z = self.layer_inputs[layer_idx]
             g = self.layer_grad_outputs[layer_idx]
             # combine weight and bias
-            v_idx = cat([v_list[2 * i], v_list[2 * i + 1].unsqueeze(-1)], dim=1)
+            v_idx = cat([v_list[2 * i], v_list[2 * i + 1].unsqueeze(1)], dim=1)
             # multiply with JJT
-            JT_v = einsum(z, g, v_idx, "n ... d_in, n ... d_out, d_out d_in -> n")
-            v_idx = einsum(z, g, JT_v, "n ... d_in, n ... d_out, n -> d_out d_in")
+            JT_v = einsum(z, g, v_idx, "n ... d_in, n ... d_out, d_out d_in v -> n v")
+            v_idx = einsum(z, g, JT_v, "n ... d_in, n ... d_out, n v -> d_out d_in v")
             # un-combine weight and bias
             result.extend([v_idx[:, :-1], v_idx[:, -1]])
 

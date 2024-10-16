@@ -1,7 +1,6 @@
 """Implements enery-natural gradient descent flavours from Mueller et al. 2023."""
 
 from argparse import ArgumentParser, Namespace
-from functools import partial
 from typing import Callable, Dict, List, Set, Tuple, Union
 
 from torch import Tensor, cat, eye, logspace, ones, zeros
@@ -10,17 +9,18 @@ from torch.nn import Module
 from torch.optim import Optimizer
 
 from kfac_pinns_exp import (
-    fokker_planck_equation,
     fokker_planck_isotropic_equation,
     heat_equation,
+    log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
-from kfac_pinns_exp.autodiff_utils import autograd_gramian
+from kfac_pinns_exp.gramian_utils import autograd_gramian
 from kfac_pinns_exp.optim.line_search import (
     grid_line_search,
     parse_grid_line_search_args,
 )
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
+from kfac_pinns_exp.pinn_utils import evaluate_boundary_loss
 from kfac_pinns_exp.utils import exponential_moving_average
 
 
@@ -114,21 +114,24 @@ class ENGD(Optimizer):
     """
 
     SUPPORTED_APPROXIMATIONS: Set[str] = {"full", "diagonal", "per_layer"}
-    SUPPORTED_EQUATIONS: Set[str] = {"poisson", "heat", "fokker-planck-isotropic"}
+    SUPPORTED_EQUATIONS: Set[str] = {
+        "poisson",
+        "heat",
+        "fokker-planck-isotropic",
+        "log-fokker-planck-isotropic",
+    }
     LOSS_EVALUATORS: Dict[str, Dict[str, Callable]] = {
         "interior": {
             "poisson": poisson_equation.evaluate_interior_loss,
             "heat": heat_equation.evaluate_interior_loss,
-            "fokker-planck-isotropic": partial(
-                fokker_planck_equation.evaluate_interior_loss,
-                sigma=fokker_planck_isotropic_equation.sigma_isotropic,
-                mu=fokker_planck_isotropic_equation.mu_isotropic,
-            ),
+            "fokker-planck-isotropic": fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
+            "log-fokker-planck-isotropic": log_fokker_planck_isotropic_equation.evaluate_interior_loss,  # noqa: B950
         },
         "boundary": {
-            "poisson": poisson_equation.evaluate_boundary_loss,
-            "heat": heat_equation.evaluate_boundary_loss,
-            "fokker-planck-isotropic": fokker_planck_equation.evaluate_boundary_loss,
+            "poisson": evaluate_boundary_loss,
+            "heat": evaluate_boundary_loss,
+            "fokker-planck-isotropic": evaluate_boundary_loss,
+            "log-fokker-planck-isotropic": evaluate_boundary_loss,
         },
     }
 
@@ -157,8 +160,9 @@ class ENGD(Optimizer):
             initialize_to_identity: Whether to initialize the Gramian to the identity
                 matrix. Default: `False`. If `True`, the Gramian is initialized to
                 identity.
-            equation: PDE to solve. Can be `'poisson'`, `'heat'`, or
-                'fokker-planck-isotropic'. Default: `'poisson'`.
+            equation: PDE to solve. Can be `'poisson'`, `'heat'`,
+                'fokker-planck-isotropic', or 'log-fokker-planck-isotropic'.
+                Default: `'poisson'`.
         """
         self._check_hyperparameters(
             model, lr, damping, ema_factor, approximation, equation

@@ -3,14 +3,19 @@
 from test.utils import report_nonclose
 
 from pytest import mark
-from torch import block_diag, manual_seed, rand
+from torch import block_diag, eye, manual_seed, rand
 from torch.nn import Linear, Sequential, Tanh
 
-from kfac_pinns_exp.autodiff_utils import autograd_gramian
+from kfac_pinns_exp.gramian_utils import autograd_gramian
 from kfac_pinns_exp.linops import GramianLinearOperator
 from kfac_pinns_exp.train import create_condition_data, create_interior_data
 
-EQUATIONS = ["poisson", "heat"]
+EQUATIONS = [
+    "poisson",
+    "heat",
+    "fokker-planck-isotropic",
+    "log-fokker-planck-isotropic",
+]
 EQUATION_IDS = [f"equation={eq}" for eq in EQUATIONS]
 
 APPROXIMATIONS = ["full", "per_layer"]
@@ -36,6 +41,8 @@ def test_GramianLinearOperator(equation: str, approximation: str, loss_type: str
     net_in_dim = {
         "poisson": dim_Omega,
         "heat": dim_Omega + 1,
+        "fokker-planck-isotropic": dim_Omega + 1,
+        "log-fokker-planck-isotropic": dim_Omega + 1,
     }[equation]
     layers = [Linear(net_in_dim, 4), Tanh(), Linear(4, 3), Tanh(), Linear(3, 1)]
     model = Sequential(*layers)
@@ -44,11 +51,13 @@ def test_GramianLinearOperator(equation: str, approximation: str, loss_type: str
         "boundary": create_condition_data,
         "interior": create_interior_data,
     }[loss_type]
-    X, y = data_fn(equation, "sin_product", dim_Omega, N)
-
-    # generate random vector
-    num_params = sum(p.numel() for p in model.parameters())
-    v = rand(num_params)
+    boundary_condition = {
+        "poisson": "sin_product",
+        "heat": "sin_product",
+        "fokker-planck-isotropic": "gaussian",
+        "log-fokker-planck-isotropic": "gaussian",
+    }[equation]
+    X, y = data_fn(equation, boundary_condition, dim_Omega, N)
 
     # autodiff
     param_names = [n for n, _ in model.named_parameters()]
@@ -62,12 +71,16 @@ def test_GramianLinearOperator(equation: str, approximation: str, loss_type: str
     if approximation == "per_layer":
         gramian = block_diag(*gramian)
     gramian.div_(N)
-    Gv = gramian @ v
 
-    # manual
+    # create a linear operator
     G_linop = GramianLinearOperator(
         equation, layers, X, y, loss_type, approximation=approximation
     )
-    G_linop_v = G_linop @ v
 
-    report_nonclose(Gv, G_linop_v)
+    # 1) Gramian-vector products
+    num_params = sum(p.numel() for p in model.parameters())
+    v = rand(num_params)
+    report_nonclose(gramian @ v, G_linop @ v)
+
+    # 2) Gramian-matrix products
+    report_nonclose(gramian, G_linop @ eye(num_params))

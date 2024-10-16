@@ -13,12 +13,10 @@ from kfac_pinns_exp.autodiff_utils import (
     autograd_input_divergence,
     autograd_input_hessian,
 )
-from kfac_pinns_exp.fokker_planck_isotropic_equation import p_isotropic_gaussian
 from kfac_pinns_exp.forward_laplacian import manual_forward_laplacian
 from kfac_pinns_exp.kfac_utils import compute_kronecker_factors
-from kfac_pinns_exp.manual_differentiation import manual_forward
+from kfac_pinns_exp.pinn_utils import get_backpropagated_error
 from kfac_pinns_exp.plot_utils import create_animation
-from kfac_pinns_exp.poisson_equation import get_backpropagated_error
 from kfac_pinns_exp.utils import bias_augmentation
 
 
@@ -28,6 +26,8 @@ def evaluate_interior_loss(
     y: Tensor,
     mu: Callable[[Tensor], Tensor],
     sigma: Callable[[Tensor], Tensor],
+    div_mu: Optional[Callable[[Tensor], Tensor]] = None,
+    sigma_isotropic: bool = False,
 ) -> Tuple[Tensor, Tensor, Union[List[Dict[str, Tensor]], None]]:
     """Evaluate the interior loss.
 
@@ -43,6 +43,14 @@ def evaluate_interior_loss(
             `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
+        div_mu: Function to manually compute the vector field's divergence, i.e.
+             (t, x) ↦ divₓ( μ(t, x) ). Maps a tensor of shape
+            `(batch_size, 1 + dim_Omega)` to a tensor of shape `(batch_size, 1)`. If
+            `None`, the divergence is computed with `autograd`.
+        sigma_isotropic: If `True`, the diffusivity matrix is assumed to be data-
+            independent and isotropic, i.e. `sigma(X)[n,:,:] = σ I` for all `n` in the
+            batch. This allows for a more efficient computation of the scaled Laplacian
+            trace. Default: `False`.
 
     Returns:
         The differentiable interior loss, differentiable residual, and intermediates
@@ -55,31 +63,45 @@ def evaluate_interior_loss(
     """
     batch_size, dim = X.shape
     sigma_X = sigma(X)
-    sigma_outer = einsum(sigma_X, sigma_X, "batch i j, batch k j -> batch i k")
+
+    sigma_outer = (
+        None
+        if sigma_isotropic
+        else einsum(sigma_X, sigma_X, "batch i j, batch k j -> batch i k")
+    )
 
     if isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        # TODO Make sure that sigma_X is identical along batch dimension
-        if not sigma_outer.allclose(
-            sigma_outer[0].unsqueeze(0).expand(batch_size, -1, -1)
+        if not sigma_isotropic and not sigma_X.allclose(
+            sigma_X[0].unsqueeze(0).expand(batch_size, -1, -1)
         ):
             raise NotImplementedError(
                 "Sigma must be identical for each datum in the batch."
             )
 
-        sigma_outer = sigma_outer[0]
+        # compute Tr(σ σᵀ ∂²p/∂x²)
+        coefficients = None if sigma_isotropic else sigma_outer[0]
         intermediates = manual_forward_laplacian(
-            model, X, coordinates=list(range(1, dim)), coefficients=sigma_outer
+            model, X, coordinates=list(range(1, dim)), coefficients=coefficients
         )
-        tr_sigma_outer_hessian = intermediates[-1]["laplacian"]
+        tr_sigma_outer_hessian = (
+            intermediates[-1]["laplacian"] * sigma_X[0, 0, 0] ** 2
+            if sigma_isotropic
+            else intermediates[-1]["laplacian"]
+        )
 
         # compute div(p μ) = div[ p(t, x) μ(t, x) ] (fixed t) using the product rule
         dp_dx = intermediates[-1]["directional_gradients"][:, 1:].squeeze(-1)
-        div_mu = autograd_input_divergence(mu, X, coordinates=list(range(1, dim)))
+        div_mu_X = (
+            autograd_input_divergence(mu, X, coordinates=list(range(1, dim)))
+            if div_mu is None
+            else div_mu(X)
+        )
         mu_X = mu(X)
         p = intermediates[-1]["forward"]
 
         div_p_times_mu = (
-            einsum(dp_dx, mu_X, "batch i, batch i -> batch").unsqueeze(-1) + p * div_mu
+            einsum(dp_dx, mu_X, "batch i, batch i -> batch").unsqueeze(-1)
+            + p * div_mu_X
         )
 
         # compute ∂p/∂t + div(p μ)
@@ -109,12 +131,16 @@ def evaluate_interior_loss(
         # compute Tr(σ σᵀ ∂²p/∂x²)
         hessian_X = autograd_input_hessian(model, X)  # [batch_size, d + 1, d + 1]
         hessian_spatial = hessian_X[:, 1:, 1:]  # [batch_size, d, d]
-        sigma_outer_hessian = einsum(
-            sigma_outer, hessian_spatial, "batch i k, batch k j -> batch i j"
-        )
-        tr_sigma_outer_hessian = einsum(
-            sigma_outer_hessian, "batch i i -> batch"
-        ).unsqueeze(-1)
+        if sigma_isotropic:
+            tr_sigma_outer_hessian = sigma_X[0, 0, 0] ** 2 * einsum(
+                hessian_spatial, "batch i i -> batch"
+            )
+        else:
+            sigma_outer_hessian = einsum(
+                sigma_outer, hessian_spatial, "batch i k, batch k j -> batch i j"
+            )
+            tr_sigma_outer_hessian = einsum(sigma_outer_hessian, "batch i i -> batch")
+        tr_sigma_outer_hessian = tr_sigma_outer_hessian.unsqueeze(-1)
 
     else:
         raise ValueError(
@@ -128,47 +154,16 @@ def evaluate_interior_loss(
     return loss, residual, intermediates
 
 
-def evaluate_boundary_loss(
-    model: Union[Module, List[Module]], X: Tensor, y: Tensor
-) -> Tuple[Tensor, Tensor, Union[List[Tensor], None]]:
-    """Evaluate the boundary loss.
-
-    Args:
-        model: The model.
-        X: Input for the boundary loss. Has shape `(batch_size, 1 + dim_Omega)`.
-        y: Target for the boundary loss. Has shape `(batch_size, 1)`.
-
-    Returns:
-        The differentiable boundary loss, the differentiable residual, and a list of
-        intermediates of the computation graph that can be used to compute (approximate)
-        curvature.
-
-    Raises:
-        ValueError: If the model is not a Module or a list of Modules.
-    """
-    if isinstance(model, Module):
-        output = model(X)
-        intermediates = None
-    elif isinstance(model, list) and all(isinstance(layer, Module) for layer in model):
-        intermediates = manual_forward(model, X)
-        output = intermediates[-1]
-    else:
-        raise ValueError(
-            "Model must be a Module or a list of Modules that form a sequential model."
-            f"Got: {model}."
-        )
-    residual = output - y
-    return 0.5 * (residual**2).mean(), residual, intermediates
-
-
 def evaluate_interior_loss_and_kfac(
     layers: List[Module],
     X: Tensor,
     y: Tensor,
     mu: Callable[[Tensor], Tensor],
     sigma: Callable[[Tensor], Tensor],
+    div_mu: Optional[Callable[[Tensor], Tensor]] = None,
     ggn_type: str = "type-2",
     kfac_approx: str = "expand",
+    sigma_isotropic: bool = False,
 ) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
     """Evaluate the interior loss and compute its KFAC approximation.
 
@@ -181,10 +176,18 @@ def evaluate_interior_loss_and_kfac(
             `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
+        div_mu: Function to manually compute the vector field's divergence, i.e.
+             (t, x) ↦ divₓ( μ(t, x) ). Maps a tensor of shape
+            `(batch_size, 1 + dim_Omega)` to a tensor of shape `(batch_size, 1)`. If
+            `None`, the divergence is computed with `autograd`. Default: `None`.
         ggn_type: The type of GGN to compute. Can be `'empirical'`, `'type-2'`,
             or `'forward-only'`. Default: `'type-2'`.
         kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
             `'reduce'`. Default: `'expand'`.
+        sigma_isotropic: If `True`, the diffusivity matrix is assumed to be data-
+            independent and isotropic, i.e. `sigma(X)[n,:,:] = σ I` for all `n` in the
+            batch. This allows for a more efficient computation of the scaled Laplacian
+            trace. Default: `False`.
 
     Returns:
         The (differentiable) interior loss and a dictionary whose keys are the layer
@@ -192,42 +195,7 @@ def evaluate_interior_loss_and_kfac(
     """
     loss, layer_inputs, layer_grad_outputs = (
         evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
-            layers, X, y, ggn_type, mu, sigma
-        )
-    )
-    kfacs = compute_kronecker_factors(
-        layers, layer_inputs, layer_grad_outputs, ggn_type, kfac_approx
-    )
-    return loss, kfacs
-
-
-def evaluate_boundary_loss_and_kfac(
-    layers: List[Module],
-    X: Tensor,
-    y: Tensor,
-    ggn_type: str = "type-2",
-    kfac_approx: str = "expand",
-) -> Tuple[Tensor, Dict[int, Tuple[Tensor, Tensor]]]:
-    """Evaluate the boundary loss and compute its KFAC approximation.
-
-    Args:
-        layers: The list of layers in the neural network.
-        X: Input for the interior loss. Has shape `(batch_size, 1 + dim_Omega)`. One
-            datum `X[n]` has coordinates `(t, x_1, x_2 , ..., x_dim_Omega)`.
-        y: Target for the interior loss. Has shape `(batch_size, 1)`.
-        ggn_type: The type of GGN to compute. Can be `'empirical'`, `'type-2'`,
-            or `'forward-only'`. Default: `'type-2'`.
-        kfac_approx: The type of KFAC approximation to use. Can be `'expand'` or
-            `'reduce'`. Default: `'expand'`.
-
-    Returns:
-        The (differentiable) boundary loss and a dictionary whose keys are the layer
-        indices and whose values are the two Kronecker factors.
-    """
-    # Compute the NN prediction, boundary loss, and all intermediates
-    loss, layer_inputs, layer_grad_outputs = (
-        evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
-            layers, X, y, ggn_type
+            layers, X, y, ggn_type, mu, sigma, div_mu, sigma_isotropic=sigma_isotropic
         )
     )
     kfacs = compute_kronecker_factors(
@@ -243,6 +211,8 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
     ggn_type: str,
     mu: Callable[[Tensor], Tensor],
     sigma: Callable[[Tensor], Tensor],
+    div_mu: Optional[Callable[[Tensor], Tensor]],
+    sigma_isotropic: bool = False,
 ) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
     """Compute the interior loss, and inputs+output gradients of Linear layers.
 
@@ -257,6 +227,14 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             `(dim_Omega,)`.
         sigma: Diffusivity matrix. Maps `X` to a tensor `sigma(X)` of shape
             `(batch_size, dim_Omega, k)` with arbitrary `k` (usually `k = dim_Omega`).
+        div_mu: Function to manually compute the vector field's divergence, i.e.
+             (t, x) ↦ divₓ( μ(t, x) ). Maps a tensor of shape
+            `(batch_size, 1 + dim_Omega)` to a tensor of shape `(batch_size, 1)`. If
+            `None`, the divergence is computed with `autograd`.
+        sigma_isotropic: If `True`, the diffusivity matrix is assumed to be data-
+            independent and isotropic, i.e. `sigma(X)[n,:,:] = σ I` for all `n` in the
+            batch. This allows for a more efficient computation of the scaled Laplacian
+            trace. Default: `False`.
 
     Returns:
         A tuple containing the loss, the inputs of the Linear layers, and the output
@@ -274,7 +252,9 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             and layer.weight.requires_grad
         )
     ]
-    loss, residual, intermediates = evaluate_interior_loss(layers, X, y, mu, sigma)
+    loss, residual, intermediates = evaluate_interior_loss(
+        layers, X, y, mu, sigma, div_mu=div_mu, sigma_isotropic=sigma_isotropic
+    )
 
     layer_inputs = {}
     # layer inputs
@@ -320,12 +300,6 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             # We used the residual in the loss and don't want its graph to be free
             # Therefore, set `retain_graph=True`.
             retain_graph=True,
-            # only the Laplacian of the last layer output is used, hence the
-            # directional gradients and forward outputs of the last layer are
-            # not used. Hence we must set this flag to true and also enable
-            # `materialize_grads` which sets these gradients to explicit zeros.
-            allow_unused=True,
-            materialize_grads=True,
         )
     )
 
@@ -351,57 +325,13 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
     return loss, layer_inputs, layer_grad_outputs
 
 
-def evaluate_boundary_loss_with_layer_inputs_and_grad_outputs(
-    layers: List[Module], X: Tensor, y: Tensor, ggn_type: str
-) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
-    """Compute the boundary loss, and inputs+output gradients of Linear layers.
-
-    Args:
-        layers: The list of layers that form the neural network.
-        X: Input for the interior loss. Has shape `(batch_size, 1 + dim_Omega)`. One
-            datum `X[n]` has coordinates `(t, x_1, x_2 , ..., x_dim_Omega)`.
-        y: Target for the interior loss. Has shape `(batch_size, 1)`.
-        ggn_type: The type of GGN to use. Can be `'type-2'`, `'empirical'`, or
-            `'forward-only'`.
-
-    Returns:
-        A tuple containing the loss, the inputs of the Linear layers, and the output
-        gradients of the Linear layers. The layer inputs are augmented with ones to
-        account for the bias term.
-    """
-    layer_idxs = [
-        idx
-        for idx, layer in enumerate(layers)
-        if (
-            isinstance(layer, Linear)
-            and layer.bias is not None
-            and layer.bias.requires_grad
-            and layer.weight.requires_grad
-        )
-    ]
-    loss, residual, intermediates = evaluate_boundary_loss(layers, X, y)
-
-    # collect all layer inputs
-    layer_inputs = {idx: bias_augmentation(intermediates[idx], 1) for idx in layer_idxs}
-
-    if ggn_type == "forward-only":
-        return loss, layer_inputs, {}
-
-    # collect all layer output gradients
-    layer_outputs = [intermediates[idx + 1] for idx in layer_idxs]
-    error = get_backpropagated_error(residual, ggn_type)
-    grad_outputs = grad(residual, layer_outputs, grad_outputs=error, retain_graph=True)
-    layer_grad_outputs = {idx: g for g, idx in zip(grad_outputs, layer_idxs)}
-
-    return loss, layer_inputs, layer_grad_outputs
-
-
 @no_grad()
 def plot_solution(
     condition: str,
     dim_Omega: int,
     model: Module,
     savepath: str,
+    solutions: Dict[str, Callable[[Tensor], Tensor]],
     title: Optional[str] = None,
     usetex: bool = False,
 ):
@@ -413,13 +343,15 @@ def plot_solution(
         dim_Omega: The dimension of the domain Omega. Can be `1` or `2`.
         model: The neural network model representing the learned solution.
         savepath: The path to save the plot.
+        solutions: A dictionary mapping the name of the solution to the function that
+            computes it.
         title: The title of the plot. Default: None.
         usetex: Whether to use LaTeX for rendering text. Default: `True`.
 
     Raises:
         ValueError: If `dim_Omega` is not `1` or `2`.
     """
-    u = {"gaussian": p_isotropic_gaussian}[condition]
+    u = solutions[condition]
     ((dev, dt),) = {(p.device, p.dtype) for p in model.parameters()}
 
     imshow_kwargs = {
