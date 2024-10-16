@@ -50,7 +50,7 @@ To reproduce the experiments shown in the [paper](https://arxiv.org/abs/2405.156
 | Figure     | Group Plot Name                   | Uses Experiments                |
 |------------|-----------------------------------|---------------------------------|
 | Figure 1   | exp17_groupplot_poisson_2d        | exp09, exp15, exp20             |
-| Figure 2   | exp4d_groupplot                   | exp27, exp28, exp29             |
+| Figure 2   | exp30_heat4d_groupplot            | exp27, exp28, exp29             |
 | Figure 3   | exp33_poisson_bayes_groupplot     | exp14, exp26, exp32             |
 | Figure A4  | exp17_groupplot_poisson_2d        | exp09, exp15, exp20             | 
 | Figure A5  | exp42_visualize_solutions         | exp09, exp13                    |
