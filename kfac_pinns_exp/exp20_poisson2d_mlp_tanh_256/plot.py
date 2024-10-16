@@ -38,7 +38,9 @@ if print_sweeps:
 sweep_ids = {  # ids from the wandb agent
     "1c4zpubc": "SGD",
     "qtc8cigj": "Adam",
-    "wh0dnmad": "Hessian-free",
+    # "wh0dnmad": "Hessian-free",  # original submission (contains scaling bug)
+    # "s9pj2ugv": "Hessian-free",  # after bug-fix
+    "cyswa16b": "Hessian-free",  # after bug-fix + fine-tuning
     "u0csf03w": "LBFGS",
     "515k1cac": "ENGD (diagonal)",
     # 1) KFACs with initialize_to_identity=False/True
