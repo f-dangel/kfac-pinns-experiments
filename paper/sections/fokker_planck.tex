@@ -177,28 +177,28 @@ Here, we consider three different Fokker-Planck equations and use random search 
 Batches are re-sampled every iteration for all optimizers except for KFAC and KFAC*, which use the same batch for ten iterations.
 \Cref{fig:fokker-planck-random-appendix} summarizes our results.
 
-\begin{figure}[!h]
-  \centering
-  \def\pathToFigs{kfac_pinns_exp/exp47_groupplot_fokker_planck_isotropic_gaussian_random}
-  \begin{subfigure}[t]{1.0\linewidth}
-    \caption{}\label{subfig:fokker-planck-random-time}
-    % trim legend, xlabel and xticklabels
-    % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
-    % trim the legend and titles
-    % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
-  \end{subfigure}
-  \begin{subfigure}[t]{1.0\linewidth}
-    \caption{}\label{subfig:fokker-planck-random-step}
-    % trim the legend, xlabel and xticklabels
-    % [trim={left bottom right top},clip]
-    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
-    % trim the titles
-    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
-  \end{subfigure}
-  \caption{Training loss and evaluation $L_2$ error for learning the solution to Fokker Planck (left) and logarithmic Fokker-Planck equations (center, right) over (\subref{subfig:fokker-planck-random-time}) time and (\subref{subfig:fokker-planck-random-step}) steps using random search.}\label{fig:fokker-planck-random-appendix}
-\end{figure}
+%\begin{figure}[!h]
+%  \centering
+%  \def\pathToFigs{kfac_pinns_exp/exp47_groupplot_fokker_planck_isotropic_gaussian_random}
+%  \begin{subfigure}[t]{1.0\linewidth}
+%    \caption{}\label{subfig:fokker-planck-random-time}
+%    % trim legend, xlabel and xticklabels
+%    % [trim={left bottom right top},clip]
+%    \includegraphics[trim={0 1.3cm 0 0},clip]{\pathToFigs/l2_error_over_time.pdf}
+%    % trim the legend and titles
+%    % [trim={left bottom right top},clip]
+%    \includegraphics[trim={0 0.5cm 0 0.3cm},clip]{\pathToFigs/loss_over_time.pdf}
+%  \end{subfigure}
+%  \begin{subfigure}[t]{1.0\linewidth}
+%    \caption{}\label{subfig:fokker-planck-random-step}
+%    % trim the legend, xlabel and xticklabels
+%    % [trim={left bottom right top},clip]
+%    \includegraphics[trim={0 1.3cm 0 0.3cm},clip]{\pathToFigs/l2_error_over_step.pdf}
+%    % trim the titles
+%    \includegraphics[trim={0 0 0 0.3cm},clip]{\pathToFigs/loss_over_step.pdf}
+%  \end{subfigure}
+%  \caption{Training loss and evaluation $L_2$ error for learning the solution to Fokker Planck (left) and logarithmic Fokker-Planck equations (center, right) over (\subref{subfig:fokker-planck-random-time}) time and (\subref{subfig:fokker-planck-random-step}) steps using random search.}\label{fig:fokker-planck-random-appendix}
+%\end{figure}
 
 \paragraph{Best run details} The runs shown in \Cref{fig:fokker-planck-random-appendix} correspond to the following hyper-parameters:
 \begin{itemize}
