@@ -1,1 +1,1 @@
-"""Compare optimizers on 10d Poisson equation with weinan solution."""
+"""Compare optimizers on 100d Poisson equation with weinan solution."""
