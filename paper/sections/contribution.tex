@@ -338,6 +338,12 @@ The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_{t+1})$ 
 The computational cost is dominated by the two Gramian-vector products with $\vDelta_t$ and $\vdelta_t$.
 By using the Gramian's outer product structure~\cite{dangel2022vivit,papyan2019measurements}, we perform them with autodiff~\citep{pearlmutter1994fast,schraudolph2002fast} using one Jacobian-vector product each, as recommended in \cite{martens2015optimizing}.
 
+
+\paragraph{Computational complexity}
+
+\paragraph{Computation of Laplacians }
+We use the forward Laplacian framework in our implementation, which we found to be significantly faster and more memory efficient than using \textmd{functorch} to compute a batched Hessian trace, see \Cref{app:?}. 
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
