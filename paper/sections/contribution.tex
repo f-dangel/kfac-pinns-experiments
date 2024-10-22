@@ -340,9 +340,15 @@ By using the Gramian's outer product structure~\cite{dangel2022vivit,papyan2019m
 
 
 \paragraph{Computational complexity}
+Inverting $l$'s layer Kronecker approximation of the Gramian requires
+$O(h_l^3+h_{l+1}^3)$ time and $O(h_l^2+h_{l+1}^2)$ storage, where $h_l$ is the number of neurons in the $l$-th layer. 
+Note that inverting the exact block for layer %(as done by 'ENGD (layer-wise)') 
+requires $O(h_l^3h_{l+1}^3)$ time and $O(h_l^2 h_{l+1}^2)$ memory. 
+In general, the improvement from the Kronecker factorization depends on how close to square the weight matrices of a layer are, and therefore on the architecture. 
+In practise, the Kronecker factorization usually significantly reduces memory and run time. Further improvements can be achieved by using structured Kronecker factors, e.g. diagonal or block-diagonal matrices as proposed in~\cite{lin2023structured}.
 
-\paragraph{Computation of Laplacians }
-We use the forward Laplacian framework in our implementation, which we found to be significantly faster and more memory efficient than using \textmd{functorch} to compute a batched Hessian trace, see \Cref{app:?}. 
+\paragraph{Computation of the Kronecker factors}
+We use the forward Laplacian framework in our implementation, which we found to be significantly faster and more memory efficient than using \textmd{functorch} to compute a batched Hessian trace, see \Cref{app:subsec:comparison}. 
 
 %%% Local Variables:
 %%% mode: latex
