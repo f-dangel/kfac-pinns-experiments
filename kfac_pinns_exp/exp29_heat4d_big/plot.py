@@ -37,7 +37,7 @@ sweep_ids = {  # ids from the wandb agent
     "1bbrvf9u": "Adam",
     "hsbs4ryg": "Hessian-free",  # original submission (contains scaling bug)
     "6wk1mxq5": "Hessian-free",  # after bug-fix
-    "zjfpj5y5": "Hessian-free",  # after bug-fix + fine-tuning
+    "mzprezey": "Hessian-free",  # after bug-fix + fine-tuning
     "tykqgfdh": "LBFGS",
     "fjjgb3i4": "ENGD (diagonal)",
     "j2wl83aw": "KFAC",
