@@ -28,13 +28,13 @@ parameters:
         value: 500
     HessianFree_curvature_opt:
         distribution: categorical
-        values: ["ggn", "hessian"]
+        values: ["ggn"]
     HessianFree_damping:
         distribution: categorical
-        values: [1.0, 1e-1, 1e-2, 1e-3, 1e-4]
+        values: [100, 50, 10, 5, 1.0, 5e-1, 1e-1, 5e-2]
     HessianFree_no_adapt_damping:
         distribution: categorical
-        values: [false, true]
+        values: [false]
     HessianFree_cg_max_iter:
         distribution: categorical
-        values: [50, 250]
+        values: [100, 150, 200, 250, 300, 350]
