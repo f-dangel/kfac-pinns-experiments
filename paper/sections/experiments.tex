@@ -108,6 +108,45 @@ We see a similar picture as before with KFAC consistently outperforming first-or
 To account for the possibility that the Bayesian search did not properly identify good hyper-parameters, we conduct a random/grid search experiment for the 10d Poisson equation (\Cref{fig:10D-Poisson}, middle), using similar batch sizes and same batch sampling frequencies as for the $(4+1)$d heat equation (all details in \Cref{sec:poisson10d-appendix}).
 In this experiment, KFAC also achieved similar performance than Hessian-free and outperformed SGD, Adam, and LBFGS (\Cref{fig:poisson_10d-appendix}).
 
+\textbf{(9+1)d Fokker-Planck equation} To show the applicability to nonlinear PDEs, we consider a Fokker-Planck equation in logarithmic space. PINN formulations of the 
+Fokker-Planck equation have been considered in \cite{hu2024score, sun2024dynamical}. Concretely, we are solving a nine-dimensional equation 
+of the form
+\begin{align}
+  \partial_t q(t, \vx)
+  -
+  \frac{d}{2}
+  -
+  \frac12 \nabla q(t,\vx)\cdot \vx
+  -
+  \lVert \nabla q(t,\vx) \rVert^2
+  -
+  \Delta q(t, \vx)
+  =
+  0,
+  \quad 
+  q(0)
+  =
+  \log(p^*(0)),
+\end{align}
+with $d=9$, $t\in[0,1]$ and $\vx \in \mathbb R^9$, where in practice $\mathbb R^9$ is replaced by $[-5,5]^9$. 
+The solution is $q^* = \log(p^*)$ and $p^*$ is given by 
+$p^*(t,\vx)\sim \mathcal{N}(0, \exp(-t)\mI + (1-\exp(-t))2\mI)$. We model the solution with a medium 
+sized tanh-activated MLP with $D=\num{118145}$ parameters. The batch sizes are set to 
+$N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and we assign each run a computation time
+budget of $\num{6000}\,\text{s}$. As in the previous experiments, the batches are re-sampled every iteration 
+for all optimizers except for KFAC and KFAC*, which use the same batch for ten iterations. Again, KFAC is among the best performing 
+optimizers offering competitive performance to Hessian-free and clearly outperforms all first-order methods. The $L^2$ error
+over training time is reported in \Cref{fig:10D-logFP}.
+
+\begin{figure}
+  \centering
+  \includegraphics{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/l2_error_over_time.pdf}
+  \caption{
+    Optimizer performance on a nine-dimensional log Fokker-Planck equation.
+  }
+  \label{fig:10D-logFP}
+\end{figure}
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"
