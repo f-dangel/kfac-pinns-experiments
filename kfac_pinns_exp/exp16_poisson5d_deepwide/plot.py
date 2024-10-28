@@ -38,8 +38,8 @@ if print_sweeps:
 sweep_ids = {  # ids from the wandb agent
     "goktsa9y": "SGD",
     "m5kvgryh": "Adam",
-    "6588slns": "Hessian-free",  # original submission (contains scaling bug)
-    "u9etnc7b": "Hessian-free",  # after bug-fix
+    # "6588slns": "Hessian-free",  # original submission (contains scaling bug)
+    # "dthug7a8": "Hessian-free",  # after bug-fix
     "cyj8zqhv": "Hessian-free",  # after bug-fix + tuning
     "65zicj58": "LBFGS",
     "ht3rw3va": "ENGD (full)",
