@@ -341,7 +341,7 @@ class HessianFreeCached(HessianFree):
         )
         grad = cat(
             [
-                (g_int + g_bnd).flatten()
+                (g_int.detach() + g_bnd.detach()).flatten()
                 for g_int, g_bnd in zip(linop_interior.grad, linop_boundary.grad)
             ]
         )
@@ -357,7 +357,6 @@ class HessianFreeCached(HessianFree):
             Returns:
                 The product of the Gramian with the vector.
             """
-            v = v.detach()
             return linop_interior @ v + linop_boundary @ v
 
         # update pre-conditioner
