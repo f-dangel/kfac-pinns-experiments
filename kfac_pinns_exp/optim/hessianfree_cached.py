@@ -357,6 +357,7 @@ class HessianFreeCached(HessianFree):
             Returns:
                 The product of the Gramian with the vector.
             """
+            v = v.detach()
             return linop_interior @ v + linop_boundary @ v
 
         # update pre-conditioner
