@@ -134,8 +134,8 @@ $p^*(t,\vx)\sim \mathcal{N}(0, \exp(-t)\mI + (1-\exp(-t))2\mI)$. We model the so
 sized tanh-activated MLP with $D=\num{118145}$ parameters. The batch sizes are set to 
 $N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and we assign each run a computation time
 budget of $\num{6000}\,\text{s}$. As in the previous experiments, the batches are re-sampled every iteration 
-for all optimizers except for KFAC and KFAC*, which use the same batch for ten iterations. Again, KFAC is among the best performing 
-optimizers offering competitive performance to Hessian-free and clearly outperforms all first-order methods. The $L^2$ error
+for all optimizers except for KFAC and KFAC*, which use the same batch for ten iterations. The full experimental details can be found in \Cref{sec:fokker10d-appendix}.
+Again, KFAC is among the best performing optimizers offering competitive performance to Hessian-free and clearly outperforms all first-order methods. The $L^2$ error
 over training time is reported in \Cref{fig:10D-logFP}.
 
 \begin{figure}
