@@ -148,6 +148,7 @@ class GramianLinearOperator:
         Returns:
             The result of the Gramian-vector product. Has shape `[D]` or `[D, N]`.
         """
+        assert not v.requires_grad
         is_vector = v.ndim == 1
         num_vectors = 1 if is_vector else v.shape[1]
 

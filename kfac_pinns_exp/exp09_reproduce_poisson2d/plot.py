@@ -101,11 +101,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     y_to_ylabel = {"loss": "Loss", "l2_error": "$L_2$ error"}
-    x_to_xlabel = {"step": "Iteration", "time": "Time (s)"}
+    x_to_xlabel = {"step": "Iteration", "time": "Time [s]"}
 
     for (x, xlabel), (y, ylabel) in product(x_to_xlabel.items(), y_to_ylabel.items()):
         with plt.rc_context(
-            bundles.neurips2023(rel_width=1.0, usetex=not args.disable_tex)
+            bundles.neurips2023(rel_width=0.5, usetex=not args.disable_tex)
         ):
             fig, ax = plt.subplots(1, 1)
             ax.set_xlabel(xlabel)
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 ax.plot(
                     x_data,
                     df_history[y],
-                    label=None if "*" in label else label,
+                    label=label,
                     color=colors[label],
                     linestyle=linestyles[label],
                 )
