@@ -15,7 +15,14 @@ We report runs with lowest $L_2$ error estimated on a held-out data set with the
 To be comparable, all runs are executed on a compute cluster with RTX 6000 GPUs (24\,GiB RAM) in double precision, and we use the same computation time budget for all optimizers on a fixed PINN problem.
 All search spaces and best run hyper-parameters, as well as training curves over iteration count rather than time, are in \Cref{sec:experimental_details}.
 
-\textbf{Pedagogical example: 2d Poisson equation}
+\begin{figure}
+  \centering
+  \includegraphics{kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
+  \caption{Performance of different optimizers on the (4+1)d heat equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
+  \label{fig:4D-heat}
+\end{figure}
+
+\paragraph{Pedagogical example: 2d Poisson equation}
 We start with a low-dimensional Poisson equation from~\citet{muller2023achieving} to reproduce ENGD's performance (\Cref{fig:2D-Poisson}).
 It is given by
 \begin{align}\label{eq:2D-Poisson}
@@ -37,14 +44,7 @@ In terms of computation time, our KFACs are competitive with full-ENGD for a lon
 In contrast to ENGD, which runs out of memory for networks with more than $\num{10000}$ parameters, KFAC scales to larger networks (\Cref{fig:2D-Poisson}, center and right) and is competitive with other second-order optimizers like Hessian-free, which uses more sophisticated heuristics.
 We make similar observations on a small (1+1)d heat equation with the same models, see \Cref{sec:1d-heat-equation,fig:heat1d-appendix}.
 
-\begin{figure}
-  \centering
-  \includegraphics{kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
-  \caption{Performance of different optimizers on the (4+1)d heat equation~\eqref{eq:4D-heat} measured in relative $L^2$ error against wall clock time for architectures with different parameter dimensions $D$.}
-  \label{fig:4D-heat}
-\end{figure}
-
-\textbf{An evolutionary problem: (4+1)d heat equation}
+\paragraph{An evolutionary problem: (4+1)d heat equation}
 To demonstrate that our methods can also be applied to other problems than the Poisson equation, we consider a four-dimensional heat equation
 \begin{align}\label{eq:4D-heat}
   \begin{split}
@@ -54,13 +54,11 @@ To demonstrate that our methods can also be applied to other problems than the P
     \\
     u(0,\vx)
     &=
-      \textstyle
       \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for }
       \vx\in [0,1]^{4}\,,
     \\
     u(t,\vx)
     &=
-      \textstyle
       \exp(-t) \sum_{i=1}^{4} \sin(2 x_i) \quad \text{for } t\in[0,1], \vx\in\partial[0,1]^{4}\,,
   \end{split}
 \end{align}
@@ -83,18 +81,16 @@ We confirmed these observations with another 5d Poisson equation on the same arc
   \label{fig:10D-Poisson}
 \end{figure}
 
-\textbf{High-dimensional Poisson equations}
+\paragraph{High-dimensional Poisson equations}
 To demonstrate scaling to high-dimensional PDEs and even larger neural networks, we consider three Poisson equations ($d=5,10,100$) with different boundary conditions used in~\cite{yu2018deep, muller2023achieving}, which admit the solutions
 \begin{align}\label{eq:solutions_poisson}
   \begin{split}
     u_\star(\vx)
     &=
-      \textstyle
       \sum_{i=1}^5 \cos(\pi x_i) \quad \text{for } \vx\in [0,1]^{5}\,,
     \\
     u_\star(\vx)
     &=
-      \textstyle
       \sum_{k=1}^5 x_{2k-1}x_{2k}  \quad \text{for } \vx\in [0,1]^{10}\,,
     \\
     u_\star(\vx)
@@ -103,13 +99,13 @@ To demonstrate scaling to high-dimensional PDEs and even larger neural networks,
   \end{split}
 \end{align}
 We use the same architectures as before, but with larger intermediate widths and parameters up to a million (\Cref{fig:10D-Poisson}).
-Due to lacking references for training such high-dimensional problems, we select all hyper-parameters via Bayesian search, including batch sizes and batch sampling frequencies (all details in \Cref{sec:high-dimensional-poissons-app}).
+Due to lacking references for training such high-dimensional problems, we select all hyper-parameters via Bayesian search, including batch sizes and batch sampling frequencies (details in \Cref{sec:high-dimensional-poissons-app}).
 We see a similar picture as before with KFAC consistently outperforming first-order methods and LBFGS, offering competitive performance with Hessian-free.
-To account for the possibility that the Bayesian search did not properly identify good hyper-parameters, we conduct a random/grid search experiment for the 10d Poisson equation (\Cref{fig:10D-Poisson}, middle), using similar batch sizes and same batch sampling frequencies as for the $(4+1)$d heat equation (all details in \Cref{sec:poisson10d-appendix}).
+To account for the possibility that the Bayesian search did not properly identify good hyper-parameters, we conduct a random/grid search experiment for the 10d Poisson equation (\Cref{fig:10D-Poisson}, middle), using similar batch sizes and same batch sampling frequencies as for the $(4+1)$d heat equation (details in \Cref{sec:poisson10d-appendix}).
 In this experiment, KFAC also achieved similar performance than Hessian-free and outperformed SGD, Adam, and LBFGS (\Cref{fig:poisson_10d-appendix}).
 
-\textbf{(9+1)d Fokker-Planck equation} To show the applicability to nonlinear PDEs, we consider a Fokker-Planck equation in logarithmic space. PINN formulations of the 
-Fokker-Planck equation have been considered in \cite{hu2024score, sun2024dynamical}. Concretely, we are solving a nine-dimensional equation 
+\paragraph{(9+1)d Fokker-Planck equation} To show the applicability to nonlinear PDEs, we consider a Fokker-Planck equation in logarithmic space. PINN formulations of the
+Fokker-Planck equation have been considered in \cite{hu2024score, sun2024dynamical}. Concretely, we are solving a nine-dimensional equation
 of the form
 \begin{align}
   \partial_t q(t, \vx)
@@ -123,30 +119,27 @@ of the form
   \Delta q(t, \vx)
   =
   0,
-  \quad 
+  \quad
   q(0)
   =
   \log(p^*(0)),
 \end{align}
-with $d=9$, $t\in[0,1]$ and $\vx \in \mathbb R^9$, where in practice $\mathbb R^9$ is replaced by $[-5,5]^9$. 
-The solution is $q^* = \log(p^*)$ and $p^*$ is given by 
-$p^*(t,\vx)\sim \mathcal{N}(0, \exp(-t)\mI + (1-\exp(-t))2\mI)$. We model the solution with a medium 
-sized tanh-activated MLP with $D=\num{118145}$ parameters. The batch sizes are set to 
-$N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and we assign each run a computation time
-budget of $\num{6000}\,\text{s}$. As in the previous experiments, the batches are re-sampled every iteration 
-for all optimizers except for KFAC and KFAC*, which use the same batch for ten iterations. The full experimental details can be found in \Cref{sec:fokker10d-appendix}.
-Again, KFAC is among the best performing optimizers offering competitive performance to Hessian-free and clearly outperforms all first-order methods. The $L^2$ error
-over training time is reported in \Cref{fig:10D-logFP}.
-
-\begin{figure}
+\begin{wrapfigure}[16]{r}{0.5\textwidth}
   \centering
+  \vspace{-2ex}
   \includegraphics{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/l2_error_over_time.pdf}
   \caption{
-    Optimizer performance on a nine-dimensional log Fokker-Planck equation.
+    Performance of different optimizers on a (9+1)d logarithmic Fokker-Planck equation in relative $L_2$ error against wall clock time.
   }
   \label{fig:10D-logFP}
-\end{figure}
-
+\end{wrapfigure}
+with $d=9$, $t\in[0,1]$ and $\vx \in \mathbb R^9$, where in practice $\mathbb R^9$ is replaced by $[-5,5]^9$.
+The solution is $q^* = \log(p^*)$ and $p^*$ is given by $p^*(t,\vx)\sim \mathcal{N}(0, \exp(-t)\mI + (1-\exp(-t))2\mI)$.
+We model the solution with a medium sized tanh-activated MLP with $D=\num{118145}$ parameters,
+batch sizes are $N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$, and we assign each run a computation time budget of $\num{6000}\,\text{s}$.
+As in previous experiments, the batches are re-sampled every iteration for all optimizers except for KFAC and KFAC*, which use the same batch for ten steps (details in \Cref{sec:fokker10d-appendix}).
+\Cref{fig:10D-logFP} reports the $L^2$ error over training time.
+Again, KFAC is among the best performing optimizers offering competitive performance to Hessian-free and clearly outperforming all first-order methods.
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "../main"

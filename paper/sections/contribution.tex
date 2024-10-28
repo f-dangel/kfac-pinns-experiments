@@ -71,7 +71,6 @@ Concretely, by summing~\eqref{subeq:secondOrderForward-LinearLayer} and~\eqref{s
     &=
       \sigma'(\vz^{(l-1)})\odot\Delta_\vx\vz^{(l-1)}
       +
-      \textstyle
       \sum_{i=1}^d \sigma''(\vz^{(l-1)})\odot (\partial_{x_i}{\vz^{(l-1)}})^{\odot 2}
       \quad \in \sR^{h^{(l)}}\,.
   \end{align}
@@ -83,7 +82,6 @@ For a more general second-order linear PDE operator $\gL = \sum_{i,j=1}^d c_{i,j
   &=
     \sigma'(\vz^{(l-1)})\odot\mathcal{L}\vz^{(l-1)}
     +
-    \textstyle
     \sum_{i,j=1}^d c_{i,j} \sigma''(\vz^{(l-1)})\odot \partial_{x_i}{\vz^{(l-1)}}\odot \partial_{x_j}{\vz^{(l-1)}}
     \quad \in \sR^{h^{(l)}}\,,
 \end{align*}
@@ -97,8 +95,7 @@ Let's consider the Poisson equation's interior Gramian block for a linear layer 
 \begin{align*}
   \mG^{(l)}_\Omega(\vtheta)
   =
-  \nicefrac{1}{N}
-  \textstyle
+  \frac{1}{N}
   \sum_{n=1}^{N}
   \left(
   \jac_{\mW^{(l)}} \Delta_\vx u_n  \right)^\top
@@ -111,7 +108,6 @@ $\mZ_n^{(l)} \in \sR^{h^{(l)} \times S}$ with $S = d+2$ and columns $\mZ_{n, 1}^
   &=
     (\jac_{\mZ_n^{(l)}}\Delta_\vx u_n) \jac_{\mW^{(l)}} \mZ_n^{(l)}
     =
-    \textstyle
     \sum_{s=1}^S
     {
     \underbrace{\mZ^{(l-1)}_{n,s}}_{\in \sR^{h^{(l-1)}}}
@@ -123,8 +119,7 @@ which has a structure similar to the Jacobian in \Cref{sec:kfac-background}, but
 \begin{equation}\label{eq:laplace_gramian_block_exact}
   \mG^{(l)}_\Omega(\vtheta)
   =
-  \nicefrac{1}{N}
-  \textstyle
+  \frac{1}{N}
   \sum_{n=1}^N
   \sum_{s=1}^S
   \sum_{s'=1}^S
@@ -158,16 +153,14 @@ For $m\in \{0, \dots, k\}$ there are $S_m = \binom{d + m - 1}{d - 1}$ independen
 $\Psi$ is a smooth mapping from all partial derivatives to $\sR^M$, $\Psi\colon \mathbb \sR^S\to\mathbb \sR^M$.
 To construct a PINN loss for \Cref{eq:general-pde-system}, we feed the residual $\vr_{\Omega, n}(\vtheta) \coloneqq \Psi(u_{\vtheta}(\vx_n), D_{\vx} u_{\vtheta}(\vx_n), \dots, D^k_{\vx} u_{\vtheta}(\vx_n)) \in \sR^M$ where $D^{m}_{\vx} u_{\vtheta}(\vx_n) \in \sR^{d \times S_{m}}$ into a smooth convex criterion function $\ell\colon \sR^M \to \sR$,
 \begin{equation}
-  L_{\Omega}(\vtheta)\coloneqq \nicefrac{1}{N}
-  \textstyle
+  L_{\Omega}(\vtheta)\coloneqq \frac{1}{N}
   \sum_{n=1}^N \ell(\vr_{\Omega,n}(\vtheta))\,.
 \end{equation}
 The generalized Gauss-Newton (GGN) matrix~\cite{schraudolph2002fast} is the Hessian of $L_{\Omega}(\vtheta)$ when the residual is linearized w.r.t.\,$\vtheta$ before differentiation. It is positive semi-definite and has the form
 \begin{align}
   \mG_{\Omega}(\vtheta)
   \coloneqq
-  \nicefrac{1}{N}
-  \textstyle
+  \frac{1}{N}
   \sum_{n=1}^N
   \left(\jac_\vtheta \vr_{\Omega,n}(\vtheta)  \right)^\top
   \mLambda(\vr_{\Omega,n})
@@ -186,8 +179,7 @@ Hence, we can derive a forward propagation for the required derivatives where a 
   \begin{split}
     \mG^{(l)}_{\Omega}(\vtheta)
     &=
-      \nicefrac{1}{N}
-      \textstyle
+      \frac{1}{N}
       \sum_{n=1}^N
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_n \right)^{\top}
       \left(
@@ -200,8 +192,7 @@ Hence, we can derive a forward propagation for the required derivatives where a 
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_n \right)
     \\
     &=
-      \nicefrac{1}{N}
-      \textstyle
+      \frac{1}{N}
       \sum_{n,s,s'=1}^{N,S,S}
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_{n,s} \right)^{\top}
       \left(
@@ -214,8 +205,7 @@ Hence, we can derive a forward propagation for the required derivatives where a 
       \left(\jac_{\mW^{(l)}} \mZ^{(l)}_{n,s'} \right)
     \\
     &=
-      \nicefrac{1}{N}
-      \textstyle
+      \frac{1}{N}
       \sum_{n,s,s'=1}^{N,S,S}
       \mZ^{(l-1)}_{n,s}
       \mZ^{(l-1)\top}_{n,s'}
@@ -284,7 +274,7 @@ To design an optimizer based on our KFAC approximation, we re-use techniques fro
 At iteration $t$, we approximate the per-layer interior and boundary Gramians using our derived Kronecker approximation (\Cref{eq:KFAC-PINN,eq:KFAC-PINNs-general}),
 $\mG_{\Omega,t}^{(l)} \approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$ and $\mG_{\partial \Omega, t}^{(l)}\approx \mA_{\Omega,t}^{(l)}\otimes \mB_{\Omega,t}^{(l)}$.
 
-\textbf{Exponential moving average and damping}
+\paragraph{Exponential moving average and damping}
 For preconditioning, we accumulate the Kronecker factors $\mA^{(l)}_{\bullet,t}, \mB^{(l)}_{\bullet,t}$ over time using an exponential moving average $\hat{\mA}^{(l)}_{\bullet,t} = \beta \hat{\mA}^{(l)}_{\bullet,t-1} + (1 - \beta) \mA^{(l)}_{\bullet,t}$ of factor $\beta\in[0,1)$ (identically for $\hat{\mB}^{(l)}_{\bullet, t}$), similar to the original KFAC.
 Moreover, we apply the same constant damping of strength $\lambda>0$ to all Kronecker factors, $\tilde{\mA}^{(l)}_{\bullet,t} = \hat{\mA}^{(l)}_{\bullet,t} + \lambda \mI$ and $\tilde{\mB}^{(l)}_{\bullet,t} = \hat{\mB}^{(l)}_{\bullet,t} + \lambda \mI$ such that the curvature approximation used for preconditioning at step $t$ is
 \begin{align*}
@@ -305,10 +295,10 @@ Moreover, we apply the same constant damping of strength $\lambda>0$ to all Kron
     \right)\,.
 \end{align*}
 
-\textbf{Gradient preconditioning}
-Given layer $l$'s mini-batch gradient $\vg_t^{(l)} = \nicefrac{\partial L(\vtheta_t)}{\partial\vtheta^{(l)}_t} \in \sR^{p^{(l)}}$, we obtain an update direction $\vDelta_t^{(l)} = -(\tilde{\mA}^{(l)}_{\Omega,t} \otimes \tilde{\mB}^{(l)}_{\Omega,t} + \tilde{\mA}^{(l)}_{\partial\Omega,t} \otimes \tilde{\mB}^{(l)}_{\partial\Omega,t})^{-1} \vg_t^{(l)} \in \sR^{p^{(l)}}$ using the trick of \cite[Appendix I]{martens2015optimizing} to invert the Kronecker sum which requires eigen-decomposing all Kronecker factors.
+\paragraph{Gradient preconditioning}
+Given layer $l$'s mini-batch gradient $\vg_t^{(l)} = \nicefrac{\partial L(\vtheta_t)}{\partial\vtheta^{(l)}_t} \in \sR^{p^{(l)}}$, we obtain an update direction $\vDelta_t^{(l)} = -(\tilde{\mA}^{(l)}_{\Omega,t} \otimes \tilde{\mB}^{(l)}_{\Omega,t} + \tilde{\mA}^{(l)}_{\partial\Omega,t} \otimes \tilde{\mB}^{(l)}_{\partial\Omega,t})^{-1} \vg_t^{(l)} \in \sR^{p^{(l)}}$ using the trick of \cite[Appendix I]{martens2015optimizing} to invert the Kronecker sum via eigen-decomposing all Kronecker factors.
 
-\textbf{Learning rate and momentum} From the preconditioned gradient $\vDelta_t \in \sR^P$, we consider two different updates $ \vtheta_{t+1} = \vtheta_t + \vdelta_{t}$ we call \emph{KFAC} and \emph{KFAC*}.
+\paragraph{Learning rate and momentum} From the preconditioned gradient $\vDelta_t \in \sR^D$, we consider two different updates $ \vtheta_{t+1} = \vtheta_t + \vdelta_{t}$ we call \emph{KFAC} and \emph{KFAC*}.
 KFAC uses momentum over previous updates, $\hat{\vdelta}_t = \mu \vdelta_{t-1} + \vDelta_t$, and $\mu$ is chosen by the practitioner.
 Like ENGD, it uses a logarithmic grid line search, selecting $\vdelta_t = \alpha_{\star} \hat{\vdelta}_t$ with $\alpha_{\star} = \argmin_{\alpha} L(\vtheta_t + \alpha \hat{\vdelta}_t)$ where $\alpha \in \{2^{-30}, \dots, 2^0\}$.
 KFAC* uses the automatic learning rate and momentum heuristic of the original KFAC optimizer.
@@ -338,17 +328,13 @@ The optimal learning rate and momentum $\argmin_{\alpha, \mu} m(\vdelta_{t+1})$ 
 The computational cost is dominated by the two Gramian-vector products with $\vDelta_t$ and $\vdelta_t$.
 By using the Gramian's outer product structure~\cite{dangel2022vivit,papyan2019measurements}, we perform them with autodiff~\citep{pearlmutter1994fast,schraudolph2002fast} using one Jacobian-vector product each, as recommended in \cite{martens2015optimizing}.
 
-
 \paragraph{Computational complexity}
-Inverting $l$'s layer Kronecker approximation of the Gramian requires
-$O(h_l^3+h_{l+1}^3)$ time and $O(h_l^2+h_{l+1}^2)$ storage, where $h_l$ is the number of neurons in the $l$-th layer. 
-Note that inverting the exact block for layer %(as done by 'ENGD (layer-wise)') 
-requires $O(h_l^3h_{l+1}^3)$ time and $O(h_l^2 h_{l+1}^2)$ memory. 
-In general, the improvement from the Kronecker factorization depends on how close to square the weight matrices of a layer are, and therefore on the architecture. 
-In practise, the Kronecker factorization usually significantly reduces memory and run time. Further improvements can be achieved by using structured Kronecker factors, e.g. diagonal or block-diagonal matrices as proposed in~\cite{lin2023structured}.
+Inverting layer $l$'s Kronecker approximation of the Gramian requires $\gO({h^{(l)}}^3+{h^{(l+1)}}^3)$ time and $\gO({h^{(l)}}^2+{h^{(l+1)}}^2)$ storage, where $h^{(l)}$ is the number of neurons in the $l$-th layer, whereas inverting the exact block for layer would require $\gO({h^{(l)}}^3{h^{(l+1)}}^3)$ time and $\gO({h^{(l)}}^2 {h^{(l+1)}}^2)$ memory.
+In general, the improvement from the Kronecker factorization depends on how close to square the weight matrices of a layer are, and therefore on the architecture.
+In practise, the Kronecker factorization usually significantly reduces memory and run time.
+Further improvements can be achieved by using structured Kronecker factors, e.g.\,(block-)diagonal matrices~\cite{lin2023structured}.
 
-\paragraph{Computation of the Kronecker factors}
-We use the forward Laplacian framework in our implementation, which we found to be significantly faster and more memory efficient than using \textmd{functorch} to compute a batched Hessian trace, see \Cref{app:subsec:comparison}. 
+We use the forward Laplacian framework in our implementation, which we found to be significantly faster and more memory efficient than computing batched Hessian traces, see \Cref{app:subsec:comparison}.
 
 %%% Local Variables:
 %%% mode: latex

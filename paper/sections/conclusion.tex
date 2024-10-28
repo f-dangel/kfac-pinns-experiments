@@ -4,7 +4,7 @@ Our approach goes beyond the established KFAC for traditional supervised problem
 To establish KFAC for such losses, we use Taylor-mode autodiff to view the differential operator's compute graph as a forward net with shared weights, then apply the recently-developed formulation of KFAC for linear layers with weight sharing.
 Empirically, we find that our KFAC-based optimizers are competitive with expensive second-order methods on small problems and scale to high-dimensional neural networks and PDEs while consistently outperforming first-order methods and LBFGS.
 
-\textbf{Limitations \& future directions} While our implementation currently only supports MLPs and the Poisson and heat equations, the concepts we use to derive KFAC (Taylor-mode, weight sharing) apply to arbitrary architectures and PDEs, as described in~\Cref{sec:KFAC-general}.
+\paragraph{Limitations \& future directions} While our implementation currently only supports MLPs and the Poisson and heat equations, the concepts we use to derive KFAC (Taylor-mode, weight sharing) apply to arbitrary architectures and PDEs, as described in~\Cref{sec:KFAC-general}.
 We are excited that our current algorithms show promising performance when compared to second-order methods with sophisticated heuristics.
 In fact, the original KFAC optimizer itself~\cite{martens2015optimizing} relies heavily on such heuristics that are said to be crucial for its performance~\cite{clarke2023adam}.
 Our algorithms borrow components, but we did not explore all bells and whistles, e.g.\,adaptive damping and heuristics to distribute damping over the Kronecker factors.
