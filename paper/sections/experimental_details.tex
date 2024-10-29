@@ -808,8 +808,44 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
 \end{itemize}
 
 \subsection{(9)+1-d Logarithmic Fokker-Planck Equations with Random Search}\label{sec:fokker10d-appendix}
-We consider a 9+1 dimensional Fokker-Planck equation in logarithmic space on
-the space-time domain $[0, 1]\times [-5, 5]$. Precisely, we aim to solve the 
+For a given drift $\vmu: [0, 1]\times \mathbb R^d \to \mathbb R^d$ and diffusivity $\sigma:[0,1]\to\mathbb R^{d\times d}$
+the Fokker-Planck equation with initial probability density $p_0$ is given by
+\begin{equation*}
+  \partial_t p 
+  +
+  \operatorname{div}(\vmu p) 
+  -
+  \frac12\operatorname{tr}(\sigma \sigma^\top \nabla^2 p) 
+  =
+  0,
+  \quad
+  p(0)
+  =
+  p_0,
+\end{equation*}
+which is posed on $[0, 1]\times \mathbb R^d$.
+Note that $p(t,\cdot)$ is a probability density on $\mathbb R^d$ for all $t\in[0,1]$. We transform the above equation into logarithmic 
+space via $q=\log(p)$. Then $q$ solves
+\begin{equation*}
+  \partial_t q 
+  + 
+  \operatorname{div}(\vmu)
+  +
+  \nabla q \cdot \vmu
+  -
+  \frac12 \|\sigma^\top \nabla q\|^2
+  -
+  \frac12\operatorname{tr}(\sigma\sigma^\top\nabla^2q)
+  =
+  0,
+  \quad
+  q(0)
+  =
+  \log p_0.
+\end{equation*}
+For the concrete example of the main text, we set $\vmu(t, \vx)=-\frac12x$ and $\sigma = \sqrt{2}\mI$. 
+We consider a 9+1 dimensional Fokker-Planck equation in logarithmic space and replace the unbounded 
+domain by $[0, 1]\times [-5, 5]$. Precisely, we aim to solve the 
 equation
 \begin{equation*}
   \partial_t q(t, \vx)
