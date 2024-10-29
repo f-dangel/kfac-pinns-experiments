@@ -807,68 +807,6 @@ For the biggest architecture, full and layer-wise ENGD lead to out-of-memory err
   \end{itemize}
 \end{itemize}
 
-\subsection{(9)+1-d Logarithmic Fokker-Planck Equations with Random Search}\label{sec:fokker10d-appendix}
-We consider a 9+1 dimensional Fokker-Planck equation in logarithmic space on
-the space-time domain $[0, 1]\times [-5, 5]$. Precisely, we aim to solve the 
-equation
-\begin{equation*}
-  \partial_t q(t, \vx)
-  -
-  \frac{d}{2}
-  -
-  \frac12 \nabla q(t, \vx)\cdot \vx
-  -
-  \| \nabla q(t, \vx) \|^2
-  -
-  \Delta q(t, \vx)
-  =
-  0,
-  \quad 
-  q(0) = \log (p^*(0)),
-\end{equation*}
-where $d=9$, $t\in[0, 1]$ and $\vx\in[-5, 5]$. The solution $q^*=\log(p^*)$ is
-given as $p^*(t, \vx) \sim \mathcal N (0, \exp(-t)\mI + (1-\exp(-t))2\mI)$.
-The PINN loss includes the PDE residual and the initial conditions.
-We model the solution with a medium sized tanh-activated 
-MLP with $D=\num{118145}$ and the layer structure
-$10 \to 256 \to 256 \to 128 \to 128 \to 1$ and use batch sizes of 
-$N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$. Each run is
-assigned a budget of $\num{6000}\,\text{s}$. \Cref{fig:fokker_10d-appendix} visualizes the results.
-
-\begin{figure}[!h]
-  \centering
-  \def\pathToFigs{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random}
-  \begin{subfigure}[t]{1.0\linewidth}
-    \caption{}\label{subfig:fokker_10d-time}
-    \includegraphics{\pathToFigs/l2_error_over_time.pdf}
-    \includegraphics{\pathToFigs/loss_over_time.pdf}
-  \end{subfigure}
-  \begin{subfigure}[t]{1.0\linewidth}
-    \caption{}\label{subfig:fokker_10d-step}
-    \includegraphics{\pathToFigs/l2_error_over_step.pdf}
-    \includegraphics{\pathToFigs/loss_over_step.pdf}
-  \end{subfigure}
-  \caption{Training loss and evaluation $L_2$ error for 
-  learning the solution to a (9+1)d log Fokker-Planck equation 
-  over (\subref{subfig:poisson_10d-time}) time and (\subref{subfig:poisson_10d-step}) steps.}\label{fig:fokker_10d-appendix}
-\end{figure}
-
-\paragraph{Search space details} The runs shown in 
-\Cref{fig:fokker_10d-appendix} were determined to be the best 
-via a random search on the following search spaces which each 
-optimizer given approximately the same total 
-computational time ($\mathcal{U}$ denotes a uniform, 
-and $\mathcal{LU}$ a log-uniform distribution):
-\begin{itemize}
-  \def\pathToRuns{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/tex}
-\item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
-\item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
-\item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
-\item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
-\item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
-\item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
-\end{itemize}
-
 \subsection{Robustness Under Model Initialization for 4+1d Heat Equation}\label{sec:4d-heat-robustness-app}
 
 Here we study the robustness of our results from \Cref{sec:4d-heat-app} for the 4+1d heat equation when initializing the neural network differently.
@@ -929,6 +867,66 @@ The runs shown in \Cref{fig:heat4d-bayes-appendix} correspond to the following h
 \item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
 \item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
 \item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+\end{itemize}
+
+\subsection{(9+1)-d Logarithmic Fokker-Planck Equations with Random Search}\label{sec:fokker10d-appendix}
+We consider a (9+1)-dimensional Fokker-Planck equation in logarithmic space,
+\begin{equation*}
+  \partial_t q(t, \vx)
+  -
+  \frac{d}{2}
+  -
+  \frac12 \nabla q(t, \vx)\cdot \vx
+  -
+  \| \nabla q(t, \vx) \|^2
+  -
+  \Delta q(t, \vx)
+  =
+  0,
+  \quad
+  q(0) = \log (p^*(0)),
+\end{equation*}
+where $d=9$, $t\in[0, 1]$ and $\vx\in[-5, 5]^d$.
+The solution $q^*=\log(p^*)$ is given as $p^*(t, \vx) \sim \mathcal N (0, \exp(-t)\mI_d + (1-\exp(-t))2\mI_d)$.
+The PINN loss includes the PDE residual and the initial conditions.
+We model the solution with a medium sized tanh-activated MLP with $D=\num{118145}$ and the layer structure $10 \to 256 \to 256 \to 128 \to 128 \to 1$ and use batch sizes of $N_{\Omega} = \num{3000}$, $N_{\partial\Omega} = \num{1000}$ (validation size is $\num{30000}$.
+Each run executes for $\num{6000}\,\text{s}$.
+\Cref{fig:fokker_10d-appendix} shows the results.
+
+\begin{figure}[!h]
+  \centering
+  \def\pathToFigs{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:fokker_10d-time}
+    \includegraphics{\pathToFigs/l2_error_over_time.pdf}
+    \includegraphics{\pathToFigs/loss_over_time.pdf}
+  \end{subfigure}
+  \begin{subfigure}[t]{1.0\linewidth}
+    \caption{}\label{subfig:fokker_10d-step}
+    \includegraphics{\pathToFigs/l2_error_over_step.pdf}
+    \includegraphics{\pathToFigs/loss_over_step.pdf}
+  \end{subfigure}
+  \caption{Training loss and evaluation $L_2$ error for
+  learning the solution to a (9+1)d log Fokker-Planck equation
+  over (\subref{subfig:poisson_10d-time}) time and (\subref{subfig:poisson_10d-step}) steps.}\label{fig:fokker_10d-appendix}
+\end{figure}
+
+\paragraph{Search space details} The runs shown in
+\Cref{fig:fokker_10d-appendix} were determined to be the best
+via a random search on the following search spaces which each
+optimizer given approximately the same total
+computational time ($\mathcal{U}$ denotes a uniform,
+and $\mathcal{LU}$ a log-uniform distribution):
+\begin{itemize}
+  \def\pathToRuns{kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/tex}
+\item \textbf{SGD:} \input{\pathToRuns/sweep_SGD.tex}
+\item \textbf{Adam:} \input{\pathToRuns/sweep_Adam.tex}
+\item \textbf{Hessian-free:} \input{\pathToRuns/sweep_HessianFree.tex}
+\item \textbf{LBFGS:} \input{\pathToRuns/sweep_LBFGS.tex}
+\item \textbf{KFAC:} \input{\pathToRuns/sweep_KFAC.tex}
+\item \textbf{KFAC*:} \input{\pathToRuns/sweep_KFAC_auto.tex}
+
+  We found that KFAC* requires very large exponential moving averages to work well.
 \end{itemize}
 
 %%% Local Variables:
