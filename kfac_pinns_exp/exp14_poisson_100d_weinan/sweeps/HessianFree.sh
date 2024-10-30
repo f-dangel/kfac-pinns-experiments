@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=rtx6000
 #SBATCH --qos=m2
+#SBATCH --exclude=gpu138
 
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -10,7 +11,4 @@
 
 echo "[DEBUG] Host name: " `hostname`
 
-source  ~/anaconda3/etc/profile.d/conda.sh
-conda activate kfac_pinns_exp
-
-wandb agent --count 1 kfac-pinns/poisson100d_weinan_norm/qmz0d4z1
+wandb agent --count 1 kfac-pinns/poisson100d_weinan_norm/pyqhbi98

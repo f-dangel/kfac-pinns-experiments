@@ -1,0 +1,35 @@
+% THE LSTLINEBGRD PACKAGE IS BROKEN. THIS SNIPPET FIXES IT. YOU NEED TO INCLUDE
+% IT IN YOUR PREAMBLE
+% (https://tex.stackexchange.com/questions/451532/recent-issues-with-lstlinebgrd-package-with-listings-after-the-latters-updates)
+
+\input{fdtexutils/checks/package_loaded}
+% requirements
+\assertPackageLoaded{listings}
+\assertPackageLoaded{xpatch}
+
+\makeatletter
+\let\old@lstKV@SwitchCases\lstKV@SwitchCases
+\def\lstKV@SwitchCases#1#2#3{}
+\makeatother
+\usepackage{lstlinebgrd}
+\makeatletter
+\let\lstKV@SwitchCases\old@lstKV@SwitchCases
+
+\lst@Key{numbers}{none}{%
+	\def\lst@PlaceNumber{\lst@linebgrd}%
+	\lstKV@SwitchCases{#1}%
+	{none:\\%
+		left:\def\lst@PlaceNumber{\llap{\normalfont
+				\lst@numberstyle{\thelstnumber}\kern\lst@numbersep}\lst@linebgrd}\\%
+		right:\def\lst@PlaceNumber{\rlap{\normalfont
+				\kern\linewidth \kern\lst@numbersep
+				\lst@numberstyle{\thelstnumber}}\lst@linebgrd}%
+	}{\PackageError{Listings}{Numbers #1 unknown}\@ehc}}
+\makeatother
+
+% Patch internal commands of lstlinebgrd to fix background color
+% https://tex.stackexchange.com/questions/398633/linebackgroundcolor-overwriting-backgroundcolor-in-lstinputlisting
+\makeatletter
+%alternative: patch \lst@bkgcolor
+\xpatchcmd\lst@linebgrd{\color{-.}}{\lst@bkgcolor}{}{\fail}
+\makeatother

@@ -1,0 +1,44 @@
+entity: kfac-pinns
+project: log_fokker_planck9d_isotropic_gaussian_random
+name: HessianFree
+program: ../../train.py
+command:
+    - ${env}
+    - python
+    - ${program}
+    - "--wandb"
+    - "--optimizer=HessianFree"
+    - ${args_no_boolean_flags}
+metric:
+    goal: minimize
+    name: l2_error
+method: grid
+parameters:
+    equation:
+        value: log-fokker-planck-isotropic
+    boundary_condition:
+        value: gaussian
+    batch_frequency:
+        value: 1
+    model:
+        value: mlp-tanh-256-256-128-128
+    num_seconds:
+        value: 6_000
+    dim_Omega:
+        value: 9
+    N_Omega:
+        value: 3_000
+    N_dOmega:
+        value: 1_000
+    HessianFree_curvature_opt:
+        distribution: categorical
+        values: ["ggn", "hessian"]
+    HessianFree_damping:
+        distribution: categorical
+        values: [1.0, 1e-1, 1e-2, 1e-3, 1e-4]
+    HessianFree_no_adapt_damping:
+        distribution: categorical
+        values: [false, true]
+    HessianFree_cg_max_iter:
+        distribution: categorical
+        values: [50, 250]

@@ -1,0 +1,119 @@
+\documentclass[a0paper]{tikzposter}
+% Force a 16 by 9 ratio, 33.1 is same height as a0
+\geometry{paperwidth=58.844in,paperheight=33.1in}
+
+\usepackage{postertheme/vector_institute/vector_institute}
+\usepackage{amsmath}
+
+% \useblockstyle{Envelope}
+% \usebackgroundstyle{Empty}
+\usetitlestyle{Filled}
+
+\title{
+  \fontsize{115}{60}\selectfont
+  \bf Kronecker-Factored Approximate Curvature
+  for Physics-Informed Neural Networks}
+\author{\Huge
+  Felix Dangel*, Johannes M\"uller*, Marius Zeinhofer*
+}
+\institute{
+  \LARGE
+  Vector Institute (Canada), RWTH Aachen University (Germany), Simula Research Laboratory (Norway)
+}
+
+
+\begin{document}
+% ==============================================================================
+% HEADER & FOOTER
+
+\backgroundgradient % Adds the background features
+\maketitle
+\headerlogo % Adds Vector logo to header
+\posterfooter{Poster footer with additional information} % Footer
+
+\hspace{-35cm}
+\begin{columns}
+  \centering
+  \begin{column}{1.85}
+    \centering \ribbon{\centering\fontsize{105}{80}\selectfont\textcolor{white}{\bf We generalize KFAC to PINN losses (which contain differential operators) \\
+        using Taylor-mode autodiff and the concept of linear weight sharing layers.}}
+  \end{column}
+\end{columns}
+\hspace{2cm}
+
+\begin{columns}
+  \column{0.9}
+  \block{Ingredient 1: PINNs}{
+    \begin{minipage}{0.63\linewidth}
+    Explain what PINNs are.
+
+    Explain that they are hard to train with first-order methods.
+    Second-order methods work, but do not scale well to larger nets.
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.33\linewidth}
+      \centering
+      Figure showing a loss curve
+
+      \includegraphics[width=\linewidth]{example-image-a}
+    \end{minipage}
+
+    \begin{minipage}{0.3\linewidth}
+      Picture showing the solution at the beginning
+      \centering
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.3\linewidth}
+      \centering
+      Picture showing the known solution
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.3\linewidth}
+      \centering
+      Picture showing the learned solution
+    \end{minipage}
+  }
+
+  \column{0.9}
+  \block{Ingredient 3: Taylor mode}{
+  }
+\end{columns}
+
+\begin{columns}
+  \column{0.9}
+  \block{Ingredient 2: KFAC}{
+    Explain what Kronecker-factored approximate curvature is.
+
+    Say that it is a scale-able curvature approximation that is cheap to invert.
+    Say that it has recently been generalized to linear layers with weight sharing.
+    \begin{equation*}
+      a^2 + b^2 = c^2
+    \end{equation*}
+  }
+  \column{0.9}
+  \block{Putting everything together + practical evaluation: KFAC for PINNs}{
+    \begin{minipage}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{example-image-a}
+      Poisson equation
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{example-image-a}
+      Heat equation
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{example-image-a}
+      log-Fokker-Planck equation
+    \end{minipage}
+  }
+\end{columns}
+
+\end{document}
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: t
+%%% End:

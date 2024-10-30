@@ -236,8 +236,8 @@ def plot_solution(
             ax[0].set_ylabel("$t$")
             if title is not None:
                 fig.suptitle(title, y=0.975)
-            ax[0].imshow(u_learned, **imshow_kwargs)
-            ax[1].imshow(u_true, **imshow_kwargs)
+            ax[0].imshow(u_learned.cpu(), **imshow_kwargs)
+            ax[1].imshow(u_true.cpu(), **imshow_kwargs)
             plt.savefig(savepath, bbox_inches="tight")
 
         plt.close(fig=fig)
@@ -270,8 +270,8 @@ def plot_solution(
                 ax[0].set_ylabel("$t$")
                 if title is not None:
                     fig.suptitle(title + f" ($t = {t:.2f})$", y=0.975)
-            ax[0].imshow(u_learned[idx], **imshow_kwargs)
-            ax[1].imshow(u_true[idx], **imshow_kwargs)
+            ax[0].imshow(u_learned[idx].cpu(), **imshow_kwargs)
+            ax[1].imshow(u_true[idx].cpu(), **imshow_kwargs)
             plt.savefig(framepath, bbox_inches="tight")
             plt.close(fig)
 

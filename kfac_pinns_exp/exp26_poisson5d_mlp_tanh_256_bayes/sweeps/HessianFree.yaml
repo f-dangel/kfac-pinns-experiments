@@ -32,14 +32,14 @@ parameters:
         max: 5_000
     batch_frequency:
         min: 0
-        max: 10_000
+        max: 1000
     HessianFree_curvature_opt:
         distribution: categorical
         values: ["ggn", "hessian"]
     HessianFree_damping:
         distribution: log_uniform_values
-        min: 1e-15
-        max: 1e-0
+        min: 1e-10
+        max: 1e3
     HessianFree_no_adapt_damping:
         distribution: categorical
         values: [false, true]

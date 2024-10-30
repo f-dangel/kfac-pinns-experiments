@@ -1,0 +1,223 @@
+\mode<presentation>
+
+% ===================================================================
+% FONTS
+% ===================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+
+% use Roboto font
+\usepackage[sfdefault,light,condensed]{roboto}
+% use Inconsolata font for monospace (texttt)
+\usepackage{inconsolata}
+
+% ===================================================================
+% COLORS
+% ===================================================================
+\input{fdtexutils/colors/vector_institute}
+
+% ===================================================================
+% TABLES
+% ===================================================================
+% customize color of rules in tables
+\usepackage{colortbl}
+\arrayrulecolor{VectorBlack}
+\usepackage{booktabs}
+
+% ===================================================================
+% LISTS
+% ===================================================================
+% \starredbullet command
+\usepackage{fourier-orns}
+\setbeamertemplate{itemize items}{\starredbullet}
+
+% ===================================================================
+% LISTINGS
+% ===================================================================
+\usepackage{listings}
+% define style for listings
+\lstdefinestyle{vector_institute}{
+  backgroundcolor=\color{VectorGray},
+  commentstyle=\bfseries\color{VectorBlue},
+  keywordstyle=\bfseries\color{VectorBlack},
+  numberstyle=\tiny\color{VectorBlack!50},
+  stringstyle=\bfseries\color{VectorPink},
+  basicstyle=\ttfamily\footnotesize,
+  xleftmargin=3.2ex,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=t,
+  keepspaces=true,
+  numbers=left,
+  numbersep=7pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=4,
+}
+% use the above style as default
+\lstset{style=vector_institute}
+
+% line highlighting
+% \usepackage{lstlinebgrd} % linebackgroundcolor option in lstlisting environment (BROKEN, see https://tex.stackexchange.com/a/451538, FIX below)
+\usepackage{xpatch} % required for the fix of lstlinebgrd below
+\input{fdtexutils/fix/lstlinebgrd} % linebackgroundcolor option in lstlisting
+% environment (with some fixes)
+
+% ===================================================================
+% STYLING
+% ===================================================================
+% redefine \emph: bold-print and red-coloring
+\let\emph\relax
+\DeclareTextFontCommand{\emph}{\color{VectorBlue}\bfseries}
+
+% no indentation when starting a new paragraph
+\setlength{\parindent}{0pt}
+
+% ===================================================================
+% BEAMER ELEMENT COLORS
+% ===================================================================
+
+\setbeamercolor{alerted text}{fg=VectorBlue}
+\setbeamercolor{normal text}{fg=black,bg=white}
+\setbeamercolor{structure}{fg=VectorBlue}
+\setbeamercolor{item projected}{use=item,fg=black,bg=VectorBlue}
+\setbeamercolor*{palette primary}{fg=white,bg=VectorBlue}
+
+\setbeamercolor{frametitle}{bg=VectorBlack,fg=white}
+\setbeamercolor{frametitle right}{bg=white}
+\setbeamercolor{framesubtitle}{fg=white}
+
+\setbeamercolor*{titlelike}{parent=structure}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{bibliography item}[triangle]
+
+\setbeamerfont{frametitle}{}
+
+\setbeamertemplate{footline}{\hfill\color{VectorBlack}{%
+    \insertframenumber}\hspace{2ex}\null\newline\vspace{2mm}%
+}
+
+% example blocks
+\setbeamercolor{block title example}{fg=white,bg=VectorBlack}
+\setbeamercolor{block body example}{fg=black,bg=VectorGray!50!white}
+\setbeamertemplate{blocks}[rounded]
+\setbeamerfont{block title example}{size=\normalsize}
+\setbeamerfont{block body example}{size=\normalsize}
+
+% ===================================================================
+% COMMANDS
+% ===================================================================
+\newcommand{\horizontalLine}{%
+  % draw a horizontal black line through a slide
+  \noindent\makebox[\linewidth]{\rule{\paperwidth}{.4pt}}%
+}
+
+% define commands with multiple default arguments
+% (https://tex.stackexchange.com/a/29975)
+% \usepackage{xparse}
+
+\NewDocumentCommand{\ribbon}{O{1.0\paperwidth} O{black} O{VectorOrange} m}{
+  % Draws a ribbon that contains an important message
+  %
+  % Optional arguments:
+  %
+  % #1: Ribbon width, default: 1.0 \paperwidth
+  % #2: Ribbon foreground color, default: black
+  % #3: Ribbon background color, default: TUgold
+  %
+  % Mandatory arguments:
+  %
+  % #1: Ribbon body
+  \setbeamercolor{ribboncolor}{fg=#2, bg=#3}
+  \begin{beamercolorbox}[wd=#1, colsep*=.3em, center]{ribboncolor}
+    \setbeamertemplate{itemize items}{\color{black}\starredbullet}
+    \setbeamercolor{structure}{fg=white}
+    \begin{minipage}{1.0\textwidth}
+      #4
+    \end{minipage}
+  \end{beamercolorbox}
+}
+
+% Environment that temporarily modifies the background color of frames.
+% Should wrap a frame environment. Default color is VectorGray
+\newenvironment{backgroundColor}[1][VectorGray]{
+  \begingroup
+  \setbeamercolor{background canvas}{bg=#1}
+}{
+  \endgroup
+}
+
+% ===================================================================
+% TITLE SLIDE COMMAND
+% ===================================================================
+\usepackage{tikz}
+
+\setbeamertemplate{title page}{
+  \thispagestyle{empty}
+  \setcounter{framenumber}{0}
+  \begin{tikzpicture}[remember picture,overlay, inner sep = 0]
+    \node (logo) [anchor=south, yshift=8mm] at (current page.south)
+    {\includegraphics[height=0.24\paperheight]{beamertheme/vector_institute/assets/logo_horizontal}};
+  \end{tikzpicture}
+  \begin{columns}
+    \centering
+    \begin{column}{0.9\linewidth}
+      \vskip-1.5cm
+      \centering
+      \usebeamercolor{title in headline}{\color{VectorBlack}\Huge{\textbf{\inserttitle}}}
+      \vskip0.6cm
+      \usebeamercolor{author in headline}{\color{VectorBlack}\large{\insertauthor}}
+      \vskip0.4cm
+      \usebeamercolor{date in headline}{\color{VectorBlack}\normalsize{\insertdate}}
+    \end{column}
+  \end{columns}
+}
+
+\newcommand{\makeTitleSlide}{%
+  % Generate the title slide with logos, title, author, and data.
+  \begin{backgroundColor}
+    \begin{frame}
+      \titlepage
+    \end{frame}
+  \end{backgroundColor}
+}
+
+% ===================================================================
+% LOGO COMMANDS
+% ===================================================================
+\newcommand{\drawLogoDefault}{%
+  % Add inverse logo of the Vector Institute at top right of a slide.
+  % This is the by default enabled command for this beamer theme.
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=north east, inner sep=3pt] at (current page.north east)
+    {\includegraphics[height=0.7cm, keepaspectratio]{%
+        % path to the inverted Vector Institute logo
+        % NOTE: The beamertheme directory must be in your graphicspath
+        beamertheme/vector_institute/assets/logo_no_text_horizontal_inverted}};
+  \end{tikzpicture}%
+  % Undo the vspace created by tikzpicture
+  \vspace{-\abovedisplayskip}%
+  \vspace{-\belowdisplayskip}%
+}
+
+\newcommand{\drawLogo}{%
+  % Command that is called when creating a title frame. You can overwrite
+  % it to achieve any effect you want.
+  \drawLogoDefault%
+}
+\addtobeamertemplate{frametitle}{}{\drawLogo}
+
+\newcommand{\noLogo}{
+  % Disable drawing of the logo on the slides that follow.
+  \renewcommand{\drawLogo}{}
+}
+
+\newcommand{\defaultLogo}{%
+  % Use the default logo on the slides that follow.
+  \renewcommand{\drawLogo}{\drawLogoDefault}%
+}
+
+\mode<all>
