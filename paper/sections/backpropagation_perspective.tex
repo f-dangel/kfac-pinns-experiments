@@ -249,6 +249,7 @@ With the Laplacian's Jacobian from \Cref{eq:laplacian-gradient}, we can now writ
   \end{split}
 \end{align}
 The Gramian consists of nine different terms, see \Cref{fig:gramian-contribution-children} for a visualization which shows not only the diagonal blocks $\mG_{\Omega}^{(i)}$, but also the full Gramian $\mG_{\Omega}$ which decomposes in the same way.
+The terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ are automatically computed when computing the gradient of the loss via backpropagation.
 We will now proceed and simplify the terms by inserting the Jacobians into \Cref{eq:laplacian-gradient} and studying the Gramian's block diagonal, which is approximated by KFAC, in more detail.
 
 \input{figures/gramian_per_child.tex}
@@ -433,8 +434,6 @@ where (1) is the contribution from the forward pass, (2) is the contribution fro
 Defining a single Kronecker product approximation would involve introducing new approximations on top of those employed by \citet{eschenhagen2023kroneckerfactored}.
 Therefore, the forward Laplacian, or Taylor-mode, perspective we choose in the main text is advantageous as it allows to define KFAC without introducing new approximations.
 
-\paragraph{Computing $\grad{\textcolor{blue}{\bullet}}\Delta u$}
-The terms $\grad{\textcolor{blue}{\bullet}}\Delta u$ are automatically computed when computing the gradient of the loss via backdrop.
 
 %%% Local Variables:
 %%% mode: latex
