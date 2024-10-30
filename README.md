@@ -52,13 +52,15 @@ To reproduce the experiments shown in the [paper](https://arxiv.org/abs/2405.156
 | Figure 1   | exp17_groupplot_poisson_2d        | exp09, exp15, exp20             |
 | Figure 2   | exp30_heat4d_groupplot            | exp27, exp28, exp29             |
 | Figure 3   | exp33_poisson_bayes_groupplot     | exp14, exp26, exp32             |
-| Figure A4  | exp17_groupplot_poisson_2d        | exp09, exp15, exp20             |
-| Figure A5  | exp42_visualize_solutions         | exp09, exp13                    |
-| Figure A6  | exp18_groupplot_poisson5d         | exp10, exp16, exp19             |
-| Figure A7  | exp21_poisson_10d                 |                                 |
-| Figure A8  | exp33_poisson_bayes_groupplot     | exp14, exp26, exp32             |
-| Figure A9  | exp24_heat1d_groupplot            | exp13, exp22, exp23             |
-| Figure A10 | exp42_visualize_solutions         | exp13, exp09                    |
-| Figure A11 | exp30_heat4d_groupplot            | exp27, exp28, exp29             |
-| Figure A12 | exp41_errorbars_exp28             | exp28                           |
-| Figure A13 | exp31_heat4d_mlp_tanh_256_bayes   |                                 |
+| Figure 4   | exp43_log_fokker_planck9d         | exp43                           |
+| Figure A5  | exp17_groupplot_poisson_2d        | exp09, exp15, exp20             |
+| Figure A6  | exp42_visualize_solutions         | exp09, exp13                    |
+| Figure A7  | exp18_groupplot_poisson5d         | exp10, exp16, exp19             |
+| Figure A8  | exp21_poisson_10d                 |                                 |
+| Figure A9  | exp33_poisson_bayes_groupplot     | exp14, exp26, exp32             |
+| Figure A10 | exp24_heat1d_groupplot            | exp13, exp22, exp23             |
+| Figure A11 | exp42_visualize_solutions         | exp13, exp09                    |
+| Figure A12 | exp30_heat4d_groupplot            | exp27, exp28, exp29             |
+| Figure A13 | exp43_log_fokker_planck9d         | exp43                           |
+| Figure A14 | exp41_errorbars_exp28             | exp28                           |
+| Figure A15 | exp31_heat4d_mlp_tanh_256_bayes   |                                 |
