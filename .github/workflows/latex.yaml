@@ -20,3 +20,4 @@ jobs:
         with:
           working_directory: poster
           root_file: main.tex
+          texlive_version: 2023
