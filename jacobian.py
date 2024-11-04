@@ -8,12 +8,14 @@ from torch.nn import Linear, Sequential, Sigmoid
 
 D_in, D_hidden, D_out = 100, 10, 1
 assert D_out == 1
-N = 10000
+N1 = 6000
+N2 = 4000
+N = N1 + N2
 
 manual_seed(0)
 
-X = rand(N, D_in)
-# y = rand(N, D_out)
+X1 = rand(N1, D_in)
+X2 = rand(N2, D_in)
 
 net = Sequential(
     Linear(D_in, D_hidden),
@@ -26,7 +28,9 @@ P = sum(p.numel() for p in params)
 
 # closure: X -> r(θ) ∈ Rᴺ, L(θ)
 # compute: J_θ r ∈ Rᴺˣᴾ
-r = net(X)
+r1 = net(X1)
+r2 = net(X2)
+r = cat([r1, r2])
 
 t = time()
 
