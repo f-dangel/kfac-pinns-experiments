@@ -1,9 +1,9 @@
 \begin{frame}[fragile,t]
   \frametitle{From Taylor-mode to Forward Laplacian}
 
-  \vspace{-2ex}
+  \only<3->{\vspace{-2ex}}
   \emph{Example:} Laplacian \quad $\Delta f_i^{(L)}(\vx) = \sum_j \frac{\partial^2 f_i^{(L)}(\vx)}{\partial x_j^2} = \sum_j \partial^2_{\ve_j} f_i^{(L)}(\vx)$
-  \vspace{-2ex}
+  \vspace{-1ex}
 
   \begin{figure}[t]
     \centering
@@ -17,11 +17,6 @@
         inner sep=2pt,
       }]
       {
-        $f^{(0)} = \operatorname{id}$
-        \& $f^{(1)} \circ f^{(0)}$
-        \& $\dots$
-        \& $f^{(L)} \circ \ldots \circ f^{(0)}$
-        \\
         \includegraphics[scale=0.23]{/Users/fdangel/Documents/Postdoc/kfac-pinns/kfac_pinns_exp/exp48_visualization_taylor_mode/f_0_taylor_2.pdf}
         \& \includegraphics[scale=0.23]{/Users/fdangel/Documents/Postdoc/kfac-pinns/kfac_pinns_exp/exp48_visualization_taylor_mode/f_1_taylor_2.pdf}
         \& \includegraphics[scale=0.23]{/Users/fdangel/Documents/Postdoc/kfac-pinns/kfac_pinns_exp/exp48_visualization_taylor_mode/f_2_taylor_2.pdf}
@@ -50,6 +45,7 @@
           \& $\left\{\Delta f_i^{(2)}(\vx) \right\}_i$
           \& \node [align=center] {\textcolor{orange}{\textbf{Forward}}\\ \textcolor{orange}{\textbf{Laplacian}}};
         }
+        \\
       };
     \end{tikzpicture}
   \end{figure}
