@@ -27,6 +27,17 @@
 \usepackage{natbib}
 
 % ===================================================================
+% FIGURES
+% ===================================================================
+\usetikzlibrary{matrix}
+
+% ===================================================================
+% MATH
+% ===================================================================
+\usepackage{amsmath,amssymb}
+\input{../paper/preamble/goodfellow.tex}
+
+% ===================================================================
 % META-DATA
 % ===================================================================
 \title{%
@@ -39,9 +50,15 @@
 
 \makeTitleSlide
 
-\begin{frame}{Some slide}
+\begin{frame}
+  \frametitle{Test}
   Some citation \cite{li2023forward}
 \end{frame}
+
+\input{slides/taylor_mode_scalar_case.tex}
+\input{slides/taylor_mode_vector_case.tex}
+\input{slides/taylor_mode_linear_layer.tex}
+\input{slides/taylor_mode_forward_laplacian.tex}
 
 \begin{frame}[allowframebreaks]
   \frametitle{References}
