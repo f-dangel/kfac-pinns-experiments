@@ -193,7 +193,7 @@ def evaluate_interior_loss_and_kfac(
         The (differentiable) interior loss and a dictionary whose keys are the layer
         indices and whose values are the two Kronecker factors.
     """
-    loss, layer_inputs, layer_grad_outputs = (
+    loss, _, layer_inputs, layer_grad_outputs = (
         evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             layers, X, y, ggn_type, mu, sigma, div_mu, sigma_isotropic=sigma_isotropic
         )
@@ -213,8 +213,8 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
     sigma: Callable[[Tensor], Tensor],
     div_mu: Optional[Callable[[Tensor], Tensor]],
     sigma_isotropic: bool = False,
-) -> Tuple[Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
-    """Compute the interior loss, and inputs+output gradients of Linear layers.
+) -> Tuple[Tensor, Tensor, Dict[int, Tensor], Dict[int, Tensor]]:
+    """Compute the interior loss, residual & inputs+output gradients of Linear layers.
 
     Args:
         layers: The list of layers that form the neural network.
@@ -237,10 +237,10 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             trace. Default: `False`.
 
     Returns:
-        A tuple containing the loss, the inputs of the Linear layers, and the output
-        gradients of the Linear layers. The layer inputs and output gradients are each
-        combined into a matrix, and layer inputs are augmented with ones or zeros to
-        account for the bias term.
+        A tuple containing the loss, residual, the inputs of the Linear layers, and the
+        output gradients of the Linear layers. The layer inputs and output gradients are
+        each combined into a matrix, and layer inputs are augmented with ones or zeros
+        to account for the bias term.
     """
     layer_idxs = [
         idx
@@ -276,7 +276,7 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
         )
 
     if ggn_type == "forward-only":
-        return loss, layer_inputs, {}
+        return loss, residual, layer_inputs, {}
 
     # compute all layer output gradients
     layer_outputs = sum(
@@ -322,7 +322,7 @@ def evaluate_interior_loss_with_layer_inputs_and_grad_outputs(
             dim=1,
         )
 
-    return loss, layer_inputs, layer_grad_outputs
+    return loss, residual, layer_inputs, layer_grad_outputs
 
 
 @no_grad()

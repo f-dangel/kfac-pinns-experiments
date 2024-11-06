@@ -120,7 +120,7 @@ ARGS = [
             ("log-fokker-planck-isotropic", "gaussian"),
         ]
     ],
-    # train with HessianFreeCached
+    # train with HessianFreeCached (w/o KFAC pre-conditioning)
     *[
         [
             "--num_steps=3",
@@ -128,21 +128,28 @@ ARGS = [
             f"--equation={equation}",
             f"--boundary_condition={condition}",
         ]
-        for (equation, condition) in [
-            ("poisson", "sin_product"),
-            ("heat", "sin_product"),
-            ("fokker-planck-isotropic", "gaussian"),
-            ("log-fokker-planck-isotropic", "gaussian"),
-        ]
+        + preconditioning
+        for (equation, condition), preconditioning in product(
+            [
+                ("poisson", "sin_product"),
+                ("heat", "sin_product"),
+                ("fokker-planck-isotropic", "gaussian"),
+                ("log-fokker-planck-isotropic", "gaussian"),
+            ],
+            [["--HessianFreeCached_kfac_preconditioner"], []],
+        )
     ],
-    # train with HessianFreeCached and KFAC pre-conditioning
+    # train with SPRING
     *[
         [
             "--num_steps=3",
-            "--optimizer=HessianFreeCached",
+            "--optimizer=SPRING",
+            "--SPRING_lr=5e-1",
+            "--SPRING_damping=1e-5",
+            "--SPRING_decay_factor=0.9",
+            "--SPRING_norm_constraint=1",
             f"--equation={equation}",
             f"--boundary_condition={condition}",
-            "--HessianFreeCached_kfac_preconditioner",
         ]
         for (equation, condition) in [
             ("poisson", "sin_product"),

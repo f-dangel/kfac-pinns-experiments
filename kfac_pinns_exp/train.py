@@ -43,6 +43,7 @@ from kfac_pinns_exp.optim import set_up_optimizer
 from kfac_pinns_exp.optim.engd import ENGD
 from kfac_pinns_exp.optim.hessianfree_cached import HessianFreeCached
 from kfac_pinns_exp.optim.kfac import KFAC
+from kfac_pinns_exp.optim.spring import SPRING
 from kfac_pinns_exp.parse_utils import (
     check_all_args_parsed,
     parse_known_args_and_remove_from_argv,
@@ -59,6 +60,7 @@ SUPPORTED_OPTIMIZERS = {
     "LBFGS",
     "HessianFree",
     "HessianFreeCached",
+    "SPRING",
 }
 SUPPORTED_EQUATIONS = {
     "poisson",
@@ -618,7 +620,7 @@ def main():  # noqa: C901
 
         optimizer.zero_grad()
 
-        if isinstance(optimizer, (KFAC, ENGD)):
+        if isinstance(optimizer, (KFAC, ENGD, SPRING)):
             loss_interior, loss_boundary = optimizer.step(
                 X_Omega, y_Omega, X_dOmega, y_dOmega
             )
