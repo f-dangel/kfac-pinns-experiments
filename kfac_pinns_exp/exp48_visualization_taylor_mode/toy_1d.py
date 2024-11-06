@@ -1,10 +1,12 @@
 """Plot functions and Taylor expansions of a one-dimensional function composition."""
 
+from math import factorial
+from os import makedirs, path
 from typing import Callable
 
 from matplotlib import pyplot as plt
-from torch import Tensor, linspace, manual_seed
-from torch.autograd.functional import hessian, jacobian
+from torch import Tensor, linspace, vmap, zeros_like
+from torch.func import grad
 from torch.nn import Identity, Module, Sequential, Tanh
 
 
@@ -30,54 +32,66 @@ def taylor(
 
     Args:
         f: The function to be expanded.
-        x0: The point around which to expand.
+        x0: The point around which to expand (scalar tensor).
         xs: The values for which to evaluate the Taylor expansion.
         degree: The degree of the Taylor expansion.
 
     Raises:
-        NotImplementedError: If the degree is not in {0, 1, 2}.
-        NotImplementedError: If the point x0 is not a 1d tensor.
+        NotImplementedError: If the point x0 is not a scalar tensor.
         NotImplementedError: If the values xs are not a 1d tensor.
 
     Returns:
         The Taylor expansion of the function f around the point x0.
+        Has same shape as `xs`.
     """
-    if degree not in {0, 1, 2}:
-        raise NotImplementedError("The degree must be in {0, 1, 2}.")
-    if x0.shape != (1,):
-        raise NotImplementedError("The point x0 must be a 1d tensor.")
+    if x0.shape != ():
+        raise NotImplementedError("The point x0 must be a 0d tensor.")
     if xs.ndim != 1:
         raise NotImplementedError("The values xs must be a 1d tensor.")
 
-    f_taylor = f(x0).expand_as(xs)
-    jac = jacobian(f, x0).item()
-    hess = hessian(f, x0).item()
+    @vmap
+    def f_taylor(x: Tensor) -> Tensor:
+        """Evaluate the Taylor expansion of f around x0 at x.
 
-    shift = xs - x0.item()
+        Args:
+            x: The value for which to evaluate the Taylor expansion (scalar tensor).
 
-    if degree >= 1:
-        f_taylor = f_taylor + jac * shift
-    if degree >= 2:
-        f_taylor = f_taylor + 0.5 * shift * hess * shift
+        Returns:
+            The value of the Taylor expansion at x.
+        """
+        dk_f = f
+        f_x = zeros_like(x)
 
-    return f_taylor
+        for k in range(degree + 1):
+            f_x += dk_f(x0) * (x - x0) ** k / factorial(k)
+            dk_f = grad(dk_f)
+
+        return f_x
+
+    return f_taylor(xs)
 
 
 if __name__ == "__main__":
-    manual_seed(0)
+    FIGDIR = path.join(path.dirname(path.abspath(__file__)), "figures")
+    makedirs(FIGDIR, exist_ok=True)
 
     # functions to be composed
     layers = [Identity(), ScaledTanh(), Cubic(), Sin()]
 
     # values for which to visualize the function and its Taylor expansions
-    degrees = [0, 1, 2]
-    x = Tensor([0.5])
-    xs = linspace(x.item() - 0.75, x.item() + 0.75, 150)
-    xs_taylor = linspace(x.item() - 0.35, x.item() + 0.35, 100)
+    max_degree = 6
+    degrees = list(range(max_degree + 1))
+    x = Tensor([0.5]).squeeze()
+    xs = linspace(x.item() - 1.2, x.item() + 1.2, 150)
+    xs_taylor = linspace(x.item() - 0.55, x.item() + 0.55, 100)
 
     # styles for plotting
     style = {"linewidth": 8.5, "color": "blue"}
-    taylor_style = {"linestyle": "dashed", "linewidth": 8.5, "color": "orange"}
+    densely_dashed = (
+        0,
+        (5, 1),
+    )
+    taylor_style = {"linestyle": densely_dashed, "linewidth": 8.5, "color": "orange"}
     marker_style = {"marker": "o", "markersize": 18, "color": "orange"}
 
     # visualize the function
@@ -108,5 +122,6 @@ if __name__ == "__main__":
             savepath = (
                 f"f_{i}" + ("" if degree is None else f"_taylor_{degree}") + ".pdf"
             )
+            savepath = path.join(FIGDIR, savepath)
             plt.savefig(savepath, bbox_inches="tight", transparent=True)
             plt.close()
