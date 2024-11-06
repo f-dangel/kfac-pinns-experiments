@@ -224,7 +224,7 @@ class SPRING(Optimizer):
         # apply inverse of damped OOT to zeta
         step = cholesky_solve(zeta.unsqueeze(-1), cholesky(OOT)).squeeze(-1)
 
-        # apply O
+        # apply OT
         step = apply_joint_JT(
             interior_inputs,
             interior_grad_outputs,
