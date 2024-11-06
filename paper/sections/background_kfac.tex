@@ -5,18 +5,16 @@ The Fisher associated with the loss $\nicefrac{1}{2N} \sum_{n=1}^N \left\lVert u
 \begin{equation}\label{eq:fisher-mle}
   \mF(\vtheta)
   =
-  \nicefrac{1}{N}
-  \textstyle
+  \frac{1}{N}
   \sum_{n=1}^N
   \left(\jac_{\vtheta} u_{\vtheta}(\vx_n)  \right)^\top
   \jac_{\vtheta} u_{\vtheta}(\vx_n)
   =
-  \nicefrac{1}{N}
-  \textstyle
+  \frac{1}{N}
   \sum_{n=1}^N
   \left( \jac_{\vtheta} u_n \right)^\top
   \jac_{\vtheta} u_n
-  \quad\in \sR^{P\times P}\,,
+  \quad\in \sR^{D\times D}\,,
 \end{equation}
 where $u_n = u_\vtheta(\vx_n)$, and it coincides with the classical Gauss-Newton matrix~\citep{martens2020new}.
 The established KFAC approximates \eqref{eq:fisher-mle}.
@@ -32,16 +30,14 @@ Inserting into $\mF^{(l)}(\vtheta)$, summing over data points, and using the exp
   \approx
   \underbrace{
     \left(
-      \nicefrac{1}{N}
-      \textstyle
+      \frac{1}{N}
       \sum_{n=1}^N \vz^{(l-1)}_n {\vz^{(l-1)}_n}^\top
     \right)
   }_{\eqqcolon \mA^{(l)} \in \sR^{h^{(l-1)} \times h^{(l-1)}}}
   \otimes
   \underbrace{
     \left(
-      \nicefrac{1}{N}
-      \textstyle
+      \frac{1}{N}
       \sum_{n=1}^N
       \left(\jac_{\vz^{(l)}}  u_n \right)^\top
       \jac_{\vz^{(l)}}  u_n

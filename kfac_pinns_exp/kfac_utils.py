@@ -93,7 +93,7 @@ def compute_kronecker_factors(
 
     # Compute input-based Kronecker factors
     for layer_idx, (A, _) in kfacs.items():
-        Z = inputs.pop(layer_idx)
+        Z = inputs[layer_idx]
         if kfac_approx == "expand":
             Z = rearrange(Z, "batch ... d_in -> (batch ...) d_in")
         else:  # KFAC-reduce
@@ -106,7 +106,7 @@ def compute_kronecker_factors(
             # set all grad-output Kronecker factors to identity
             B.fill_diagonal_(1.0)
         else:
-            G = grad_outputs.pop(layer_idx)
+            G = grad_outputs[layer_idx]
             if kfac_approx == "expand":
                 G = rearrange(G, "batch ... d_out -> (batch ...) d_out")
             else:  # KFAC-reduce

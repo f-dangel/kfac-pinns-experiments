@@ -4,8 +4,6 @@ echo "Updating non-Bayesian plots"
 # Update individual plots
 for DIR in ./exp09_reproduce_poisson2d/ \
                                       ./exp10_reproduce_poisson5d/ \
-                                      ./exp11_poisson2d_deep/ \
-                                      ./exp12_poisson5d_deep/ \
                                       ./exp13_reproduce_heat1d/ \
                                       ./exp15_poisson2d_deepwide/ \
                                       ./exp16_poisson5d_deepwide/ \
@@ -16,7 +14,8 @@ for DIR in ./exp09_reproduce_poisson2d/ \
                                       ./exp23_heat1d_mlp_tanh_256/ \
                                       ./exp27_heat4d_small/ \
                                       ./exp28_heat4d_medium/ \
-                                      ./exp29_heat4d_big/; do
+                                      ./exp29_heat4d_big/ \
+                                      ./exp43_log_fokker_planck9d_isotropic_gaussian_random/; do
     echo "Updating plots in $DIR"
     cd $DIR
     python plot.py &

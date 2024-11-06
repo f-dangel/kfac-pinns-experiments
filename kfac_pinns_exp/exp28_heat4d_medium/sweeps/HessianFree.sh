@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=rtx6000
-#SBATCH --qos=deadline
-#SBATCH --account=deadline
+#SBATCH --qos=m5
+
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
@@ -13,4 +13,4 @@ echo "[DEBUG] Host name: " `hostname`
 source  ~/anaconda3/etc/profile.d/conda.sh
 conda activate kfac_pinns_exp
 
-wandb agent --count 1 kfac-pinns/heat4d_medium/2dhd7li6
+wandb agent --count 1 kfac-pinns/heat4d_medium/ongi18pc

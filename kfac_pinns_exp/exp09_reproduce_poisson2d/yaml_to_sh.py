@@ -37,6 +37,7 @@ def create_sbatch_script(
 #SBATCH --partition={partition}
 #SBATCH --qos={qos}
 {'#SBATCH --account=deadline' if qos == 'deadline' else ''}
+#SBATCH --exclude=gpu138
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --time={QUEUE_TO_TIME[qos]}

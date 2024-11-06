@@ -364,15 +364,15 @@ As mentioned in \Cref{sec:taylor-mode-tutorial}, this requires a generalization 
   \label{eq:taylor-mode-multi-directional}
   \partial^K f(\vx)[\vv_1, \dots, \vv_K]
   & =
-  \sum_{\sigma \in \mathrm{part}(\{1, \dots, K\})}
-  \partial^{|\sigma|}g(h(\vx))
-  \left[
-  \otimes_{\eta \in \sigma} \partial^{|\eta|}h(\vx) \left[ \otimes_{l \in \eta} \vv_l \right]
-  \right]
-  %\\ &
-  %= \sum_{\lvert\alpha\rvert = K}
-  %\partial^{\alpha}g(h(\vx))
-  %\vv^\alpha
+    \sum_{\sigma \in \mathrm{part}(\{1, \dots, K\})}
+    \partial^{|\sigma|}g(h(\vx))
+    \left[
+    \otimes_{\eta \in \sigma} \partial^{|\eta|}h(\vx) \left[ \otimes_{l \in \eta} \vv_l \right]
+    \right]
+    % \\ &
+    % = \sum_{\lvert\alpha\rvert = K}
+    % \partial^{\alpha}g(h(\vx))
+    % \vv^\alpha
   \,.
 \end{align}
 Here, $\mathrm{part}(\{1, \dots, K\})$ denotes the set of all set partitions of $\{1, \dots, K\}$ ($\sigma$ is a set of sets). E.g.,
@@ -515,6 +515,63 @@ As shown in \Cref{subeq:taylor-mode-multi-directional-1-2}, for both \Cref{eq:ta
 (the summed second-order derivatives that are forward-propagated are highlighted).
 This propagation reduces back to the forward Laplacian \Cref{eq:forward-laplacian-activation-layers,eq:forward-laplacian-linear-layer} when we set $c_{i,j} = \delta_{i,j}$.
 In contrast to other attempts to compute such a weighted sum of second-order derivatives by reducing it to (multiple) partial standard forward Laplacians~\cite{li2024dof}, we do not need to diagonalize the coefficient matrix and can compute the linear operator in one forward propagation.
+
+\subsection{Comparison of Forward Laplacian and Autodiff Laplacian}\label{app:subsec:comparison}
+
+\paragraph{Setup}
+We compare the efficiency of the forward Laplacian, that we use in all our experiments, to an off-the shelve solution. We consider two Laplacian implementations:
+\begin{enumerate}
+  \item \emph{Autodiff Laplacian.} Computes the Laplacian with PyTorch's automatic differentiation (\texttt{functorch}) by computing the batched Hessian trace (via \texttt{torch.func.hessian} and \texttt{torch.func.vmap}). This is the standard approach in many PINN implementations.
+  \item \emph{Forward Laplacian.} Computes the Laplacian via the forward Laplacian framework. We used this approach for all PDEs and optimizers, except ENGD, presented in the experiments.
+\end{enumerate}
+
+We use the biggest network from our experiments (the $D_\Omega \to 768\to 768\to 512\to 512\to 1$ MLP with tanh-activations from \Cref{fig:10D-Poisson}), then measure run time and peak memory of computing the net's Laplacian on a mini-batch of size $N=1024$ with varying values of $D_{\Omega}$.
+To reduce measurement noise, we repeat each run over five independent Python sessions and report the smallest value (using the same GPU as in all other experiments, an NVIDIA RTX 6000 with 24 GiB memory).
+
+\paragraph{Results}
+The following tables compare run time and peak memory between the two approaches:
+
+\begin{minipage}{0.495\linewidth}
+  \centering
+    \begin{tabular}{cccc}
+      \toprule
+      \multirow{2}{*}{$D_{\Omega}$} & \textbf{Autodiff} & \textbf{Forward} \\
+                                    &  \textbf{Laplacian [s]} & \textbf{Laplacian [s]}
+      \\
+      \midrule
+      1   & 0.051 (1.6x) & 0.033 (1.0x) \\
+      10  & 0.20 (2.0x)  & 0.10 (1.0x)  \\
+      100 & 1.7 (2.0x)   & 0.84 (1.0x)  \\
+      \bottomrule
+    \end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}{0.495\linewidth}
+  \centering
+    \begin{tabular}{cccc}
+      \toprule
+      \multirow{2}{*}{$D_{\Omega}$} & \textbf{Autodiff} & \textbf{Forward}
+      \\
+                                    &  \textbf{Laplacian [GiB]} & \textbf{Laplacian [GiB]}
+      \\
+      \midrule
+      1   & 0.21 (0.96x) & 0.22 (1.0x) \\
+      10  & 0.98 (1.6x)  & 0.61 (1.0x) \\
+      100 & 8.8 (1.9x)   & 4.6 (1.0x)  \\
+      \bottomrule
+      \end{tabular}
+\end{minipage}
+
+We observe that the forward Laplacian is roughly twice as fast as the \texttt{functorch} Laplacian, and that it uses significantly less memory for large input dimensions, up to only one half when $D_\Omega=100$.
+We visualized both tables using more values for $D_\Omega$, see \Cref{app:fig:comparison}.
+In the shown regime, we find that the MLP's increasing cost in $D_{\Omega}$ (due to the growing first layer) is negligible as we observe linear scaling in both memory and run time. For extremely large $D_{\Omega}$, it would eventually become quadratic.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{figures/laplacian_benchmark.pdf}
+  \caption{Time (left) and memory (right) required with the forward Laplacian used in our implementation and the \texttt{functorch} implementation.}
+  \label{app:fig:comparison}
+\end{figure}
 
 %%% Local Variables:
 %%% mode: latex
