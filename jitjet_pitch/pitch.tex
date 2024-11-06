@@ -30,6 +30,7 @@
 % FIGURES
 % ===================================================================
 \usetikzlibrary{matrix}
+\usepackage{animate}
 
 % ===================================================================
 % MATH
@@ -40,19 +41,110 @@
 % ===================================================================
 % META-DATA
 % ===================================================================
+% \title{%
+% \texttt{jitjet}: Efficient Laplacians in JAX by Compiling Taylor-mode AD
+% }
 \title{%
-  \texttt{jitjet}: Efficient Laplacians in JAX by Compiling Taylor-mode AD
+  Kronecker-factored Approximate Curvature for Physics-Informed Neural Networks
 }
-\author{Felix Dangel, Johannes M\"uller, Marius Zeinhofer}
-\date{July 17, 2024}
+\author{Felix Dangel*, Johannes M\"uller*, Marius Zeinhofer*}
+\date{NeurIPS 2024}
 
 \begin{document}
 
 \makeTitleSlide
 
 \begin{frame}
-  \frametitle{Test}
-  Some citation \cite{li2023forward}
+  \frametitle{TL;DR: KFAC for PINNs}
+  \vspace{2ex}
+  \ribbon[\paperwidth][black][VectorPink]{ \centering \textbf{We develop KFAC for, and apply it to, loss functions with differential operators.} }
+  \begin{columns}
+    \begin{column}[b]{0.37\linewidth}
+      \begin{itemize}
+      \item Goal: Learn PDE solution
+        \begin{align*}
+          \hat{\gL} u(\vx)
+          &=
+            f(\vx) \qquad \vx \in \Omega
+          \\
+          u(\vx)
+          &=
+            g(\vx) \qquad \vx \in \partial \Omega
+        \end{align*}
+        % \item E.g.\,Poisson equation
+        %   \begin{align*}
+    %     \hat{\gL} = -\Delta_{\vx} = -\Tr(\nabla_{\vx}^2)
+    %   \end{align*}
+
+      \item Ansatz: Neural net $u_{\vtheta}(\vx)$
+      \item Sample $\vx_n \sim \Omega$, $\vx_n^{\text{b}} \sim \partial \Omega$
+      \end{itemize}
+    \end{column}
+    \begin{column}[b]{0.53\linewidth}
+      \vspace{1ex}
+      \centering \only<3->{%
+        \begin{animateinline}[loop, autoplay]{1.0}
+          \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}%
+          \newframe[1.0]%
+          \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000335.pdf}%
+          \newframe[1.0]%
+          \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0003299.pdf}%
+          \newframe[1.0]%
+          \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0032494.pdf}%
+        \end{animateinline}
+      } \vspace*{-5.5ex}
+    \end{column}
+  \end{columns}
+
+  \uncover<2->{
+    \begin{align*}
+      \min_{\vtheta}
+      L(\vtheta)
+      \coloneqq
+      \underbrace{
+      \frac{1}{2N_{\Omega}} \sum_{n=1}^{N_{\Omega}}
+      \left(
+      \hat{\gL}u_{\vtheta}(\vx_n) - f(\vx_n)
+      \right)^2
+      }_{L_{\Omega}(\vtheta)}
+      +
+      \underbrace{
+      \frac{1}{2N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}}
+      \left(
+      u_{\vtheta}(\vx_n^{\text{b}}) - g(\vx_n^{\text{b}})
+      \right)^2
+      }_{L_{\partial\Omega}(\vtheta)}
+    \end{align*}
+  }
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Conceptual Overview}
+  \begin{itemize}
+  \item Neural network ansatz $u_{\vtheta} = f^{(L)} \circ f^{(L-1)} \circ
+    \ldots \circ f^{(1)}$
+  \item Evaluating $u_{\vtheta}(\vx)$
+    \begin{align*}
+      \vz^{(0)} \mapsto \vz^{(1)}\mapsto \vz^{(2)} \mapsto \dots \mapsto \vz^{(L)} = u_{\vtheta}
+    \end{align*}
+    with vector-valued $\vz^{(l)} = f^{(l)}(\vz^{(l-1)})$ and $\vz^{(0)} = x$
+
+  \item Evaluating $\gL u_{\vtheta}(\vx)$
+    \begin{align*}
+      \mZ^{(0)} \mapsto \mZ^{(1)} \mapsto \mZ^{(2)} \mapsto \ldots \mapsto \mZ^{(L)} \mapsto \gL u_{\vtheta}
+    \end{align*}
+    with matrix-valued $\mZ^{(l)}$ and dependencies determined by Taylor-mode
+
+    If layer $l$ is a linear layer with weight $\mW$, then
+    \begin{align*}
+      \vz^{(l)} &= \mW \vz^{(l-1)}
+      \\
+      \mZ^{(l)} &= \mW \mZ^{(l-1)}
+    \end{align*}
+
+  \end{itemize}
+
 \end{frame}
 
 \input{slides/taylor_mode_scalar_case.tex}
