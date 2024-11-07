@@ -1,18 +1,5 @@
 \documentclass[12pt,usepdftitle=false,aspectratio=169]{beamer}
 
-\makeatletter
-\def\input@path{
-  % {../..} % repository root
-  % {../../latex-utilities} % LaTeX utilities
-  % {../../repos/einconv-paper/tex/paper} % TN drawing commands
-  % {../2023_12_01_Perimeter_Institute_45min} % PI talk slides
-}
-\makeatother
-\graphicspath{
-  % {../../} % Logo
-}
-
-
 % ===================================================================
 % BEAMERTHEME
 % ===================================================================
@@ -41,9 +28,6 @@
 % ===================================================================
 % META-DATA
 % ===================================================================
-% \title{%
-% \texttt{jitjet}: Efficient Laplacians in JAX by Compiling Taylor-mode AD
-% }
 \title{%
   Kronecker-factored Approximate Curvature for Physics-Informed Neural Networks
 }
@@ -54,40 +38,15 @@
 
 \makeTitleSlide
 
-\input{slides/tldr.tex}
+\input{slides/motivation.tex}
+\input{slides/roadmap.tex}
+\input{slides/conclusion.tex}
 
-\begin{frame}
-  \frametitle{Conceptual Overview}
-  \begin{itemize}
-  \item Neural network ansatz $u_{\vtheta} = f^{(L)} \circ f^{(L-1)} \circ
-    \ldots \circ f^{(1)}$
-  \item Evaluating $u_{\vtheta}(\vx)$
-    \begin{align*}
-      \vz^{(0)} \mapsto \vz^{(1)}\mapsto \vz^{(2)} \mapsto \dots \mapsto \vz^{(L)} = u_{\vtheta}
-    \end{align*}
-    with vector-valued $\vz^{(l)} = f^{(l)}(\vz^{(l-1)})$ and $\vz^{(0)} = x$
-
-  \item Evaluating $\gL u_{\vtheta}(\vx)$
-    \begin{align*}
-      \mZ^{(0)} \mapsto \mZ^{(1)} \mapsto \mZ^{(2)} \mapsto \ldots \mapsto \mZ^{(L)} \mapsto \gL u_{\vtheta}
-    \end{align*}
-    with matrix-valued $\mZ^{(l)}$ and dependencies determined by Taylor-mode
-
-    If layer $l$ is a linear layer with weight $\mW$, then
-    \begin{align*}
-      \vz^{(l)} &= \mW \vz^{(l-1)}
-      \\
-      \mZ^{(l)} &= \mW \mZ^{(l-1)}
-    \end{align*}
-
-  \end{itemize}
-
-\end{frame}
-
-\input{slides/taylor_mode_scalar_case.tex}
-\input{slides/taylor_mode_vector_case.tex}
-\input{slides/taylor_mode_linear_layer.tex}
-\input{slides/taylor_mode_forward_laplacian.tex}
+% these slides are optional, I would leave them out in a short presentation
+% \input{slides/taylor_mode_scalar_case.tex}
+% \input{slides/taylor_mode_vector_case.tex}
+% \input{slides/taylor_mode_linear_layer.tex}
+% \input{slides/taylor_mode_forward_laplacian.tex}
 
 \begin{frame}[allowframebreaks]
   \frametitle{References}
@@ -97,7 +56,6 @@
     \bibliography{../paper/references}
   }
 \end{frame}
-
 
 \end{document}
 

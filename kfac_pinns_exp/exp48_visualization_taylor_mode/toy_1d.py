@@ -87,11 +87,7 @@ if __name__ == "__main__":
 
     # styles for plotting
     style = {"linewidth": 8.5, "color": "blue"}
-    densely_dashed = (
-        0,
-        (5, 1),
-    )
-    taylor_style = {"linestyle": densely_dashed, "linewidth": 8.5, "color": "orange"}
+    taylor_style = {"linewidth": 8.5, "color": "orange"}
     marker_style = {"marker": "o", "markersize": 18, "color": "orange"}
 
     # visualize the function
