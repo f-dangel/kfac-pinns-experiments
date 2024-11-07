@@ -15,6 +15,11 @@ jobs:
         with:
           working_directory: paper
           root_file: main.tex
+      - name: presentation
+        uses: xu-cheng/latex-action@v3
+        with:
+          working_directory: presentation
+          root_file: main.tex
       - name: poster
         uses: xu-cheng/latex-action@v3
         with:
