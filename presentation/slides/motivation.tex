@@ -8,7 +8,7 @@
         \uncover<2->{
         \item Goal: Learn PDE solution
           \begin{align*}
-            \hat{\gL} u(\vx)
+            \gL u(\vx)
             &=
               f(\vx) \qquad \vx \in \Omega
             \\
@@ -16,10 +16,6 @@
             &=
               g(\vx) \qquad \vx \in \partial \Omega
           \end{align*}
-          % \item E.g.\,Poisson equation
-          %   \begin{align*}
-    %     \hat{\gL} = -\Delta_{\vx} = -\Tr(\nabla_{\vx}^2)
-    %   \end{align*}
 
         \item Ansatz: Neural net $u_{\vtheta}(\vx)$
         }
@@ -85,7 +81,7 @@
       \underbrace{
       \frac{1}{2N_{\Omega}} \sum_{n=1}^{N_{\Omega}}
       \left(
-      \hat{\gL}u_{\vtheta}(\vx_n) - f(\vx_n)
+      \gL u_{\vtheta}(\vx_n) - f(\vx_n)
       \right)^2
       }_{L_{\Omega}(\vtheta)}
       +
