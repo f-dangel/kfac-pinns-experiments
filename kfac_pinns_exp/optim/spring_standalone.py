@@ -1,0 +1,130 @@
+"""First draft for a general purpose SPRING implementation."""
+
+from math import sqrt
+from typing import Callable, List, Tuple
+
+from torch import Tensor, arange, cat, cholesky_solve, eye, zeros_like
+from torch.autograd import grad
+from torch.linalg import cholesky
+from torch.optim import Optimizer
+
+
+class SPRING(Optimizer):
+    """SPRING general purpose optimizer.
+
+    See https://arxiv.org/pdf/2401.10190 for details.
+    """
+
+    def __init__(
+        self,
+        params: List[Tensor],
+        lr: float,
+        damping: float = 1e-3,
+        decay_factor: float = 0.99,
+        norm_constraint: float = 1e-3,
+    ):
+        """Set up the SPRING optimizer.
+
+        Args:
+            params: The trainable params of the neural network.
+            lr: The learning rate.
+            damping: The non-negative damping factor (λ in the paper).
+                Default: `1e-3` (taken from Section 4 of the paper).
+            decay_factor: The decay factor (μ in the paper). Must be in `[0; 1)`.
+                Default: `0.99` (taken from Section 4 of the paper).
+            norm_constraint: The positive norm constraint (C in the paper).
+                Default: `1e-3` (taken from Section 4 of the paper).
+
+        Raises:
+            ValueError: If the optimizer is used with per-parameter options.
+        """
+        defaults = dict(
+            lr=lr,
+            damping=damping,
+            decay_factor=decay_factor,
+            norm_constraint=norm_constraint,
+        )
+        super().__init__(params, defaults)
+
+        if len(self.param_groups) != 1:
+            raise ValueError("SPRING does not support per-parameter options.")
+
+        self.steps = 0
+
+        # initialize phi
+        (group,) = self.param_groups
+        for p in group["params"]:
+            self.state[p]["phi"] = zeros_like(p)
+
+    def step(
+        self,
+        forward: Callable,
+    ) -> Tuple[Tensor, Tensor]:
+        """Perform a parameter update step.
+
+        Args:
+            forward: This function returns a `(loss, residual)`-tuple,
+                where `loss` is the target function value. Here is a pseudo-code
+                example of the training loop:
+                ```
+                for step_idx in range(num_steps):
+
+                    inputs, targets = get_minibatch_data()
+
+                    def forward():
+                        outputs = model(inputs)
+                        loss = loss_function(outputs, targets)
+                        return loss, outputs
+
+                    opt.step(forward=forward)
+                ```
+        Returns:
+            Tuple of the interior and boundary loss before taking the step.
+        """
+        (group,) = self.param_groups
+        params = group["params"]
+        sizes = [p.numel() for p in params]
+        lr = group["lr"]
+        damping = group["damping"]
+        decay_factor = group["decay_factor"]
+        norm_constraint = group["norm_constraint"]
+
+        # compute loss and residual
+        loss, residual = forward()
+        N = residual.shape[0]
+
+        # compute JJT
+        grad_outputs = eye(N).unsqueeze(-1)
+        J = grad(-residual, params, grad_outputs=grad_outputs, is_grads_batched=True)
+        J = cat([j.flatten(start_dim=1) for j in J], dim=1)
+        JJT = J @ J.T
+        # apply damping
+        idx = arange(JJT.shape[0], device=JJT.device)
+        JJT[idx, idx] = JJT.diag() + damping
+
+        # compute zeta
+        J_phi = J @ cat([self.state[p]["phi"].flatten() for p in params]).unsqueeze(-1)
+        zeta = residual - decay_factor * J_phi
+
+        # compute step, i.e., JT(JJT + lambda I)^{-1}zeta
+        step = cholesky_solve(zeta, cholesky(JJT))
+
+        # apply JT
+        step = (J.T @ step).squeeze()
+        step = [s.reshape_as(p) for s, p in zip(step.split(sizes), params)]
+
+        # update phi
+        for p, s in zip(params, step):
+            self.state[p]["phi"].mul_(decay_factor).add_(s)
+
+        # compute effective learning rate
+        norm_phi = sum([(self.state[p]["phi"] ** 2).sum() for p in params]).sqrt()
+        scale = min(lr, (sqrt(norm_constraint) / norm_phi).item())
+
+        # update parameters
+        for p in params:
+            p.data.add_(self.state[p]["phi"], alpha=scale)
+
+        self.steps += 1
+
+        return loss
