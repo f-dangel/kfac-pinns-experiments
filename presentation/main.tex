@@ -1,18 +1,5 @@
 \documentclass[12pt,usepdftitle=false,aspectratio=169]{beamer}
 
-\makeatletter
-\def\input@path{
-  % {../..} % repository root
-  % {../../latex-utilities} % LaTeX utilities
-  % {../../repos/einconv-paper/tex/paper} % TN drawing commands
-  % {../2023_12_01_Perimeter_Institute_45min} % PI talk slides
-}
-\makeatother
-\graphicspath{
-  % {../../} % Logo
-}
-
-
 % ===================================================================
 % BEAMERTHEME
 % ===================================================================
@@ -27,21 +14,33 @@
 \usepackage{natbib}
 
 % ===================================================================
+% FIGURES
+% ===================================================================
+\usetikzlibrary{matrix}
+\usepackage{animate}
+
+% ===================================================================
+% MATH
+% ===================================================================
+\usepackage{amsmath,amssymb}
+\input{../paper/preamble/goodfellow.tex}
+
+% ===================================================================
 % META-DATA
 % ===================================================================
 \title{%
-  \texttt{jitjet}: Efficient Laplacians in JAX by Compiling Taylor-mode AD
+  Kronecker-factored Approximate Curvature for Physics-Informed Neural Networks
 }
-\author{Felix Dangel, Johannes M\"uller, Marius Zeinhofer}
-\date{July 17, 2024}
+\author{Felix Dangel*, Johannes M\"uller*, Marius Zeinhofer*}
+\date{NeurIPS 2024}
 
 \begin{document}
 
 \makeTitleSlide
 
-\begin{frame}{Some slide}
-  Some citation \cite{li2023forward}
-\end{frame}
+\input{slides/motivation.tex}
+\input{slides/roadmap.tex}
+\input{slides/conclusion.tex}
 
 \begin{frame}[allowframebreaks]
   \frametitle{References}
@@ -51,7 +50,6 @@
     \bibliography{../paper/references}
   }
 \end{frame}
-
 
 \end{document}
 

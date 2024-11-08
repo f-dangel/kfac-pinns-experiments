@@ -1,0 +1,40 @@
+\begin{frame}
+  \frametitle{High-level Walkthrough}
+
+  \vspace{1.5ex}
+  \uncover<4->{
+    \ribbon[\paperwidth][black][VectorPink]{
+      \centering
+      \textbf{Computing differential operators yields networks with linear weight sharing layers.}
+      \newline
+      \textbf{$\to$ Apply KFAC for linear layers with weight sharing} {\scriptsize \citep[][NeurIPS]{eschenhagen2023kroneckerfactored}}
+    }
+  }
+  \vspace{1ex}
+
+  \begin{itemize}
+  \item Neural network ansatz $u_{\vtheta} = f^{(L)} \circ f^{(L-1)} \circ
+    \ldots \circ f^{(1)}$
+    \uncover<2->{
+    \item Evaluating $u_{\vtheta}(\vx)$
+      \uncover<4->{\hfill \textcolor{orange}{\bfseries Linear layer: $\vz^{(l)} = \mW \vz^{(l-1)}$}}
+      \begin{align*}
+        \vz^{(0)} \mapsto \vz^{(1)}\mapsto \vz^{(2)} \mapsto \dots \mapsto \vz^{(L)} = u_{\vtheta}(\vx)
+      \end{align*}
+      with \emph{vector-valued} $\vz^{(l)} = f^{(l)}(\vz^{(l-1)})$ and $\vz^{(0)} = \vx$
+    }
+
+    \uncover<3->{
+    \item Evaluating $\gL u_{\vtheta}(\vx)$
+      \uncover<4->{\hfill \textcolor{orange}{\bfseries Linear layer: $\mZ^{(l)} = \mW \mZ^{(l-1)}$}}
+      \begin{align*}
+        \mZ^{(0)} \mapsto \mZ^{(1)} \mapsto \mZ^{(2)} \mapsto \ldots \mapsto \mZ^{(L)} \mapsto \gL u_{\vtheta}(\vx)
+      \end{align*}
+      with \emph{matrix-valued} $\mZ^{(l)}$ and dependencies determined by Taylor-mode
+    }
+  \end{itemize}
+\end{frame}
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: "../main"
+%%% End:

@@ -160,7 +160,11 @@
   \setcounter{framenumber}{0}
   \begin{tikzpicture}[remember picture,overlay, inner sep = 0]
     \node (logo) [anchor=south, yshift=8mm] at (current page.south)
-    {\includegraphics[height=0.24\paperheight]{beamertheme/vector_institute/assets/logo_horizontal}};
+    {\includegraphics[height=0.17\paperheight]{beamertheme/vector_institute/assets/logo_horizontal}};
+    \node (logo-rwth) [anchor=east, xshift=-10mm] at (logo.west)
+    {\includegraphics[height=0.13\paperheight]{beamertheme/vector_institute/assets/rwth_logo}};
+    \node (logo-eth) [anchor=west, xshift=10mm] at (logo.east)
+    {\includegraphics[height=0.2\paperheight]{beamertheme/vector_institute/assets/eth_logo_pos.png}};
   \end{tikzpicture}
   \begin{columns}
     \centering
