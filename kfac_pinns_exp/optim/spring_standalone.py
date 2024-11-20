@@ -58,28 +58,35 @@ class SPRING(Optimizer):
 
     def step(
         self,
-        forward: Callable,
-    ) -> Tuple[Tensor, Tensor]:
+        forward: Callable[[], Tuple[Tensor, Tensor]],
+    ) -> Tensor:
         """Perform a parameter update step.
 
         Args:
-            forward: This function returns a `(loss, residual)`-tuple,
-                where `loss` is the target function value. Here is a pseudo-code
-                example of the training loop:
+            forward: A function that computes both the residual and the loss and
+                returns both. Note that unlike the PyTorch API of LBFGS, the
+                forward does not compute gradients, hence it should not zero the
+                gradients either. Instead it splits the model and the
+                loss at the `linearization point'. Here is a pseudo-code
+                example for how it should look in the training-loop:
                 ```
-                for step_idx in range(num_steps):
+                for iter in range(iterations):
 
-                    inputs, targets = get_minibatch_data()
+                    X, Y = get_data()
 
                     def forward():
-                        outputs = model(inputs)
-                        loss = loss_function(outputs, targets)
-                        return loss, outputs
+                        residual = model(X)
+                        loss = loss_function(residual, Y)
+                        return loss, residual
 
-                    opt.step(forward=forward)
+                    optimizer.step(forward=forward)
                 ```
+        
         Returns:
-            Tuple of the interior and boundary loss before taking the step.
+            The loss.
+            
+        Raises:
+            ValueError: If the residual returned by `forward` is not of shape `(N, 1)`.
         """
         (group,) = self.param_groups
         params = group["params"]
@@ -89,28 +96,31 @@ class SPRING(Optimizer):
         decay_factor = group["decay_factor"]
         norm_constraint = group["norm_constraint"]
 
-        # compute loss and residual
+        # compute J, residual and loss
         loss, residual = forward()
         N = residual.shape[0]
+        if residual.shape != (N, 1):
+            raise ValueError(
+                f"The current implementation assumes that the residual is "
+                f"of shape {(N, 1)}."
+            )
 
-        # compute JJT
         grad_outputs = eye(N).unsqueeze(-1)
-        J = grad(-residual, params, grad_outputs=grad_outputs, is_grads_batched=True)
+        J = grad(residual, params, grad_outputs=grad_outputs, is_grads_batched=True)
         J = cat([j.flatten(start_dim=1) for j in J], dim=1)
-        JJT = J @ J.T
-        # apply damping
-        idx = arange(JJT.shape[0], device=JJT.device)
-        JJT[idx, idx] = JJT.diag() + damping
 
         # compute zeta
         J_phi = J @ cat([self.state[p]["phi"].flatten() for p in params]).unsqueeze(-1)
-        zeta = residual - decay_factor * J_phi
+        zeta = residual + J_phi.mul_(decay_factor)
 
-        # compute step, i.e., JT(JJT + lambda I)^{-1}zeta
+        # compute preconditioner
+        JJT = (J @ J.T).detach()
+        idx = arange(JJT.shape[0], device=JJT.device)
+        JJT[idx, idx] = JJT.diag() + damping
+
+        # compute step
         step = cholesky_solve(zeta, cholesky(JJT))
-
-        # apply JT
-        step = (J.T @ step).squeeze()
+        step = -(J.T @ step).squeeze()
         step = [s.reshape_as(p) for s, p in zip(step.split(sizes), params)]
 
         # update phi
