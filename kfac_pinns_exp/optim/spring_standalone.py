@@ -70,7 +70,7 @@ class SPRING(Optimizer):
                 loss at the `linearization point'. Here is a pseudo-code
                 example for how it should look in the training-loop:
                 ```
-                for iter in range(iterations):
+                for _ in range(iterations):
 
                     X, Y = get_data()
 
@@ -81,10 +81,10 @@ class SPRING(Optimizer):
 
                     optimizer.step(forward=forward)
                 ```
-        
+
         Returns:
-            The loss.
-            
+            The loss before the optimization step is taken.
+
         Raises:
             ValueError: If the residual returned by `forward` is not of shape `(N, 1)`.
         """
@@ -102,7 +102,7 @@ class SPRING(Optimizer):
         if residual.shape != (N, 1):
             raise ValueError(
                 f"The current implementation assumes that the residual is "
-                f"of shape {(N, 1)}."
+                f"of shape {(N, 1)} but is {residual.shape}."
             )
 
         grad_outputs = eye(N).unsqueeze(-1)

@@ -1,36 +1,41 @@
 """Test general purpose SPRING for l2 regression."""
 
-from torch import manual_seed, ones, rand
+from test.utils import DEVICE_IDS, DEVICES
+
+from pytest import mark
+from torch import device, dtype, float64, manual_seed, ones, rand
 from torch.nn import Linear, Sequential, Sigmoid
 
 from kfac_pinns_exp.optim.spring_standalone import SPRING
 
 
-def test_spring_standalone():
+@mark.parametrize("device", DEVICES, ids=DEVICE_IDS)
+def test_spring_standalone(device: device, dtype: dtype = float64):
     """Test if the general purpose spring implementation reduces loss."""
     manual_seed(0)
 
     # neural network setup
     D_in, D_hidden, D_out = 2, 20, 1
-    assert D_out == 1.0, "Atm the autodiff internals require D_out=1"
+    assert D_out == 1, "Atm the autodiff internals require D_out=1"
 
-    net = Sequential(Linear(D_in, D_hidden), Sigmoid(), Linear(D_hidden, D_out))
+    layers = [Linear(D_in, D_hidden), Sigmoid(), Linear(D_hidden, D_out)]
+    net = Sequential(*layers).to(device, dtype)
     params = list(net.parameters())
 
     # data generation
     N = 10
-    X = rand(N, D_in)
-    Y = ones(N, D_out)
+    X = rand(N, D_in).to(device, dtype)
+    Y = ones(N, D_out).to(device, dtype)
 
     # loss and optimizer
     def loss_function(X):
         return 0.5 * (X**2).sum()
 
-    opt = SPRING(params=params, lr=0.01, decay_factor=0.99)
+    opt = SPRING(params=params, lr=0.01)
 
     # training loop
     prev_loss = float("inf")
-    for _ in range(0, 10):
+    for _ in range(10):
         opt.zero_grad()
 
         def forward():
