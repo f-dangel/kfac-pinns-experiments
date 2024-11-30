@@ -3,7 +3,7 @@
 from math import sqrt
 from typing import Callable, List, Tuple
 
-from torch import Tensor, arange, cat, cholesky_solve, eye, zeros_like
+from torch import Tensor, arange, cat, cholesky_solve, eye, no_grad, zeros_like
 from torch.autograd import grad
 from torch.linalg import cholesky
 from torch.optim import Optimizer
@@ -20,6 +20,7 @@ class SPRING(Optimizer):
         params: List[Tensor],
         lr: float,
         damping: float = 1e-3,
+        adaptive_damping: bool = False,
         decay_factor: float = 0.99,
         norm_constraint: float = 1e-3,
     ):
@@ -30,6 +31,10 @@ class SPRING(Optimizer):
             lr: The learning rate.
             damping: The non-negative damping factor (λ in the paper).
                 Default: `1e-3` (taken from Section 4 of the paper).
+            adaptive_damping: If adapt_damping is True, then the damping parameter is
+                adapted according to a trust-region strategy. See Section 4.1 in
+                https://www.cs.toronto.edu/~jmartens/docs/Deep_HessianFree.pdf
+                Default: False (no adaptive damping).
             decay_factor: The decay factor (μ in the paper). Must be in `[0; 1)`.
                 Default: `0.99` (taken from Section 4 of the paper).
             norm_constraint: The positive norm constraint (C in the paper).
@@ -50,6 +55,7 @@ class SPRING(Optimizer):
             raise ValueError("SPRING does not support per-parameter options.")
 
         self.steps = 0
+        self.adaptive_damping = adaptive_damping
 
         # initialize phi
         (group,) = self.param_groups
@@ -135,6 +141,24 @@ class SPRING(Optimizer):
         for p in params:
             p.data.add_(self.state[p]["phi"], alpha=scale)
 
-        self.steps += 1
+        if self.adaptive_damping:
+            # compute quadratic model at previous and new iterate
+            q = 0.5 * (zeta**2).sum()
+            step = cat([s.flatten() for s in step])
+            q_new = 0.5 * ((J @ step + zeta.squeeze()) ** 2).sum()
 
+            # compute loss at new parameter value
+            with no_grad():
+                loss_new, _ = forward()
+
+            # compute reduction ratio
+            rho = (loss_new - loss) / (q_new - q)
+
+            # adapt trust-region
+            if rho < 0.25 and rho > 0:
+                group["damping"] *= 3 / 2
+            elif rho > 0.75:
+                group["damping"] *= 2 / 3
+
+        self.steps += 1
         return loss
