@@ -13,7 +13,8 @@ from kfac_pinns_exp.optim.spring import (
     apply_individual_JT,
     apply_joint_J,
     apply_joint_JT,
-    compute_JJT,
+    compute_individual_JJT,
+    compute_joint_JJT,
     evaluate_losses_with_layer_inputs_and_grad_outputs,
 )
 from kfac_pinns_exp.train import (
@@ -75,12 +76,19 @@ def test_leading_eigenvalues_G_and_JJT(
         for t in create_condition_data(equation, condition, dim_Omega, N_dOmega)
     ]
 
-    # ground truth: Eigenvalues of the Gramian
-    G_interior = GramianLinearOperator(equation, layers, X_Omega, y_Omega, "interior")
-    G_boundary = GramianLinearOperator(equation, layers, X_dOmega, y_dOmega, "boundary")
-
+    # ground truth: Eigenvalues of the Gramians
     identity = eye(num_params, device=device, dtype=dtype)
-    G = G_interior @ identity + G_boundary @ identity
+    G_interior = (
+        GramianLinearOperator(equation, layers, X_Omega, y_Omega, "interior") @ identity
+    )
+    G_boundary = (
+        GramianLinearOperator(equation, layers, X_dOmega, y_dOmega, "boundary")
+        @ identity
+    )
+    G = G_interior + G_boundary
+
+    G_interior_evals = eigvalsh(G_interior)
+    G_boundary_evals = eigvalsh(G_boundary)
     G_evals = eigvalsh(G)
 
     # compare with: Eigenvalues of the Jacobian outer product
@@ -96,17 +104,29 @@ def test_leading_eigenvalues_G_and_JJT(
     ) = evaluate_losses_with_layer_inputs_and_grad_outputs(
         layers, X_Omega, y_Omega, X_dOmega, y_dOmega, equation
     )
-    JJT = compute_JJT(
+    JJT_interior = compute_individual_JJT(interior_inputs, interior_grad_outputs)
+    JJT_boundary = compute_individual_JJT(boundary_inputs, boundary_grad_outputs)
+    JJT = compute_joint_JJT(
         interior_inputs, interior_grad_outputs, boundary_inputs, boundary_grad_outputs
     )
+    assert JJT_interior.shape == (N_Omega, N_Omega)
+    assert JJT_boundary.shape == (N_dOmega, N_dOmega)
+    assert JJT.shape == (N_Omega + N_dOmega, N_Omega + N_dOmega)
+
+    JJT_interior_evals = eigvalsh(JJT_interior)
+    JJT_boundary_evals = eigvalsh(JJT_boundary)
     JJT_evals = eigvalsh(JJT)
 
-    # clip to same length and sort descendingly
-    effective_evals = min(num_params, N_Omega + N_dOmega)
-    G_evals = G_evals.flip(0)[:effective_evals]
-    JJT_evals = JJT_evals.flip(0)[:effective_evals]
-
-    report_nonclose(G_evals, JJT_evals)
+    # clip to same length, sort descendingly, and compare
+    for jjt_evals, n, g_evals in zip(
+        [JJT_interior_evals, JJT_boundary_evals, JJT_evals],
+        [N_Omega, N_dOmega, N_Omega + N_dOmega],
+        [G_interior_evals, G_boundary_evals, G_evals],
+    ):
+        effective_evals = min(num_params, n)
+        g_evals = g_evals.flip(0)[:effective_evals]
+        jjt_evals = jjt_evals.flip(0)[:effective_evals]
+        report_nonclose(g_evals, jjt_evals)
 
 
 LOSS_TYPE_CASES = ["interior", "boundary"]
