@@ -32,7 +32,7 @@
 }
 \institute{
   \LARGE
-  Vector Institute (Canada), RWTH Aachen University (Germany), Simula Research Laboratory (Norway)
+  Vector Institute (Canada), RWTH Aachen University (Germany), ETH Z\"urich (Switzerland)
 }
 
 
@@ -51,12 +51,17 @@
 \begin{columns}
   \centering
   \begin{column}{1.85}
-    \centering \ribbon{\centering\fontsize{105}{80}\selectfont\textcolor{white}{\bf
-        We develop KFAC for loss functions with differential operators.
-        \\[0.5ex]
-        For training PINNs, our optimizer consistently outperforms SGD/Adam.
-        % We generalize KFAC to PINN losses (which contain differential operators) \\
-        % using Taylor-mode autodiff and the concept of linear weight sharing layers.
+    \centering \ribbon{
+      \begin{minipage}[b]{0.9\linewidth}
+        \centering\fontsize{105}{80}\selectfont\textcolor{white}{\bf
+          We develop KFAC for loss functions with differential operators.
+          \\[0.5ex]
+          For training PINNs, our optimizer consistently outperforms SGD/Adam.
+        \end{minipage}
+        \begin{minipage}[t]{0.05\linewidth}
+          \centering
+          \includegraphics[width=\linewidth]{figures/qrcode.png}
+        \end{minipage}
       }}
   \end{column}
 \end{columns}
@@ -84,7 +89,7 @@
 
       \item \textbf{Example:} 2d Poisson equation
         \begin{align*}
-          \gL = \frac{\partial^2}{\partial x_1^2} + \frac{\partial^2}{\partial x_2^2}
+          - \gL = \frac{\partial^2}{\partial x_1^2} + \frac{\partial^2}{\partial x_2^2}
         \end{align*}
       \end{itemize}
 
@@ -220,7 +225,7 @@
   \block{Motivation: PINNs Are Hard to Train, Second-order Methods Can Help}{
     \begin{center}
       \begin{Large}
-        \textcolor{VectorBlue}{\textbf{Second-order methods beat first-order methods on small problems\dots
+        \textcolor{VectorBlue}{\textbf{Natural gradient methods beat first-order methods on small problems\dots
             but do not scale well to larger nets $\mathbf{\to}$ our KFAC scales.}}
       \end{Large}
     \end{center}
