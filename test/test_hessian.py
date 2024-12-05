@@ -3,9 +3,22 @@
 from itertools import product
 from math import sqrt
 
-from torch import Tensor, cat, einsum, eye, manual_seed, rand, split, zeros, zeros_like
+from torch import (
+    Tensor,
+    cat,
+    einsum,
+    eye,
+    manual_seed,
+    rand,
+    randint,
+    split,
+    stack,
+    zeros,
+    zeros_like,
+)
 from torch.autograd import grad
 from torch.linalg import cholesky
+from torch.nn.functional import cross_entropy
 
 
 def compute_batched_hessian_loop(f: Tensor, x: Tensor) -> Tensor:
@@ -125,3 +138,29 @@ def test_hessian_and_hessian_sqrt():
     assert true_hessian.allclose(
         einsum("n i j, n k j -> n i k", hessian_sqrt, hessian_sqrt)
     )
+
+
+def test_hessian_crossentropy():
+    """Verify Hessian computed with `grad` versus `is_grads_batched`.
+
+    Use softmax cross-entropy loss, whose Hessian is easy to compute manually.
+    """
+    N, C = 10, 3
+
+    manual_seed(0)
+    residual = rand(N, C, requires_grad=True)
+    labels = randint(C, (N,))
+    loss = cross_entropy(residual, labels)
+
+    # manual Hessian
+    p = residual.softmax(dim=1)
+    true_hessian = (stack([row.diag() for row in p]) - einsum("ni,nj->nij", p, p)) / N
+
+    # compute the Hessian with autograd + for loop
+    loop_hessian = compute_batched_hessian_loop(loss, residual)
+
+    # compute the Hessian with autograd + `is_grads_batched`
+    batched_hessian = compute_batched_hessian(loss, residual)
+
+    assert loop_hessian.allclose(true_hessian)
+    assert batched_hessian.allclose(true_hessian)
