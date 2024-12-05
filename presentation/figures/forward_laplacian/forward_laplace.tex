@@ -1,0 +1,127 @@
+\input{tikzpicture/style}
+\begin{tikzpicture}
+  % arrange nodes in a matrix
+  \matrix [%
+  row sep=5ex,%
+  column sep=5.5ex,%
+  ampersand replacement=\&,% in order to put this inside of a scalebox
+  ]{%
+    % neural network parameters
+    \&
+    \node [paramNode] (weight-1) {$\theta^{(1)}$};
+    \&
+    %\node [dotsNode] (param-1) {$\dots$};
+    \&
+    \node [dotsNode] (weight-3) {$\dots$};
+    % \node [paramNode, anchor=west, xshift=0.5ex] (bias) at (weight.east) {$\vb^{(i)}$};
+    \&
+    \node [paramNode] (weight-L) {$\theta^{(L)}$};
+    \&
+    \\
+    % forward pass
+    \node [forwardNode] (z-0) {$x=z^{(0)}$};
+    \&
+    \node [forwardNode] (z-1) {$z^{(1)}$};
+    \&
+    \node [forwardNode] (z-2) {$z^{(2)}$};
+    \&
+    \node [dotsNode] (z-3) {$\dots$};
+    \&
+    \node [forwardNode] (z-L) {$u = z^{(L)}$};
+    \&
+    \\
+    % gradients
+    \node [gradientNode] (gradient-0) {$\operatorname{I}=\nabla z^{(0)}$};
+    \&
+    \node [gradientNode] (gradient-1) {$\nabla z^{(1)}$};
+    \&
+    \node [gradientNode] (gradient-2) {$\nabla z^{(2)}$};
+    \&
+    \node [dotsNode] (gradient-3) {$\dots$};
+    \&
+    \node [gradientNode] (gradient-L) {$\nabla u=\nabla z^{(L)}$};
+    \&
+    \\
+    % Hessians
+    \node [hessianNode] (laplacian-0) {$\mathbf{0}=\Delta z^{(0)}$};
+    \&
+    \node [hessianNode] (laplacian-1) {$\Delta z^{(1)}$};
+    \&
+    \node [hessianNode] (laplacian-2) {$\Delta z^{(2)}$};
+    \&
+    \node [dotsNode] (laplacian-3) {$\dots$};
+    \&
+    \node [hessianNode] (laplacian-L) {$\Delta u=\Delta z^{(L)}$};
+    \&
+    \node [lossNode] (Loss) {$L(\theta)$};
+    \\
+  };
+  % dependency arrows
+  %\foreach \i in {1} {
+  %  \pgfmathsetmacro{\j}{int(\i+1)}
+  %  \draw [-Latex, thick] (param-\i) to (forward-\j);
+  %}
+
+    % draw arrows first column
+    \draw [-Latex, thick] (z-0) to (z-1);
+    \draw [-Latex, thick] (gradient-0) to (gradient-1);
+    \draw [-Latex, thick] (laplacian-0) to (laplacian-1);
+
+    \draw [-Latex, thick] (weight-1) to (z-1);
+    \draw [-Latex, thick, out=215, in=145] (weight-1) to (gradient-1);
+    \draw [-Latex, thick, out=215, in=145] (weight-1) to (laplacian-1);
+     
+    % draw arrows second column  
+    \draw [-Latex, thick] (z-1) to (z-2);
+    \draw [-Latex, thick] (z-1) to (gradient-2);
+    \draw [-Latex, thick] (z-1) to (laplacian-2);
+    
+    \draw [-Latex, thick] (gradient-1) to (gradient-2);
+    \draw [-Latex, thick] (gradient-1) to (laplacian-2);
+    
+    \draw [-Latex, thick] (laplacian-1) to (laplacian-2);
+
+    % draw arrows third column
+    \draw [-Latex, thick] (z-2) to (z-3);
+    \draw [-Latex, thick] (gradient-2) to (gradient-3);
+    \draw [-Latex, thick] (laplacian-2) to (laplacian-3);
+    
+    % fourth column
+    \draw [-Latex, thick] (z-3) to (z-L);
+    \draw [-Latex, thick] (gradient-3) to (gradient-L);
+    \draw [-Latex, thick] (laplacian-3) to (laplacian-L);
+
+    % fith column
+    \draw [-Latex, thick] (weight-L) to (z-L);
+    \draw [-Latex, thick, out=210, in=165] (weight-L) to (gradient-L);
+    \draw [-Latex, thick, out=210, in=165] (weight-L) to (laplacian-L);
+
+    % last column
+    \draw [-Latex, thick, out=-355, in=95] (z-L) to (Loss);
+    \draw [-Latex, thick] (laplacian-L) to (Loss);
+    
+  %\foreach \i in {1,...,4} {
+  %  \draw [-Latex, thick] (forward-\i) to (gradient-\i);
+  %  \draw [-Latex, thick] (gradient-\i) to (hessian-\i);
+  %  \draw [-Latex, thick, out=225, in=135] (forward-\i) to (hessian-\i);
+  %}
+  %\foreach \i in {1,...,3} {
+  %  \pgfmathsetmacro{\j}{int(\i+1)}
+  %  \draw [-Latex, thick] (forward-\i) to (forward-\j);
+  %  \draw [-Latex, thick] (gradient-\j) to (gradient-\i);
+  %  \draw [-Latex, thick] (hessian-\j) to (hessian-\i);
+  %}
+  %\foreach \i in {1,3} {
+  %  \pgfmathsetmacro{\j}{int(\i)}
+  %  \draw [-Latex, thick, out=215, in=45] (param-\i) to (gradient-\j);
+  %  \draw [-Latex, thick, out=235, in=45] (param-\j) to (hessian-\j);
+  %}
+  %\draw [-Latex, thick] (hessian-1) to (laplacian);
+  %\draw [-Latex, ultra thick, secondcolor] (weight) to (forward-3);
+  %\draw [-Latex, ultra thick, secondcolor, out=215, in=45] (weight) to (gradient-2);
+  %\draw [-Latex, ultra thick, secondcolor, out=235, in=45] (weight) to (hessian-2);
+\end{tikzpicture}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:

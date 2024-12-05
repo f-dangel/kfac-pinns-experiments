@@ -2,8 +2,22 @@
 % Force a 16 by 9 ratio, 33.1 is same height as a0
 \geometry{paperwidth=58.844in,paperheight=33.1in}
 
+\makeatletter
+\def\input@path{
+  {../} % repository root
+  {../latex-utilities} % LaTeX utilities
+}
+\makeatother
+
 \usepackage{postertheme/vector_institute/vector_institute}
-\usepackage{amsmath}
+
+% \usepackage{amsmath}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\input{paper/preamble/goodfellow}
+% math in sans serif
+\usepackage{sfmath}
+
+\usetikzlibrary{arrows.meta}
 
 % \useblockstyle{Envelope}
 % \usebackgroundstyle{Empty}
@@ -18,7 +32,7 @@
 }
 \institute{
   \LARGE
-  Vector Institute (Canada), RWTH Aachen University (Germany), Simula Research Laboratory (Norway)
+  Vector Institute (Canada), RWTH Aachen University (Germany), ETH Z\"urich (Switzerland)
 }
 
 
@@ -29,86 +43,247 @@
 \backgroundgradient % Adds the background features
 \maketitle
 \headerlogo % Adds Vector logo to header
-\posterfooter{Poster footer with additional information} % Footer
+\posterfooter{
+  % Poster footer with additional information
+} % Footer
 
 \hspace{-35cm}
 \begin{columns}
   \centering
   \begin{column}{1.85}
-    \centering \ribbon{\centering\fontsize{105}{80}\selectfont\textcolor{white}{\bf We generalize KFAC to PINN losses (which contain differential operators) \\
-        using Taylor-mode autodiff and the concept of linear weight sharing layers.}}
+    \centering \ribbon{
+      \begin{minipage}[b]{0.9\linewidth}
+        \centering\fontsize{105}{80}\selectfont\textcolor{white}{\bf
+          We develop KFAC for loss functions with differential operators.
+          \\[0.5ex]
+          For training PINNs, our optimizer consistently outperforms SGD/Adam.
+        }
+      \end{minipage}
+      \begin{minipage}[t]{0.05\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/qrcode.png}
+      \end{minipage}
+    }
   \end{column}
 \end{columns}
 \hspace{2cm}
 
 \begin{columns}
   \column{0.9}
-  \block{Ingredient 1: PINNs}{
-    \begin{minipage}{0.63\linewidth}
-    Explain what PINNs are.
+  \block{Background: What Are PINNs?}{
+    \begin{Large}
+      \begin{center}
+        \textcolor{VectorBlue}{\textbf{Main idea: Train a neural network to satisfy a PDE $\to$ loss contains the PDE's differential operator.}}
+      \end{center}
+    \end{Large}
 
-    Explain that they are hard to train with first-order methods.
-    Second-order methods work, but do not scale well to larger nets.
+    \vspace{1ex}
+
+    \begin{minipage}[t]{0.4\linewidth}
+      \begin{itemize}
+      \item \textbf{Goal:} Learn PDE solution $u(\vx)$
+        \begin{align*}
+          \gL u(\vx) &= f(\vx) \qquad  \vx \in \Omega
+          \\
+          u(\vx) &= g(\vx) \qquad  \vx \in \partial\Omega
+        \end{align*}
+
+      \item \textbf{Example:} 2d Poisson equation
+        \begin{align*}
+          - \gL = \frac{\partial^2}{\partial x_1^2} + \frac{\partial^2}{\partial x_2^2}
+        \end{align*}
+      \end{itemize}
+
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.6\linewidth}
+      \begin{itemize}
+      \item \textbf{Data:} Sample $\vx_n \sim \Omega$, $\vx_n^{\text{b}} \sim \partial \Omega$
+
+      \item \textbf{Ansatz:} Neural net $u_{\vtheta}(\vx)$
+        \begin{align*}
+          L(\vtheta)
+          =
+          \underbrace{
+          \frac{1}{2N_{\Omega}} \sum_{n=1}^{N_{\Omega}}
+          \left(
+          \gL u_{\vtheta}(\vx_n) - f(\vx_n)
+          \right)^2
+          }_{\substack{
+          L_{\Omega}(\vtheta)
+          \\[1ex] \textbf{\large satisfy interior condition}
+          }}
+          +
+          \underbrace{
+          \frac{1}{2N_{\partial\Omega}} \sum_{n=1}^{N_{\partial\Omega}}
+          \left(
+          u_{\vtheta}(\vx_n^{\text{b}}) - g(\vx_n^{\text{b}})
+          \right)^2
+          }_{\substack{
+          L_{\partial\Omega}(\vtheta)
+          \\[1ex] \textbf{\large satisfy boundary condition}
+          }}
+        \end{align*}
+      \end{itemize}
+    \end{minipage}
+
+    \vspace{1ex}
+
+    \begin{minipage}{0.33\linewidth}
+      \centering
+      % [trim={left bottom right top},clip]
+      \includegraphics[scale=2,trim={0.9cm 0.8cm 6.7cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+
+      \textbf{Untrained}
     \end{minipage}
     \hfill
     \begin{minipage}{0.33\linewidth}
       \centering
-      Figure showing a loss curve
+      % [trim={left bottom right top},clip]
+      \includegraphics[scale=2,trim={0.9cm 0.8cm 6.7cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0003299.pdf}
 
-      \includegraphics[width=\linewidth]{example-image-a}
-    \end{minipage}
-
-    \begin{minipage}{0.3\linewidth}
-      Picture showing the solution at the beginning
-      \centering
+      \textbf{Trained}
     \end{minipage}
     \hfill
-    \begin{minipage}{0.3\linewidth}
+    \begin{minipage}{0.33\linewidth}
       \centering
-      Picture showing the known solution
-    \end{minipage}
-    \hfill
-    \begin{minipage}{0.3\linewidth}
-      \centering
-      Picture showing the learned solution
+      % [trim={left bottom right top},clip]
+      \includegraphics[scale=2,trim={7.3cm 0.8cm 0.1cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+
+      \textbf{True solution}
     \end{minipage}
   }
 
   \column{0.9}
-  \block{Ingredient 3: Taylor mode}{
+  \block{Contribution: How Do We Derive KFAC for PINN Losses?}{
+    \begin{center}
+      \begin{Large}
+        \textcolor{VectorBlue}{\textbf{We show that computing differential operators with Taylor-mode autodiff yields networks with linear weight sharing layers}
+          \\[0.5ex]
+          $\mathbf{\to}$ \textbf{This allows us to apply the existing definition of KFAC for linear weight sharing layers.}}
+      \end{Large}
+    \end{center}
+
+    \begin{minipage}{0.3\linewidth}
+
+      \vspace{2ex}
+
+      \begin{itemize}
+      \item \textbf{Goal:} Approximate Gauss-Newton matrix
+        \begin{align*}
+          \mG(\mW) = \mG_{\Omega}(\mW) + \mG_{\partial \Omega}(\mW)
+        \end{align*}
+        for each linear layer with weight $\mW$
+        \begin{align*}
+          \mG_{\Omega}(\mW)
+          &\approx
+            \mA_{\Omega} \otimes \mB_{\Omega}
+          \\
+          \mG_{\partial\Omega}(\mW)
+          &\approx
+            \mA_{\partial\Omega} \otimes \mB_{\partial\Omega}
+        \end{align*}
+
+        \vspace{0.7ex}
+
+      \item \textbf{Contribution:} Make computation of $L(\vtheta)$ explicit
+        \begin{itemize}
+        \item Linear layer in boundary loss
+          \begin{align*}
+            \vz \mapsto \mW \vz \qquad \textbf{($\vz$ is a vector)}
+          \end{align*}
+        \item Linear layer in interior loss
+          \begin{align*}
+            \mZ \mapsto \mW \mZ \qquad \textbf{($\mZ$ is a matrix)}
+          \end{align*}
+        \end{itemize}
+      \end{itemize}
+
+      \vspace{2ex}
+
+      \textbf{The computation reduces to a neural net with linear weight sharing layers.
+        We can just apply the existing KFAC definition from Eschenhagen (NeurIPS 2023).}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.68\linewidth}
+      \centering
+      \hspace{-13.25ex}\input{figures/compute_graph_boundary_loss.tex}
+
+      \textbf{Boundary loss compute graph}
+
+      \vspace{2ex}
+
+      \input{figures/compute_graph_interior_loss.tex}
+
+      \textbf{Interior loss compute graph} (simplified)
+
+    \end{minipage}
   }
 \end{columns}
 
 \begin{columns}
   \column{0.9}
-  \block{Ingredient 2: KFAC}{
-    Explain what Kronecker-factored approximate curvature is.
+  \block{Motivation: PINNs Are Hard to Train, Second-order Methods Can Help}{
+    \begin{center}
+      \begin{Large}
+        \textcolor{VectorBlue}{\textbf{Natural gradient methods beat first-order methods on small problems\dots
+            but do not scale well to larger nets $\mathbf{\to}$ our KFAC scales.}}
+      \end{Large}
+    \end{center}
 
-    Say that it is a scale-able curvature approximation that is cheap to invert.
-    Say that it has recently been generalized to linear layers with weight sharing.
-    \begin{equation*}
-      a^2 + b^2 = c^2
-    \end{equation*}
+    \hfill
+    \begin{minipage}{0.08\linewidth}
+      \textbf{Small net}
+      \\
+      \textbf{($\mathbf{D = 257}$)}
+    \end{minipage}
+    \begin{minipage}{0.38\linewidth}
+      \centering
+      % [trim={left bottom right top},clip]
+      \includegraphics[width=0.85\linewidth, trim={0 0 0 0.3cm},clip]{../presentation/figures/poisson2d-02.pdf}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.38\linewidth}
+      \centering
+      % [trim={left bottom right top},clip]
+      \includegraphics[width=0.85\linewidth, trim={0 0.08cm 0 0.3cm},clip]{figures/poisson2d-medium.pdf}
+    \end{minipage}
+    \begin{minipage}{0.08\linewidth}
+      \textbf{Medium net}
+      \\
+      \textbf{($\mathbf{D = 9873}$)}
+    \end{minipage}
+    \hfill
   }
   \column{0.9}
-  \block{Putting everything together + practical evaluation: KFAC for PINNs}{
-    \begin{minipage}[t]{0.3\linewidth}
+  \block{Evaluation: Our KFAC Optimizer Outperforms First-order Methods and Scales Well}{
+    \begin{minipage}[t]{0.31\linewidth}
       \centering
-      \includegraphics[width=\linewidth]{example-image-a}
-      Poisson equation
+      \textbf{9+1d log-Fokker-Planck equation, $\mathbf{D \approx 10^5}$}
+
+      \vspace{1ex}
+
+      \includegraphics[width=\linewidth]{../kfac_pinns_exp/exp43_log_fokker_planck9d_isotropic_gaussian_random/l2_error_over_time.pdf}
     \end{minipage}
     \hfill
-    \begin{minipage}[t]{0.3\linewidth}
+    \begin{minipage}[t]{0.28\linewidth}
       \centering
-      \includegraphics[width=\linewidth]{example-image-a}
-      Heat equation
+      \textbf{4+1d Heat equation, $\mathbf{D \approx 10^5}$}
+
+      % [trim={left bottom right top},clip]
+      \includegraphics[trim={9.5cm 0.5cm 0 0.3cm},clip, width=0.93\linewidth]{../kfac_pinns_exp/exp33_poisson_bayes_groupplot/l2_error_over_time.pdf}
     \end{minipage}
     \hfill
-    \begin{minipage}[t]{0.3\linewidth}
+    \begin{minipage}[t]{0.28\linewidth}
       \centering
-      \includegraphics[width=\linewidth]{example-image-a}
-      log-Fokker-Planck equation
+      \textbf{100d Poisson equation, $\mathbf{D\approx 10^6}$}
+
+      % [trim={left bottom right top},clip]
+      \includegraphics[trim={9.5cm 0.5cm 0 0.3cm},clip, width=0.9\linewidth]{../kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
     \end{minipage}
+    \hfill
+
+    \vspace{-0.5ex}
   }
 \end{columns}
 

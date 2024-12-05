@@ -1,0 +1,56 @@
+\input{../paper/figures/computation_graph_styles.tex}
+\colorlet{maincolor}{VectorPink}
+\colorlet{secondcolor}{VectorOrange}
+\colorlet{thirdcolor}{VectorTeal}
+\colorlet{fourthcolor}{white}
+\colorlet{fifthcolor}{red}
+\begin{tikzpicture}
+  % arrange nodes in a matrix
+  \matrix [%
+  row sep=2.5ex,%
+  column sep=3.5ex,%
+  ampersand replacement=\&,% in order to put this inside of a scalebox
+  ]{%
+    % neural network parameters
+    \&
+    \node [paramNode] (param-1) {$\mW^{(1)}$};
+    \&
+    \node [dotsNode] (param-2) {$\dots$};
+    \&
+    \node [paramNode] (param-3) {$\mW^{(i-1)}$};
+    \&
+    \node [paramNode] (param-4) {$\mW^{(i)}$};
+    \&
+    \node [dotsNode] (param-5) {$\dots$};
+    \&
+    \node [paramNode] (param-6) {$\mW^{(L)}$};
+    \\
+    % forward pass
+    \node [inputNode] (forward-0) {$\vx$};
+    \&
+    \node [forwardNode] (forward-1) {$\vz^{(1)}$};
+    \&
+    \node [dotsNode] (forward-2) {$\dots$};
+    \&
+    \node [forwardNode] (forward-3) {$\vz^{(i-1)}$};
+    \&
+    \node [forwardNode] (forward-4) {$\vz^{(i)}$};
+    \&
+    \node [dotsNode] (forward-5) {$\dots$};
+    \&
+    \node [forwardNode] (forward-6) {$u(\vx)$};
+    \\
+  };
+  % dependency arrows
+  \foreach \i in {1,...,6} {
+    \draw [-Latex, line width=4pt, VectorBlue] (param-\i) to (forward-\i);
+  }
+  \foreach \i in {0,...,5} {
+    \pgfmathsetmacro{\j}{int(\i+1)}
+    \draw [-Latex, line width=3pt] (forward-\i) to (forward-\j);
+  }
+\end{tikzpicture}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:

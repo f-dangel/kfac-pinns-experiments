@@ -1,0 +1,54 @@
+% Define styles of nodes in computation graph sketch
+\tikzset{%
+  % shared basic style
+  basicNode/.style={%
+    rectangle,%
+    minimum width=5ex,%
+    minimum height=3.5ex,%
+    inner sep=0.3ex,%
+    rounded corners,%
+    draw=black,%
+    thick,%
+    fill opacity=0.3,%
+    text opacity=1.0,%
+  },%
+  % style for nodes representing neural network parameters
+  paramNode/.style={%
+    basicNode,%
+    fill=maincolor,%
+  },%
+  % style for nodes representing data
+  inputNode/.style={%
+    basicNode,%
+    fill=secondcolor,%
+  },%
+  % style for nodes indicating a repetition
+  dotsNode/.style={%
+    basicNode,%
+    draw opacity=0,%
+  },%
+  % style for nodes representing intermediates from the forward pass
+  forwardNode/.style={%
+    basicNode,%
+    fill=thirdcolor,%
+  },%
+  % style for nodes representing intermediates from the gradient backpropagation
+  gradientNode/.style={%
+    basicNode,%
+    fill=fourthcolor,%
+  },%
+  % style for nodes representing intermediates from the Hessian % backpropagation
+  hessianNode/.style={%
+    basicNode,%
+    fill=fifthcolor,%
+  },%
+  % style for nodes representing loss
+  lossNode/.style={%
+    basicNode,%
+    fill=sixthcolor,%
+  },%
+}%
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "../main"
+%%% End:sixthcolor
