@@ -155,7 +155,7 @@ class SPRING(Optimizer):
             rho = (loss_new - loss) / (q_new - q)
 
             # adapt trust-region
-            if rho < 0.25 and rho > 0:
+            if rho < 0.25:
                 group["damping"] *= 3 / 2
             elif rho > 0.75:
                 group["damping"] *= 2 / 3

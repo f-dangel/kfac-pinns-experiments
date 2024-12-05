@@ -11,7 +11,12 @@ from kfac_pinns_exp.optim.spring_standalone import SPRING
 
 @mark.parametrize("device", DEVICES, ids=DEVICE_IDS)
 def test_spring_standalone(device: device, dtype: dtype = float64):
-    """Test if the general purpose spring implementation reduces loss."""
+    """Test if the general purpose spring implementation reduces loss.
+
+    Args:
+        device: The devices the optimizer will run on, cpu and gpu.
+        dtype: The type of tensors used. Default: `float64`.
+    """
     manual_seed(0)
 
     # neural network setup
