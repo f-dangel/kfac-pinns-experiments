@@ -1,6 +1,5 @@
 \documentclass[a0paper]{tikzposter}
-% Force a 16 by 9 ratio, 33.1 is same height as a0
-\geometry{paperwidth=58.844in,paperheight=33.1in}
+\geometry{paperwidth=60in,paperheight=36in}
 
 \makeatletter
 \def\input@path{
@@ -24,7 +23,7 @@
 \usetitlestyle{Filled}
 
 \title{
-  \fontsize{115}{60}\selectfont
+  \fontsize{125}{60}\selectfont
   \bf Kronecker-Factored Approximate Curvature
   for Physics-Informed Neural Networks}
 \author{\Huge
@@ -47,19 +46,21 @@
   % Poster footer with additional information
 } % Footer
 
-\hspace{-35cm}
+\hspace{-36.25cm}
 \begin{columns}
   \centering
-  \begin{column}{1.85}
+  \begin{column}{1.9}
     \centering \ribbon{
-      \begin{minipage}[b]{0.9\linewidth}
-        \centering\fontsize{105}{80}\selectfont\textcolor{white}{\bf
+      \vspace{1.5ex}
+      \begin{minipage}{0.9\linewidth}
+        \centering\fontsize{120}{80}\selectfont\textcolor{white}{\bf
           We develop KFAC for loss functions with differential operators.
           \\[0.5ex]
           For training PINNs, our optimizer consistently outperforms SGD/Adam.
         }
       \end{minipage}
-      \begin{minipage}[t]{0.05\linewidth}
+      \vspace{1.5ex}
+      \begin{minipage}{0.07\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figures/qrcode.png}
       \end{minipage}
@@ -69,7 +70,7 @@
 \hspace{2cm}
 
 \begin{columns}
-  \column{0.9}
+  \column{0.91}
   \block{Background: What Are PINNs?}{
     \begin{Large}
       \begin{center}
@@ -77,7 +78,7 @@
       \end{center}
     \end{Large}
 
-    \vspace{1ex}
+    \vspace{1.5ex}
 
     \begin{minipage}[t]{0.4\linewidth}
       \begin{itemize}
@@ -127,12 +128,12 @@
       \end{itemize}
     \end{minipage}
 
-    \vspace{1ex}
+    \vspace{1.5ex}
 
     \begin{minipage}{0.33\linewidth}
       \centering
       % [trim={left bottom right top},clip]
-      \includegraphics[scale=2,trim={0.9cm 0.8cm 6.7cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+      \includegraphics[scale=2.25,trim={0.9cm 0.8cm 6.7cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
 
       \textbf{Untrained}
     \end{minipage}
@@ -140,7 +141,7 @@
     \begin{minipage}{0.33\linewidth}
       \centering
       % [trim={left bottom right top},clip]
-      \includegraphics[scale=2,trim={0.9cm 0.8cm 6.7cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0003299.pdf}
+      \includegraphics[scale=2.25,trim={0.9cm 0.8cm 6.7cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0003299.pdf}
 
       \textbf{Trained}
     \end{minipage}
@@ -148,13 +149,13 @@
     \begin{minipage}{0.33\linewidth}
       \centering
       % [trim={left bottom right top},clip]
-      \includegraphics[scale=2,trim={7.3cm 0.8cm 0.1cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
+      \includegraphics[scale=2.25,trim={7.3cm 0.8cm 0.1cm 1cm}, clip]{../kfac_pinns_exp/exp42_visualize_solutions/visualize_solution/SGD/poisson_2d_sin_product_mlp-tanh-64_SGD_step0000000.pdf}
 
       \textbf{True solution}
     \end{minipage}
   }
 
-  \column{0.9}
+  \column{0.91}
   \block{Contribution: How Do We Derive KFAC for PINN Losses?}{
     \begin{center}
       \begin{Large}
@@ -163,6 +164,8 @@
           $\mathbf{\to}$ \textbf{This allows us to apply the existing definition of KFAC for linear weight sharing layers.}}
       \end{Large}
     \end{center}
+
+    \vspace{0.25ex}
 
     \begin{minipage}{0.3\linewidth}
 
@@ -222,7 +225,7 @@
 \end{columns}
 
 \begin{columns}
-  \column{0.9}
+  \column{0.91}
   \block{Motivation: PINNs Are Hard to Train, Second-order Methods Can Help}{
     \begin{center}
       \begin{Large}
@@ -255,7 +258,7 @@
     \end{minipage}
     \hfill
   }
-  \column{0.9}
+  \column{0.91}
   \block{Evaluation: Our KFAC Optimizer Outperforms First-order Methods and Scales Well}{
     \begin{minipage}[t]{0.31\linewidth}
       \centering
@@ -268,7 +271,7 @@
     \hfill
     \begin{minipage}[t]{0.28\linewidth}
       \centering
-      \textbf{4+1d Heat equation, $\mathbf{D \approx 10^5}$}
+      \textbf{100d Poisson equation, $\mathbf{D\approx 10^6}$}
 
       % [trim={left bottom right top},clip]
       \includegraphics[trim={9.5cm 0.5cm 0 0.3cm},clip, width=0.93\linewidth]{../kfac_pinns_exp/exp33_poisson_bayes_groupplot/l2_error_over_time.pdf}
@@ -276,7 +279,7 @@
     \hfill
     \begin{minipage}[t]{0.28\linewidth}
       \centering
-      \textbf{100d Poisson equation, $\mathbf{D\approx 10^6}$}
+      \textbf{4+1d Heat equation, $\mathbf{D \approx 10^5}$}
 
       % [trim={left bottom right top},clip]
       \includegraphics[trim={9.5cm 0.5cm 0 0.3cm},clip, width=0.9\linewidth]{../kfac_pinns_exp/exp30_heat4d_groupplot/l2_error_over_time.pdf}
