@@ -16,6 +16,7 @@ from kfac_pinns_exp import (
     log_fokker_planck_isotropic_equation,
     poisson_equation,
 )
+from kfac_pinns_exp.optim.spring_standalone import SPRING as SPRING_STANDALONE
 from kfac_pinns_exp.parse_utils import parse_known_args_and_remove_from_argv
 from kfac_pinns_exp.pinn_utils import (
     evaluate_boundary_loss_with_layer_inputs_and_grad_outputs,
@@ -82,6 +83,11 @@ def parse_SPRING_args(verbose: bool = False, prefix="SPRING_") -> Namespace:
         default=1e-3,
     )
     parser.add_argument(
+        f"--{prefix}adaptive_damping",
+        action="store_true",
+        help="Whether to use adaptive damping.",
+    )
+    parser.add_argument(
         f"--{prefix}equation",
         type=str,
         choices=SPRING.SUPPORTED_EQUATIONS,
@@ -112,6 +118,7 @@ class SPRING(Optimizer):
         damping: float = 1e-3,
         decay_factor: float = 0.99,
         norm_constraint: float = 1e-3,
+        adaptive_damping: bool = False,
         equation: str = "poisson",
     ):
         """Set up the SPRING optimizer.
@@ -125,6 +132,9 @@ class SPRING(Optimizer):
                 Default: `0.99` (taken from Section 4 of the paper).
             norm_constraint: The positive norm constraint (C in the paper).
                 Default: `1e-3` (taken from Section 4 of the paper).
+            adaptive_damping: If adapt_damping is True, then the damping parameter is
+                adapted according to a trust-region strategy. See Section 4.1 in
+                https://www.cs.toronto.edu/~jmartens/docs/Deep_HessianFree.pdf
             equation: Equation to solve. Currently supports `'poisson'`, `'heat'`, and
                 `'fokker-planck-isotropic'`. Default: `'poisson'`.
 
@@ -152,6 +162,7 @@ class SPRING(Optimizer):
         self.equation = equation
         self.steps = 0
         self.layers = layers
+        self.adaptive_damping = adaptive_damping
 
         # initialize phi
         (group,) = self.param_groups
@@ -245,6 +256,40 @@ class SPRING(Optimizer):
         for p in params:
             p.data.add_(self.state[p]["phi"], alpha=scale)
 
+        if self.adaptive_damping:
+            # compute quadratic model at previous and new iterate
+            q = 0.5 * (zeta**2).sum()
+            J_step = apply_joint_J(
+                interior_inputs,
+                interior_grad_outputs,
+                boundary_inputs,
+                boundary_grad_outputs,
+                step,
+            )
+            q_new = 0.5 * ((J_step + zeta.squeeze()) ** 2).sum()
+
+            # compute loss at new parameter value
+            (
+                interior_loss_new,
+                boundary_loss_new,
+                _,
+                _,
+                _,
+                _,
+                _,
+                _,
+            ) = evaluate_losses_with_layer_inputs_and_grad_outputs(
+                self.layers, X_Omega, y_Omega, X_dOmega, y_dOmega, self.equation
+            )
+
+            multiplier = SPRING_STANDALONE.damping_multiplier(
+                interior_loss_new + boundary_loss_new,
+                interior_loss + boundary_loss,
+                q,
+                q_new,
+            )
+            group["damping"] *= multiplier
+
         self.steps += 1
 
         return interior_loss, boundary_loss
@@ -289,12 +334,18 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
     interior_evaluator = EVAL_FNS[equation]["interior"]
     boundary_evaluator = EVAL_FNS[equation]["boundary"]
 
-    interior_loss, interior_res, interior_inputs, interior_grad_outputs = (
-        interior_evaluator(layers, X_Omega, y_Omega, ggn_type)
-    )
-    boundary_loss, boundary_res, boundary_inputs, boundary_grad_outputs = (
-        boundary_evaluator(layers, X_dOmega, y_dOmega, ggn_type)
-    )
+    (
+        interior_loss,
+        interior_res,
+        interior_inputs,
+        interior_grad_outputs,
+    ) = interior_evaluator(layers, X_Omega, y_Omega, ggn_type)
+    (
+        boundary_loss,
+        boundary_res,
+        boundary_inputs,
+        boundary_grad_outputs,
+    ) = boundary_evaluator(layers, X_dOmega, y_dOmega, ggn_type)
 
     return (
         interior_loss,

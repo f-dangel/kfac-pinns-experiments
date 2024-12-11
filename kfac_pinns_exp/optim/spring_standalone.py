@@ -151,14 +151,39 @@ class SPRING(Optimizer):
             with no_grad():
                 loss_new, _ = forward()
 
-            # compute reduction ratio
-            rho = (loss_new - loss) / (q_new - q)
-
-            # adapt trust-region
-            if rho < 0.25:
-                group["damping"] *= 3 / 2
-            elif rho > 0.75:
-                group["damping"] *= 2 / 3
+            multiplier = self.damping_multiplier(loss_new, loss, q_new, q)
+            group["damping"] *= multiplier
 
         self.steps += 1
         return loss
+
+    @staticmethod
+    def damping_multiplier(loss_new, loss, q_new, q):
+        """Computes the factor by which the damping constant gets multiplied.
+
+        This is based on a Levenberg-Marquardt heuristic. See Section 4.1 in
+        https://www.cs.toronto.edu/~jmartens/docs/Deep_HessianFree.pdf
+
+        Args:
+            loss_new: The loss function at the new parameters.
+            loss: The loss function at the old parameters.
+            q_new: The quadratic model step = new_params - old_params.
+            q: The quadratic model at zero.
+
+        Returns:
+            The multiplier for the adaptive damping parameter. Either
+            3/2, 2/3 or 1, depending on the reduction ration (rho < 0.25 -> 3/2,
+            rho > 0.75 -> 2/3 and 1 else.)
+        """
+        # compute reduction ratio
+        rho = (loss_new - loss) / (q_new - q)
+
+        # set multiplier
+        if rho < 0.25:
+            multiplier = 3 / 2
+        elif rho > 0.75:
+            multiplier = 2 / 3
+        else:
+            multiplier = 1
+
+        return multiplier
