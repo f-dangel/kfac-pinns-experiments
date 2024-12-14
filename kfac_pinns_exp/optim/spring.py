@@ -192,7 +192,7 @@ class SPRING(Optimizer):
         ) = evaluate_losses_with_layer_inputs_and_grad_outputs(
             self.layers, X_Omega, y_Omega, X_dOmega, y_dOmega, self.equation
         )
-        OOT = compute_JJT(
+        OOT = compute_joint_JJT(
             interior_inputs,
             interior_grad_outputs,
             boundary_inputs,
@@ -308,13 +308,45 @@ def evaluate_losses_with_layer_inputs_and_grad_outputs(
     )
 
 
-def compute_JJT(
+def compute_individual_JJT(
+    inputs: Dict[int, Tensor], grad_outputs: Dict[int, Tensor]
+) -> Tensor:
+    """Compute the Jacobian outer product of an individual (boundary/interior) residual.
+
+    Args:
+        inputs: The layer inputs for the interior or boundary loss.
+        grad_outputs: The layer gradient outputs for the interior or boundary loss.
+
+    Returns:
+        The Jacobian outer product. Has shape `(N, N)` where `N` is the batch size used
+        for the boundary/interior loss.
+    """
+    (N,) = {t.shape[0] for t in list(inputs.values()) + list(grad_outputs.values())}
+    ((dev, dt),) = {
+        (t.device, t.dtype) for t in list(inputs.values()) + list(grad_outputs.values())
+    }
+    JJT = zeros((N, N), device=dev, dtype=dt)
+
+    for idx in inputs:
+        J = einsum(
+            # gradients are scaled by 1/N, but we need 1/√N for the outer product
+            grad_outputs[idx] * sqrt(N),
+            inputs[idx],
+            "n ... d_out, n ... d_in -> n d_out d_in",
+        )
+        J = J.flatten(start_dim=1)
+        JJT.add_(J @ J.T)
+
+    return JJT
+
+
+def compute_joint_JJT(
     interior_inputs: Dict[int, Tensor],
     interior_grad_outputs: Dict[int, Tensor],
     boundary_inputs: Dict[int, Tensor],
     boundary_grad_outputs: Dict[int, Tensor],
 ) -> Tensor:
-    """Compute the Jacobian outer product.
+    """Compute the Jacobian outer product of the joint residual.
 
     Args:
         interior_inputs: The layer inputs for the interior loss.
@@ -323,7 +355,8 @@ def compute_JJT(
         boundary_grad_outputs: The layer gradient outputs for the boundary loss.
 
     Returns:
-        The Jacobian outer product.
+        The Jacobian outer product. Has shape `(N, N)` where `N = N_Omega + N_dOmega`
+        is the sum of the interior and boundary loss batch sizes.
     """
     (N_Omega,) = {
         t.shape[0]
